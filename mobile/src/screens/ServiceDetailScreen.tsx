@@ -33,7 +33,7 @@ export default function ServiceDetailScreen({ route }: RootProps<'ServiceDetail'
 
   if (!service || !provider) {
     return (
-      <Screen header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}>
+      <Screen header={<AppBar onBack={() => nav.goBack()} />}>
         <Text style={[font('700'), { color: colors.slate, textAlign: 'center', marginTop: 40 }]}>الخدمة غير متاحة</Text>
       </Screen>
     );
@@ -43,7 +43,7 @@ export default function ServiceDetailScreen({ route }: RootProps<'ServiceDetail'
 
   return (
     <Screen
-      header={<AppBar title="تفاصيل الخدمة" onBack={() => nav.goBack()} onBell={() => {}} />}
+      header={<AppBar title="تفاصيل الخدمة" onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
           <Button label="احجز موعد" icon="calendar" style={{ flex: 1 }} onPress={() => nav.navigate('BookAppointment', { serviceId: service.id })} />

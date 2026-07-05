@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const featured = projects[0];
 
   return (
-    <Screen header={<AppBar onBell={() => {}} />}>
+    <Screen header={<AppBar />}>
       {/* Hero */}
       <LinearGradient
         colors={[colors.navy800, colors.navy900]}

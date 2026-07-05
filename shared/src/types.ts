@@ -95,3 +95,14 @@ export interface FoundationStats {
   beneficiaries: string;
   yearsOfService: number;
 }
+
+export type NotificationKind = 'donation' | 'case' | 'project' | 'booking' | 'system';
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  time: string; // relative Arabic label
+  read: boolean;
+}

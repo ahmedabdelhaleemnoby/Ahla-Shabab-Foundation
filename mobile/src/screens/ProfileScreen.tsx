@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { donorProfile, donations, egp } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
@@ -17,16 +18,18 @@ const favorites: { id: string; title: string; amount: number; gradient: [string,
   { id: 'f4', title: 'مساعدات طبية', amount: 18000, gradient: ['#c3a888', '#8f7350'] },
 ];
 
-const SETTINGS: { label: string; danger?: boolean; value?: string }[] = [
-  { label: 'تفضيلات الإشعارات' },
+const SETTINGS: { label: string; danger?: boolean; value?: string; route?: string }[] = [
+  { label: 'تسجيل الدخول / تأكيد الهاتف', route: 'PhoneAuth' },
+  { label: 'تفضيلات الإشعارات', route: 'Notifications' },
   { label: 'اللغة', value: 'العربية ‹' },
   { label: 'إعدادات الحساب' },
   { label: 'تسجيل الخروج', danger: true },
 ];
 
 export default function ProfileScreen() {
+  const nav = useNavigation<any>();
   return (
-    <Screen header={<AppBar title="حسابي" onBell={() => {}} />}>
+    <Screen header={<AppBar title="حسابي" />}>
       {/* Profile card */}
       <View style={[row, { backgroundColor: colors.navy700, borderRadius: 18, padding: 16, gap: 13 }]}>
         <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -97,7 +100,10 @@ export default function ProfileScreen() {
       <Card style={{ marginTop: 12, padding: 0 }}>
         {SETTINGS.map((s, i) => (
           <View key={s.label}>
-            <Pressable style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]}>
+            <Pressable
+              style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]}
+              onPress={() => s.route && nav.navigate(s.route)}
+            >
               {s.value ? (
                 <Text style={[font('400'), { color: colors.muted, fontSize: 11 }]}>{s.value}</Text>
               ) : (

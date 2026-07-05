@@ -24,7 +24,7 @@ export default function ConsultationsScreen() {
   const featured = consultants.find((c) => c.featured)!;
 
   return (
-    <Screen header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}>
+    <Screen header={<AppBar onBack={() => nav.goBack()} />}>
       <View style={{ alignItems: 'center', marginVertical: 6 }}>
         <Text style={[font('800'), { fontSize: 23, color: colors.navy700 }]}>الاستشارات</Text>
         <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 3 }]}>

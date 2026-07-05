@@ -6,8 +6,10 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@ahla/shared": ["../shared/src/index.ts"]
-    }
+      "@ahla/shared": ["../shared/src/index.ts"],
+      "react": ["./node_modules/@types/react"]
+    },
+    "typeRoots": ["./node_modules/@types"]
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

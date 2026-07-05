@@ -6,6 +6,7 @@ import type {
   Appointment,
   DonorProfile,
   FoundationStats,
+  AppNotification,
 } from './types';
 
 export const foundationStats: FoundationStats = {
@@ -218,6 +219,15 @@ export const quickServices = [
   { id: 'projects', label: 'المشروعات', icon: 'building' },
   { id: 'cases', label: 'الحالات', icon: 'map-pin' },
 ] as const;
+
+export const notifications: AppNotification[] = [
+  { id: 'n-1', kind: 'booking', title: 'تم تأكيد موعدك', body: 'تم تأكيد جلسة الاستشارة النفسية مع د. محمد العربي يوم الخميس 11:00 ص.', time: 'منذ 5 دقائق', read: false },
+  { id: 'n-2', kind: 'case', title: 'اقتربت حالة من هدفها', body: 'حالة «أسرة رقم 1427» وصلت إلى 62% من المبلغ المطلوب. ساهم في إتمامها.', time: 'منذ ساعة', read: false },
+  { id: 'n-3', kind: 'donation', title: 'شكراً لتبرعك', body: 'تم استلام تبرعك بمبلغ 250 ج.م لصالح كفالة أسرة محتاجة. جزاك الله خيراً.', time: 'منذ 3 ساعات', read: false },
+  { id: 'n-4', kind: 'project', title: 'تحديث مشروع', body: 'مشروع «محطة تحلية مياه» انتقل إلى مرحلة التركيب والتشغيل.', time: 'أمس', read: true },
+  { id: 'n-5', kind: 'system', title: 'تذكير بموعد', body: 'لديك موعد استشارة غداً الساعة 1:00 م. برجاء الحضور في الوقت المحدد.', time: 'أمس', read: true },
+  { id: 'n-6', kind: 'donation', title: 'كفالة شهرية', body: 'تم تجديد كفالتك الشهرية للطالبة نور بنجاح.', time: 'منذ يومين', read: true },
+];
 
 export const foundationValues = ['الشفافية', 'المسؤولية', 'التطوع', 'التفوق', 'الإيمان'];
 

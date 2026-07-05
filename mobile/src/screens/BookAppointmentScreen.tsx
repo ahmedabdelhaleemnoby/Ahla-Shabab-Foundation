@@ -42,7 +42,7 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
 
   if (!service || !provider) {
     return (
-      <Screen header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}>
+      <Screen header={<AppBar onBack={() => nav.goBack()} />}>
         <Text style={[font('700'), { color: colors.slate, textAlign: 'center', marginTop: 40 }]}>الخدمة غير متاحة</Text>
       </Screen>
     );
@@ -81,7 +81,7 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
   return (
     <Screen
       scroll
-      header={<AppBar title="حجز موعد" onBack={() => nav.goBack()} onBell={() => {}} />}
+      header={<AppBar title="حجز موعد" onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
           <Button label="تأكيد الحجز" icon="check" style={{ flex: 1 }} onPress={submit} />

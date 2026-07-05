@@ -6,6 +6,9 @@ export type RootStackParamList = {
   CaseDetail: { id: string };
   Consultations: undefined;
   Booking: { consultantId?: string } | undefined;
+  Notifications: undefined;
+  PhoneAuth: undefined;
+  Otp: { phone: string };
   // Free Services Booking flow (Technical Offer §4)
   ServicesBrowse: { parentId: string | null } | undefined;
   ProviderDetail: { providerId: string };

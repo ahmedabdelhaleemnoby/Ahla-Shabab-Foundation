@@ -42,7 +42,7 @@ export default function BookingScreen() {
 
   return (
     <Screen
-      header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}
+      header={<AppBar onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
           <Button label="تأكيد الحجز" style={{ flex: 1 }} onPress={() => nav.goBack()} />

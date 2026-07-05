@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors, cardShadow, font } from '../theme';
 import { Icon } from './Icon';
 
@@ -25,9 +26,12 @@ export function AppBar({
 }: {
   title?: string;
   onBack?: () => void;
+  /** Optional override; by default the bell opens the Notifications screen. */
   onBell?: () => void;
   notifications?: number;
 }) {
+  const nav = useNavigation<any>();
+  const openBell = onBell ?? (() => nav.navigate('Notifications'));
   return (
     <View style={styles.bar}>
       {onBack ? (
@@ -36,7 +40,7 @@ export function AppBar({
           <Icon name="chevron-right" size={20} color={colors.navy700} />
         </Pressable>
       ) : (
-        <Pressable style={[styles.iconBtn, cardShadow]} onPress={onBell}>
+        <Pressable style={[styles.iconBtn, cardShadow]} onPress={openBell}>
           <Icon name="bell" size={20} color={colors.navy700} />
           {notifications > 0 && (
             <View style={styles.badge}>

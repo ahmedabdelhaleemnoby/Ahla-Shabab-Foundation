@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { cases, pct, type CaseTag } from '@ahla/shared';
@@ -19,10 +19,18 @@ const tagColor = (tag: CaseTag) =>
 export default function CasesScreen() {
   const nav = useNavigation<any>();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
-  const list = filter === 'الكل' ? cases : cases.filter((c) => c.tag === filter);
+  const [query, setQuery] = useState('');
+  const list = useMemo(() => {
+    const q = query.trim();
+    return cases.filter(
+      (c) =>
+        (filter === 'الكل' || c.tag === filter) &&
+        (q === '' || c.code.includes(q) || c.title.includes(q) || c.summary.includes(q) || c.location.includes(q))
+    );
+  }, [filter, query]);
 
   return (
-    <Screen header={<AppBar onBell={() => {}} />}>
+    <Screen header={<AppBar />}>
       <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 12 }}>
         <Text style={[font('800'), { fontSize: 21, color: colors.navy700 }]}>الحالات المستحقة</Text>
         <Text style={[font('400'), { fontSize: 11, color: colors.slate, marginTop: 3 }]}>
@@ -31,9 +39,20 @@ export default function CasesScreen() {
       </View>
 
       {/* Search */}
-      <View style={[row, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, gap: 8, justifyContent: 'flex-end' }]}>
-        <Text style={[font('400'), { color: colors.muted, fontSize: 13 }]}>ابحث عن حالة إنسانية...</Text>
+      <View style={[row, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 14, gap: 8 }]}>
         <Icon name="search" size={16} color={colors.muted} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="ابحث عن حالة إنسانية..."
+          placeholderTextColor={colors.muted}
+          style={[font('600'), { flex: 1, fontSize: 13, color: colors.ink, paddingVertical: 12, textAlign: 'right', writingDirection: 'rtl' }]}
+        />
+        {query.length > 0 && (
+          <Text onPress={() => setQuery('')} style={[font('700'), { color: colors.muted, fontSize: 16 }]}>
+            ✕
+          </Text>
+        )}
       </View>
 
       {/* Filters */}
@@ -80,6 +99,16 @@ export default function CasesScreen() {
           </Card>
         );
       })}
+
+      {list.length === 0 && (
+        <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+          <Icon name="search" size={34} color={colors.muted} />
+          <Text style={[font('700'), { fontSize: 14, color: colors.slate, marginTop: 12 }]}>لا توجد نتائج مطابقة</Text>
+          <Text style={[font('400'), { fontSize: 11.5, color: colors.muted, marginTop: 4, textAlign: 'center' }]}>
+            جرّب كلمة بحث أخرى أو غيّر التصنيف
+          </Text>
+        </View>
+      )}
       <View style={{ height: 12 }} />
     </Screen>
   );

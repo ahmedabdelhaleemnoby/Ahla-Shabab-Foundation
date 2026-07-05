@@ -32,7 +32,7 @@ export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
 
   return (
     <Screen
-      header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}
+      header={<AppBar onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
           <Button label="أضف للمفضلة" variant="outline" icon="heart" style={{ width: 130 }} />

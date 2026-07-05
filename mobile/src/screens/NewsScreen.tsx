@@ -44,7 +44,7 @@ const initiativeIcons: Record<string, IconName> = {
 export default function NewsScreen() {
   return (
     <Screen
-      header={<AppBar title="عن الجمعية" onBell={() => {}} />}
+      header={<AppBar title="عن الجمعية" />}
       footer={
         <StickyFooter>
           <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ width: 130 }} />

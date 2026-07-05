@@ -30,7 +30,7 @@ export default function ProviderDetailScreen({ route }: RootProps<'ProviderDetai
 
   if (!provider) {
     return (
-      <Screen header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}>
+      <Screen header={<AppBar onBack={() => nav.goBack()} />}>
         <Text style={[font('700'), { color: colors.slate, textAlign: 'center', marginTop: 40 }]}>المختص غير متاح</Text>
       </Screen>
     );
@@ -40,7 +40,7 @@ export default function ProviderDetailScreen({ route }: RootProps<'ProviderDetai
   const days = provider.availableDays.map((d) => WEEKDAYS[d]).join('، ');
 
   return (
-    <Screen header={<AppBar title="ملف المختص" onBack={() => nav.goBack()} onBell={() => {}} />}>
+    <Screen header={<AppBar title="ملف المختص" onBack={() => nav.goBack()} />}>
       {/* Profile */}
       <Card>
         <View style={[row, { gap: 12, alignItems: 'flex-start' }]}>

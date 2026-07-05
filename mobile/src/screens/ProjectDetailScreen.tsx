@@ -24,7 +24,7 @@ export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'
 
   return (
     <Screen
-      header={<AppBar onBack={() => nav.goBack()} onBell={() => {}} />}
+      header={<AppBar onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
           <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 104 }} />

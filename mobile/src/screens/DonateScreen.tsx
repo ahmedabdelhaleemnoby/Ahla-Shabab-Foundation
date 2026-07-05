@@ -36,7 +36,7 @@ export default function DonateScreen() {
 
   return (
     <Screen
-      header={<AppBar title="طرق التبرع" onBell={() => {}} />}
+      header={<AppBar title="طرق التبرع" />}
       footer={
         <StickyFooter>
           <Button label="تأكيد التبرع" onPress={() => {}} style={{ flex: 1 }} />

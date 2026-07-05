@@ -27,6 +27,9 @@ import ProjectDetailScreen from './src/screens/ProjectDetailScreen';
 import CaseDetailScreen from './src/screens/CaseDetailScreen';
 import ConsultationsScreen from './src/screens/ConsultationsScreen';
 import BookingScreen from './src/screens/BookingScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
+import PhoneAuthScreen from './src/screens/PhoneAuthScreen';
+import OtpScreen from './src/screens/OtpScreen';
 import ServicesBrowseScreen from './src/screens/ServicesBrowseScreen';
 import ProviderDetailScreen from './src/screens/ProviderDetailScreen';
 import ServiceDetailScreen from './src/screens/ServiceDetailScreen';
@@ -84,6 +87,9 @@ export default function App() {
           <Stack.Screen name="CaseDetail" component={CaseDetailScreen} />
           <Stack.Screen name="Consultations" component={ConsultationsScreen} />
           <Stack.Screen name="Booking" component={BookingScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="PhoneAuth" component={PhoneAuthScreen} />
+          <Stack.Screen name="Otp" component={OtpScreen} />
           <Stack.Screen name="ServicesBrowse" component={ServicesBrowseScreen} />
           <Stack.Screen name="ProviderDetail" component={ProviderDetailScreen} />
           <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />
