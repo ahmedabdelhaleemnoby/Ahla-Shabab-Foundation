@@ -95,6 +95,7 @@ export default function HomeScreen() {
               if (s.id === 'consult') nav.navigate('ServicesBrowse', { parentId: null });
               else if (s.id === 'cases') nav.navigate('Discover');
               else if (s.id === 'donate') nav.navigate('Main', { screen: 'Donate' });
+              else if (s.id === 'projects') nav.navigate('Projects');
             }}
           />
         ))}
@@ -110,7 +111,7 @@ export default function HomeScreen() {
       <CaseRow item={urgent} onPress={() => nav.navigate('CaseDetail', { id: urgent.id })} />
 
       {/* Featured project */}
-      <SectionHeader title="مشروع مميز" />
+      <SectionHeader title="مشروع مميز" more="عرض الكل ‹" onMore={() => nav.navigate('Projects')} />
       <Card style={{ flexDirection: 'row-reverse', gap: 11, padding: 11 }}>
         <LinearGradient colors={featured.gradient} style={{ width: 70, height: 92, borderRadius: 12 }} />
         <View style={{ flex: 1 }}>

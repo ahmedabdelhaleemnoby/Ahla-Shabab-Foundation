@@ -19,10 +19,15 @@ const favorites: { id: string; title: string; amount: number; gradient: [string,
 ];
 
 const SETTINGS: { label: string; danger?: boolean; value?: string; route?: string }[] = [
+  { label: 'حجوزاتي', route: 'MyBookings' },
+  { label: 'سجل التبرعات', route: 'DonationHistory' },
   { label: 'تسجيل الدخول / تأكيد الهاتف', route: 'PhoneAuth' },
-  { label: 'تفضيلات الإشعارات', route: 'Notifications' },
-  { label: 'اللغة', value: 'العربية ‹' },
-  { label: 'إعدادات الحساب' },
+  { label: 'تفضيلات الإشعارات', route: 'NotificationPreferences' },
+  { label: 'اللغة', value: 'العربية ‹', route: 'Language' },
+  { label: 'إعدادات الحساب', route: 'AccountSettings' },
+  { label: 'حاسبة الزكاة', route: 'ZakatCalculator' },
+  { label: 'الأسئلة الشائعة', route: 'Faq' },
+  { label: 'جولة تعريفية', route: 'Onboarding' },
   { label: 'تسجيل الخروج', danger: true },
 ];
 
@@ -54,7 +59,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Recent donations */}
-      <SectionHeader title="آخر التبرعات" more="عرض الكل" />
+      <SectionHeader title="آخر التبرعات" more="عرض الكل" onMore={() => nav.navigate('DonationHistory')} />
       <Card style={{ padding: 0 }}>
         {myDonations.map((d, i) => (
           <View key={d.id}>

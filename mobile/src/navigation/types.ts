@@ -9,6 +9,26 @@ export type RootStackParamList = {
   Notifications: undefined;
   PhoneAuth: undefined;
   Otp: { phone: string };
+  Projects: undefined;
+  MyBookings: undefined;
+  NewsFeed: undefined;
+  ArticleDetail: { id: string };
+  Volunteer: undefined;
+  ContactUs: undefined;
+  NotificationPreferences: undefined;
+  AccountSettings: undefined;
+  Language: undefined;
+  DonationHistory: undefined;
+  ZakatCalculator: undefined;
+  Onboarding: undefined;
+  Faq: undefined;
+  DonationSuccess: {
+    amount: string;
+    cause: string;
+    method: string;
+    recurring: boolean;
+    reference: string;
+  };
   // Free Services Booking flow (Technical Offer §4)
   ServicesBrowse: { parentId: string | null } | undefined;
   ProviderDetail: { providerId: string };

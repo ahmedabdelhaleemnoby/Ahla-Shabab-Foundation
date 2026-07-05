@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Switch } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Tile, Segmented } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { colors, font, num, row, rowBetween } from '../theme';
-import type { PaymentMethod } from '@ahla/shared';
+import { makeBookingRef, type PaymentMethod } from '@ahla/shared';
 
 const DESTINATIONS = [
   { id: 'cases', label: 'الحالات', icon: 'users' as const },
@@ -26,6 +27,7 @@ const METHODS: { id: PaymentMethod; brand?: string; brandColor?: string; icon?: 
 ];
 
 export default function DonateScreen() {
+  const nav = useNavigation<any>();
   const [dest, setDest] = useState('cases');
   const [amount, setAmount] = useState('500');
   const [recurring, setRecurring] = useState(false);
@@ -34,15 +36,40 @@ export default function DonateScreen() {
   const destLabel = DESTINATIONS.find((d) => d.id === dest)?.label ?? '';
   const total = amount === 'مبلغ آخر' ? '—' : `${amount} ج.م`;
 
+  const confirm = () => {
+    nav.navigate('DonationSuccess', {
+      amount: total,
+      cause: destLabel,
+      method,
+      recurring,
+      reference: makeBookingRef(Math.floor(Date.now() / 1000)),
+    });
+  };
+
   return (
     <Screen
       header={<AppBar title="طرق التبرع" />}
       footer={
         <StickyFooter>
-          <Button label="تأكيد التبرع" onPress={() => {}} style={{ flex: 1 }} />
+          <Button label="تأكيد التبرع" onPress={confirm} style={{ flex: 1 }} />
         </StickyFooter>
       }
     >
+      {/* Zakat calculator shortcut */}
+      <Pressable
+        onPress={() => nav.navigate('ZakatCalculator')}
+        style={[row, { gap: 11, backgroundColor: '#EAF0F8', borderRadius: 14, padding: 12, marginTop: 4 }]}
+      >
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="percent" size={19} color={colors.navy700} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'flex-end' }}>
+          <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700 }]}>لست متأكداً من زكاتك؟</Text>
+          <Text style={[font('400'), { fontSize: 10, color: colors.slate, marginTop: 1 }]}>احسب مقدار زكاة مالك في ثوانٍ</Text>
+        </View>
+        <Icon name="chevron-left" size={18} color={colors.muted} />
+      </Pressable>
+
       <Label text="اختر وجهة التبرع" />
       <View style={[row, { gap: 6 }]}>
         {DESTINATIONS.map((d) => (

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { foundationStats, foundationValues, foundationInitiatives } from '@ahla/shared';
+import { useNavigation } from '@react-navigation/native';
+import { foundationStats, foundationValues, foundationInitiatives, articles } from '@ahla/shared';
 
 const MILESTONES = [
   { year: '2013', label: 'بداية الفكرة' },
@@ -42,13 +43,14 @@ const initiativeIcons: Record<string, IconName> = {
 };
 
 export default function NewsScreen() {
+  const nav = useNavigation<any>();
   return (
     <Screen
       header={<AppBar title="عن الجمعية" />}
       footer={
         <StickyFooter>
-          <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ width: 130 }} />
-          <Button label="انضم متطوعاً" icon="user-plus" style={{ flex: 1 }} />
+          <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ width: 130 }} onPress={() => nav.navigate('ContactUs')} />
+          <Button label="انضم متطوعاً" icon="user-plus" style={{ flex: 1 }} onPress={() => nav.navigate('Volunteer')} />
         </StickyFooter>
       }
     >
@@ -68,6 +70,29 @@ export default function NewsScreen() {
         <Stat icon="users" value={foundationStats.beneficiaries} label="مستفيد" />
         <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنوات" />
       </View>
+
+      {/* News & activities */}
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 10, marginHorizontal: 2 }}>
+        <Text style={[font('800'), { fontSize: 14, color: colors.navy700 }]}>أخبار وأنشطة</Text>
+        <Pressable onPress={() => nav.navigate('NewsFeed')}>
+          <Text style={[font('700'), { fontSize: 11.5, color: colors.navy500 }]}>عرض الكل ‹</Text>
+        </Pressable>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, flexDirection: 'row-reverse', paddingHorizontal: 2 }}>
+        {articles.slice(0, 4).map((a) => (
+          <Pressable key={a.id} onPress={() => nav.navigate('ArticleDetail', { id: a.id })}>
+            <Card style={{ width: 190, padding: 0, overflow: 'hidden' }}>
+              <LinearGradient colors={a.gradient} style={{ height: 84 }} />
+              <View style={{ padding: 10, alignItems: 'flex-end' }}>
+                <Text style={[font('700'), { fontSize: 8.5, color: colors.navy500 }]}>{a.category}</Text>
+                <Text style={[font('800'), { fontSize: 12, color: colors.navy700, textAlign: 'right', marginTop: 3 }]} numberOfLines={2}>
+                  {a.title}
+                </Text>
+              </View>
+            </Card>
+          </Pressable>
+        ))}
+      </ScrollView>
 
       {/* Mission / Vision */}
       <View style={[row, { gap: 9, marginTop: 12 }]}>

@@ -96,6 +96,20 @@ export interface FoundationStats {
   yearsOfService: number;
 }
 
+export type ArticleCategory = 'خبر' | 'نشاط' | 'مقال' | 'قافلة';
+
+export interface Article {
+  id: string;
+  category: ArticleCategory;
+  title: string;
+  excerpt: string;
+  body: string;
+  date: string;
+  location?: string;
+  readMinutes: number;
+  gradient: [string, string];
+}
+
 export type NotificationKind = 'donation' | 'case' | 'project' | 'booking' | 'system';
 
 export interface AppNotification {

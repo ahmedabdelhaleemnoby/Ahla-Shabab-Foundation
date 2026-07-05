@@ -30,6 +30,20 @@ import BookingScreen from './src/screens/BookingScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import PhoneAuthScreen from './src/screens/PhoneAuthScreen';
 import OtpScreen from './src/screens/OtpScreen';
+import ProjectsScreen from './src/screens/ProjectsScreen';
+import MyBookingsScreen from './src/screens/MyBookingsScreen';
+import DonationSuccessScreen from './src/screens/DonationSuccessScreen';
+import NewsFeedScreen from './src/screens/NewsFeedScreen';
+import ArticleDetailScreen from './src/screens/ArticleDetailScreen';
+import VolunteerScreen from './src/screens/VolunteerScreen';
+import ContactUsScreen from './src/screens/ContactUsScreen';
+import NotificationPreferencesScreen from './src/screens/NotificationPreferencesScreen';
+import AccountSettingsScreen from './src/screens/AccountSettingsScreen';
+import LanguageScreen from './src/screens/LanguageScreen';
+import DonationHistoryScreen from './src/screens/DonationHistoryScreen';
+import ZakatCalculatorScreen from './src/screens/ZakatCalculatorScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import FaqScreen from './src/screens/FaqScreen';
 import ServicesBrowseScreen from './src/screens/ServicesBrowseScreen';
 import ProviderDetailScreen from './src/screens/ProviderDetailScreen';
 import ServiceDetailScreen from './src/screens/ServiceDetailScreen';
@@ -90,6 +104,20 @@ export default function App() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="PhoneAuth" component={PhoneAuthScreen} />
           <Stack.Screen name="Otp" component={OtpScreen} />
+          <Stack.Screen name="Projects" component={ProjectsScreen} />
+          <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
+          <Stack.Screen name="DonationSuccess" component={DonationSuccessScreen} />
+          <Stack.Screen name="NewsFeed" component={NewsFeedScreen} />
+          <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
+          <Stack.Screen name="Volunteer" component={VolunteerScreen} />
+          <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+          <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+          <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+          <Stack.Screen name="Language" component={LanguageScreen} />
+          <Stack.Screen name="DonationHistory" component={DonationHistoryScreen} />
+          <Stack.Screen name="ZakatCalculator" component={ZakatCalculatorScreen} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Faq" component={FaqScreen} />
           <Stack.Screen name="ServicesBrowse" component={ServicesBrowseScreen} />
           <Stack.Screen name="ProviderDetail" component={ProviderDetailScreen} />
           <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />
