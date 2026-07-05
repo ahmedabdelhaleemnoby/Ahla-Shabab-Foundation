@@ -1,0 +1,10 @@
+{
+  "//": "Type-check-only config. Kept separate from tsconfig.json because Expo's Metro reads tsconfig `paths`, and forcing `react` -> @types/react there would break the runtime bundle. This maps `react` types to the single React 19 copy so the duplicate @types/react (dashboard pulls in v18 at the workspace root) doesn't cause bigint/ReactNode mismatches.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@ahla/shared": ["../shared/src/index.ts"],
+      "react": ["./node_modules/@types/react"]
+    }
+  }
+}
