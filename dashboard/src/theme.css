@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Color variables (--navy700, --green, …) are injected at runtime from
+   @ahla/shared in main.tsx; Tailwind's palette references them. */
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+  /* Latin digits/currency stay LTR inside the RTL app. */
+  .num {
+    direction: ltr;
+    unicode-bidi: embed;
+    font-variant-numeric: tabular-nums;
+  }
+  /* thin scrollbars for inner scroll areas */
+  .scroll-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 8px;
+  }
+}
+
+@layer components {
+  .card {
+    /* min-w-0 lets wide tables scroll INSIDE the card instead of stretching
+       the whole page on narrow screens. */
+    @apply bg-card border border-line rounded-card shadow-card min-w-0 max-w-full;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 font-bold text-[13.5px] rounded-xl px-4 py-2.5 bg-navy-700 text-white transition-colors hover:bg-navy-600 disabled:opacity-50 cursor-pointer;
+  }
+  .btn-outline {
+    @apply bg-white text-navy-700 border-[1.5px] border-navy-700 hover:bg-paper-2;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-[12.5px] rounded-lg;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 text-[11.5px] font-bold px-2.5 py-1 rounded-full;
+  }
+  .chip {
+    @apply text-[13px] font-semibold px-4 py-1.5 rounded-full border border-line bg-white text-slate cursor-pointer transition-colors;
+  }
+  .chip-on {
+    @apply bg-navy-700 text-white border-navy-700;
+  }
+  .field {
+    @apply w-full border border-line rounded-lg px-3.5 py-2.5 text-[13.5px] text-ink text-right bg-white outline-none focus:border-navy-500;
+  }
+  .th {
+    @apply text-right text-[12px] font-bold text-slate bg-paper-2 px-4 py-3 whitespace-nowrap;
+  }
+  .td {
+    @apply text-right px-4 py-3 border-b border-line-2 whitespace-nowrap align-middle;
+  }
+}

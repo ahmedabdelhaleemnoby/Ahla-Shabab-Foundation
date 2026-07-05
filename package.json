@@ -1,0 +1,19 @@
+{
+  "name": "ahla-shabab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "جمعية خواطر أحلى شباب — Mobile app (Expo) + Admin dashboard (React), sharing one design system.",
+  "workspaces": [
+    "shared",
+    "mobile",
+    "dashboard"
+  ],
+  "scripts": {
+    "mobile": "npm run start --workspace mobile",
+    "dashboard": "npm run dev --workspace dashboard",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
