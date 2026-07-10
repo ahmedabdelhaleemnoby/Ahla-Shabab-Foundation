@@ -6,6 +6,7 @@ export interface HumanitarianCase {
   id: string;
   code: string; // e.g. "أسرة رقم 1427"
   title: string;
+  /** Governorate-level only — NEVER exact address (beneficiary privacy). */
   location: string;
   summary: string;
   need: string;
@@ -14,10 +15,21 @@ export interface HumanitarianCase {
   targetAmount: number;
   raisedAmount: number;
   supporters: number;
+  /** Approved image from the admin panel (privacy-vetted). Fallback = branded gradient. */
+  imageUrl?: string;
+  /** Eligible for monthly sponsorship (كفالة شهرية). */
+  sponsorable?: boolean;
+  /** Latest public update label, e.g. "تم توثيق الحالة منذ يومين". */
+  lastUpdate?: string;
   gradient: [string, string];
 }
 
 export type ProjectStatus = 'مستدام' | 'جارٍ' | 'مكتمل';
+
+export interface ProjectUpdate {
+  date: string; // ISO
+  text: string;
+}
 
 export interface Project {
   id: string;
@@ -28,6 +40,10 @@ export interface Project {
   raisedAmount: number;
   supporters: number;
   stages: { label: string; done: boolean }[];
+  /** Approved image from the admin panel. */
+  imageUrl?: string;
+  /** Public timeline updates shown on the project detail page. */
+  updates?: ProjectUpdate[];
   gradient: [string, string];
 }
 
@@ -41,6 +57,8 @@ export type ConsultationType =
 
 export interface Consultant {
   id: string;
+  /** Approved photo or professional avatar from the admin panel. */
+  imageUrl?: string;
   name: string;
   specialty: string;
   type: ConsultationType;
@@ -59,6 +77,26 @@ export type PaymentMethod =
   | 'فودافون كاش'
   | 'تحويل بنكي';
 
+export type PaymentAvailability = 'متاحة' | 'قيد التفعيل' | 'غير متاحة حالياً';
+
+export interface PaymentMethodInfo {
+  id: PaymentMethod;
+  /** Method family shown to the user. */
+  group: 'دفع إلكتروني' | 'تحويل بنكي' | 'محفظة إلكترونية';
+  description: string;
+  availability: PaymentAvailability;
+  /**
+   * true = manual method (bank transfer / InstaPay): the donation stays
+   * "قيد المراجعة" until an admin approves it. false = gateway method:
+   * stays "قيد التأكيد" until the SERVER confirms the payment callback.
+   * The app NEVER marks a donation successful on its own.
+   */
+  manual: boolean;
+}
+
+/** 'مكتمل' is set ONLY by backend confirmation or admin approval — never by the app UI. */
+export type DonationStatus = 'مكتمل' | 'قيد المعالجة' | 'قيد التأكيد' | 'قيد المراجعة' | 'فشل';
+
 export interface Donation {
   id: string;
   donorName: string;
@@ -67,7 +105,7 @@ export interface Donation {
   method: PaymentMethod;
   date: string; // ISO
   recurring: boolean;
-  status: 'مكتمل' | 'قيد المعالجة' | 'فشل';
+  status: DonationStatus;
 }
 
 export type AppointmentStatus = 'مؤكد' | 'قيد الانتظار' | 'مكتمل' | 'ملغي';
@@ -100,6 +138,8 @@ export type ArticleCategory = 'خبر' | 'نشاط' | 'مقال' | 'قافلة';
 
 export interface Article {
   id: string;
+  /** Approved cover image from the admin panel. */
+  imageUrl?: string;
   category: ArticleCategory;
   title: string;
   excerpt: string;

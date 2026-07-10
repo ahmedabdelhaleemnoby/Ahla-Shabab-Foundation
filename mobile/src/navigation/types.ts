@@ -28,7 +28,13 @@ export type RootStackParamList = {
     method: string;
     recurring: boolean;
     reference: string;
+    date: string;
+    /** Pending by default — 'مكتمل' only after backend/admin confirmation. */
+    status: 'قيد التأكيد' | 'قيد المراجعة' | 'مكتمل' | 'فشل';
   };
+  Receipts: undefined;
+  PrivacyPolicy: undefined;
+  Favorites: undefined;
   // Free Services Booking flow (Technical Offer §4)
   ServicesBrowse: { parentId: string | null } | undefined;
   ProviderDetail: { providerId: string };
@@ -40,12 +46,14 @@ export type RootStackParamList = {
     providerId: string;
     date: string;
     time: string;
+    /** Preferred communication channel chosen in the wizard. */
+    mode?: string;
   };
 };
 
 export type TabParamList = {
   Home: undefined;
-  Discover: undefined;
+  Discover: { initialFilter?: string } | undefined;
   Donate: { caseId?: string; projectId?: string } | undefined;
   News: undefined;
   Profile: undefined;

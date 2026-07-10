@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { projects, pct, egp } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Pill } from '../components/ui';
+import { RemoteImage } from '../components/RemoteImage';
 import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, row, rowBetween } from '../theme';
@@ -27,12 +28,12 @@ export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'
       header={<AppBar onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
-          <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 104 }} />
-          <Button label="ادعم المشروع" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+          <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 104 }} onPress={() => Share.share({ message: `ادعم مشروع «${project.title}» مع جمعية خواطر أحلى شباب — اكتمل ${p}% من الهدف` }).catch(() => {})} />
+          <Button label="دعم المشروع الآن" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
         </StickyFooter>
       }
     >
-      <LinearGradient colors={project.gradient} style={{ height: 150, borderRadius: 16 }} />
+      <RemoteImage uri={project.imageUrl} gradient={project.gradient} icon="droplet" style={{ height: 150, borderRadius: 16 }} />
 
       <View style={{ alignItems: 'flex-end', marginTop: 14 }}>
         <Pill label={`مشروع ${project.status}`} tone="navy" />
@@ -108,6 +109,31 @@ export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'
             </React.Fragment>
           ))}
       </View>
+
+      {/* Updates timeline (UX v2) */}
+      {project.updates && project.updates.length > 0 && (
+        <>
+          <View style={[row, { gap: 7, marginTop: 16, marginBottom: 10, marginHorizontal: 2 }]}>
+            <Icon name="file-text" size={16} color={colors.navy700} />
+            <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>تحديثات المشروع</Text>
+          </View>
+          <Card>
+            {project.updates.map((u, i) => (
+              <View key={u.date} style={{ flexDirection: 'row-reverse', gap: 10 }}>
+                <View style={{ alignItems: 'center' }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: i === 0 ? colors.green : colors.navy300, marginTop: 3 }} />
+                  {i < project.updates!.length - 1 && <View style={{ flex: 1, width: 2, backgroundColor: colors.line }} />}
+                </View>
+                <View style={{ flex: 1, alignItems: 'flex-end', paddingBottom: i < project.updates!.length - 1 ? 14 : 0 }}>
+                  <Text style={[font('600'), num, { fontSize: 10, color: colors.muted }]}>{u.date}</Text>
+                  <Text style={[font('700'), { fontSize: 12.5, color: colors.navy700, textAlign: 'right', marginTop: 2, lineHeight: 18 }]}>{u.text}</Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
+
       <View style={{ height: 12 }} />
     </Screen>
   );

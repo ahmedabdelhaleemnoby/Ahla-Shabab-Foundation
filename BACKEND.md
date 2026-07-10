@@ -347,3 +347,35 @@ Seed the DB directly from the existing mocks in `@ahla/shared` so the apps look 
 - **Payment gateways**: which of Fawry / InstaPay / Vodafone Cash / card go live vs sandbox first.
 - **Hosting/DB**: managed Postgres? where is media stored long-term (local vs S3)?
 - **Auth for donors**: required accounts or fully guest-first?
+
+---
+
+## 16. Security acceptance criteria (production sign-off — added by QA pass v2)
+
+These MUST be implemented and tested server-side before launch. The mobile app already enforces the client half (statuses `قيد التأكيد`/`قيد المراجعة` only — see `shared/src/rules.ts` + unit tests in `shared/src/__tests__/rules.test.ts`).
+
+**Donations**
+1. `POST /donations` accepts NO `status` field from clients — the server sets it (`قيد التأكيد` gateway / `قيد المراجعة` manual). Reject any payload containing `status`.
+2. Only two paths may set `مكتمل`: (a) the payment-gateway webhook after signature verification; (b) `PATCH /admin/donations/:id/status` by an admin holding the `donations` permission.
+3. Webhooks are **idempotent**: store the gateway transaction id with a unique constraint; replays return 200 without state change; out-of-order events cannot regress a final state.
+4. Amount + destination are re-validated server-side against the gateway's charged amount — mismatch → flag `قيد المراجعة`, never auto-complete.
+5. Receipts: `GET /me/donations/:ref` returns only the requester's own receipts (401/403 otherwise); receipts contain no beneficiary personal data.
+6. Rate-limit donation creation per phone/IP.
+
+**Bookings**
+7. `POST /bookings` re-validates the slot server-side (transactional unique `(provider, date, slot)`); a client submitting a booked/blocked slot gets 409 — frontend state is never trusted.
+8. Duplicate booking (same phone + service + date) → 409.
+9. Confirmation status returned by the server; app shows «قيد تأكيد الإدارة» until an admin confirms.
+10. All times stored UTC, rendered Africa/Cairo.
+
+**Authorization (403 matrix)**
+11. Every admin endpoint checks role permissions; write an integration test per module (donations/content/cases/bookings/reports/roles) asserting each unauthorized role gets **403** for: approve/reject donation, edit case, edit project, edit impact numbers, read reports, read audit log.
+
+**Audit log**
+12. Every mutation writes: actor id, action, entity type, entity id, **previous value, new value**, timestamp, request IP + user-agent. Required for: donation approve/reject, case create/update, project create/update, booking status change, impact-number change, role/permission change. Audit entries are append-only.
+
+**Notifications**
+13. User push on donation approval/failure and booking confirmation; admin WhatsApp/notification on new manual transfer + new booking (integration credentials are the association's responsibility).
+
+**Media (§9 of the UX spec)**
+14. Admin uploads are the only image source (cases/projects/consultants/news/events). Server strips EXIF, resizes to max 1280px, re-encodes ~80% JPEG, and serves via CDN paths stored in `imageUrl`. The app renders them through `RemoteImage` (loading + broken-image + privacy-safe fallback already implemented).

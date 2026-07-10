@@ -67,8 +67,8 @@ export default function ConsultationsScreen() {
           </View>
         </View>
         <View style={[row, { gap: 8, marginTop: 10 }]}>
-          <Button label="تعرف على الخدمة" variant="outline" small style={{ flex: 1 }} />
-          <Button label="احجز الآن" small style={{ flex: 1 }} onPress={() => nav.navigate('Booking', { consultantId: featured.id })} />
+          <Button label="تعرف على الخدمة" variant="outline" small style={{ flex: 1 }} onPress={() => nav.navigate('ServiceDetail', { serviceId: 'sv-psych' })} />
+          <Button label="احجز الآن" small style={{ flex: 1 }} onPress={() => nav.navigate('BookAppointment', { serviceId: 'sv-psych' })} />
         </View>
       </Card>
 
@@ -84,7 +84,7 @@ export default function ConsultationsScreen() {
       </Card>
 
       {/* Book CTA */}
-      <Button label="احجز موعد استشارة" icon="calendar" style={{ marginTop: 16 }} onPress={() => nav.navigate('Booking', {})} />
+      <Button label="احجز موعد استشارة" icon="calendar" style={{ marginTop: 16 }} onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })} />
       <View style={{ height: 12 }} />
     </Screen>
   );

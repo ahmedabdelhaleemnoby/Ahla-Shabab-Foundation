@@ -88,6 +88,19 @@ export default function Reports() {
           أعلى فئة طلباً <b className="text-navy-700">{byCategory[0]?.label}</b> بعدد <b className="text-navy-700 num">{byCategory[0]?.value}</b> حجز.
         </div>
       </Card>
+
+      {/* Notification performance (stub — TODO(backend): real delivery metrics) */}
+      <Card>
+        <SectionHead title="أداء الإشعارات" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+          {[['3,420', 'إشعار مُرسل'], ['78%', 'نسبة الفتح'], ['1,120', 'نقرة إلى التطبيق'], ['2.1%', 'إلغاء الاشتراك']].map(([v, l]) => (
+            <div key={l} className="rounded-2xl border border-line bg-paper-2/50 py-4">
+              <div className="num text-[22px] font-extrabold text-navy-700">{v}</div>
+              <div className="text-[12.5px] text-slate mt-1">{l}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

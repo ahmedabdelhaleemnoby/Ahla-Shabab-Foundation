@@ -212,6 +212,29 @@ export function Segmented({
   );
 }
 
+/* ---------------- Empty state ---------------- */
+export function EmptyState({
+  icon = 'inbox',
+  title,
+  hint,
+}: {
+  icon?: IconName;
+  title: string;
+  hint?: string;
+}) {
+  return (
+    <View style={{ alignItems: 'center', paddingVertical: 44 }}>
+      <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={28} color={colors.muted} />
+      </View>
+      <Text style={[font('700'), { fontSize: 14, color: colors.slate, marginTop: 12 }]}>{title}</Text>
+      {hint ? (
+        <Text style={[font('400'), { fontSize: 11.5, color: colors.muted, marginTop: 4, textAlign: 'center' }]}>{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
 /* ---------------- Filter chip ---------------- */
 export function Chip({
   label,
@@ -237,14 +260,14 @@ export function Chip({
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.s4 },
   btn: {
-    borderRadius: radius.md,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
+    borderRadius: radius.btn,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     justifyContent: 'center',
     gap: 7,
   },
   btnOutline: { borderWidth: 1.5, borderColor: colors.navy700 },
-  btnSmall: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 11 },
+  btnSmall: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.sm },
   pill: {
     paddingVertical: 4,
     paddingHorizontal: 10,

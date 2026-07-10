@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   CalendarCheck,
+  Wallet,
   ListTree,
   Stethoscope,
   FolderKanban,
@@ -28,6 +29,7 @@ interface NavItem {
 export const NAV: NavItem[] = [
   { to: '/', label: 'لوحة المعلومات', icon: LayoutDashboard, title: 'لوحة المعلومات', sub: 'ملخص أداء المنصة والحجوزات' },
   { to: '/bookings', label: 'الحجوزات', icon: CalendarCheck, title: 'إدارة الحجوزات', sub: 'متابعة وتأكيد وإعادة جدولة المواعيد' },
+  { to: '/donations', label: 'التبرعات والإيصالات', icon: Wallet, title: 'التبرعات والإيصالات', sub: 'اعتماد التحويلات اليدوية ومتابعة تأكيدات الدفع' },
   { to: '/services', label: 'الخدمات والفئات', icon: ListTree, title: 'الخدمات والفئات', sub: 'فئات متعددة المستويات وخدمات قابلة للحجز' },
   { to: '/providers', label: 'مقدمو الخدمة', icon: Stethoscope, title: 'مقدمو الخدمة', sub: 'الأطباء والمستشارون وجداول المواعيد' },
   { to: '/content', label: 'إدارة المحتوى', icon: FolderKanban, title: 'إدارة المحتوى', sub: 'المشروعات والحالات والقوافل والمقالات' },
@@ -41,7 +43,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex items-center gap-3 px-2 pt-1.5 pb-5">
-        <div className="w-10 h-10 rounded-xl grid place-items-center font-extrabold text-lg bg-gradient-to-br from-[#3E62A0] to-[#1B3A6B]">خ</div>
+        <img src="/logo.png" alt="جمعية خواطر أحلى شباب" className="w-10 h-10 rounded-xl bg-white p-1 object-contain" />
         <div>
           <b className="text-[15px] font-extrabold block leading-tight">خواطر أحلى شباب</b>
           <span className="text-[11px] text-navy-300 font-semibold">لوحة التحكم</span>

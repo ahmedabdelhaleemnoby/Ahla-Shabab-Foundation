@@ -35,8 +35,8 @@ export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
       header={<AppBar onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
-          <Button label="أضف للمفضلة" variant="outline" icon="heart" style={{ width: 130 }} />
-          <Button label="اكفل الحالة شهرياً" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+          <Button label="تبرع مرة واحدة" variant="outline" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+          <Button label="كفالة شهرية" variant="green" icon="users" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
         </StickyFooter>
       }
     >
@@ -99,8 +99,8 @@ export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
         <SectionTitle label="آخر التحديثات" icon="file-text" />
         <View style={[row, { gap: 10, marginTop: 10, justifyContent: 'flex-end', alignItems: 'flex-start' }]}>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Text style={[font('700'), { fontSize: 12, color: colors.navy700 }]}>تم توثيق الحالة</Text>
-            <Text style={[font('400'), { fontSize: 10, color: colors.muted, marginTop: 2 }]}>منذ يومين</Text>
+            <Text style={[font('700'), { fontSize: 12, color: colors.navy700 }]}>{item.lastUpdate ?? 'تم توثيق الحالة'}</Text>
+            <Text style={[font('400'), { fontSize: 10, color: colors.muted, marginTop: 2 }]}>أحدث تحديث</Text>
           </View>
           <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="check" size={13} color="#fff" />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { articles } from '@ahla/shared';
@@ -23,7 +23,7 @@ export default function ArticleDetailScreen({ route }: RootProps<'ArticleDetail'
       header={<AppBar title="التفاصيل" onBack={() => nav.goBack()} onBell={undefined} />}
       footer={
         <StickyFooter>
-          <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 120 }} />
+          <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 120 }} onPress={() => Share.share({ message: `${article.title} — جمعية خواطر أحلى شباب` }).catch(() => {})} />
           <Button label="تبرع الآن" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
         </StickyFooter>
       }

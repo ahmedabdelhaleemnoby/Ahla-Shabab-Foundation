@@ -23,7 +23,7 @@ function Line({ icon, label, value }: { icon: IconName; label: string; value: st
 
 export default function BookingConfirmationScreen({ route }: RootProps<'BookingConfirmation'>) {
   const nav = useNavigation<any>();
-  const { reference, serviceId, providerId, date, time } = route.params;
+  const { reference, serviceId, providerId, date, time, mode } = route.params;
   const service = serviceById(serviceId);
   const provider = providerById(providerId);
 
@@ -48,9 +48,10 @@ export default function BookingConfirmationScreen({ route }: RootProps<'BookingC
             <Icon name="check" size={30} color="#fff" />
           </View>
         </View>
-        <Text style={[font('800'), { fontSize: 20, color: colors.navy700, marginTop: 16 }]}>تم تأكيد حجزك</Text>
-        <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center' }]}>
-          سنتواصل معك لتأكيد الموعد. احتفظ برقم الحجز للمراجعة.
+        <Text style={[font('800'), { fontSize: 20, color: colors.navy700, marginTop: 16 }]}>تم استلام طلب الحجز</Text>
+        <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
+          سيتواصل معك فريق الإدارة لتثبيت الموعد{mode ? ` عبر ${mode}` : ''}.{'\n'}
+          وصلك إشعار بالطلب، وتم إخطار فريق الإدارة. احتفظ برقم الحجز للمراجعة.
         </Text>
       </View>
 
@@ -73,6 +74,14 @@ export default function BookingConfirmationScreen({ route }: RootProps<'BookingC
         <Line icon="calendar" label="التاريخ" value={date} />
         <View style={{ height: 1, backgroundColor: colors.line2 }} />
         <Line icon="clock" label="الوقت" value={time} />
+        {mode ? (
+          <>
+            <View style={{ height: 1, backgroundColor: colors.line2 }} />
+            <Line icon="message-square" label="وسيلة التواصل" value={mode} />
+          </>
+        ) : null}
+        <View style={{ height: 1, backgroundColor: colors.line2 }} />
+        <Line icon="clock" label="حالة الحجز" value="قيد تأكيد الإدارة" />
       </Card>
     </Screen>
   );

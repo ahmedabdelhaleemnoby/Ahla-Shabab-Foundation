@@ -7,9 +7,7 @@ import { Card, Button } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { Icon } from '../components/Icon';
 import { colors, font, radius, row } from '../theme';
-
-/** Egyptian mobile: 11 digits starting 010/011/012/015. */
-const isValidEgPhone = (v: string) => /^01[0125][0-9]{8}$/.test(v);
+import { isEgPhone as isValidEgPhone } from '@ahla/shared';
 
 export default function PhoneAuthScreen() {
   const nav = useNavigation<any>();

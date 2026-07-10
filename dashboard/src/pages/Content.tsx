@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { portfolioItems as seed, governorates, type PortfolioItem, type PortfolioType } from '@ahla/shared';
-import { Card, Badge, Toggle, Modal, TableWrap, MobileRow } from '../components/ui';
+import { portfolioItems as seed, governorates, foundationStats, type PortfolioItem, type PortfolioType } from '@ahla/shared';
+import { Card, Badge, Toggle, Modal, TableWrap, MobileRow, SectionHead } from '../components/ui';
 
 const TYPES: (PortfolioType | 'الكل')[] = ['الكل', 'مشروع', 'حالة', 'قافلة', 'برنامج', 'رحلة', 'مقال'];
 const typeTone = (t: PortfolioType) =>
@@ -14,6 +14,8 @@ export default function Content() {
   const [type, setType] = useState<(typeof TYPES)[number]>('الكل');
   const [editing, setEditing] = useState<PortfolioItem | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [impact, setImpact] = useState<Record<string, string | number>>({ ...foundationStats });
+  const [impactSaved, setImpactSaved] = useState(true);
 
   const filtered = useMemo(() => (type === 'الكل' ? rows : rows.filter((r) => r.type === type)), [rows, type]);
 
@@ -31,6 +33,21 @@ export default function Content() {
 
   return (
     <div className="flex flex-col gap-5">
+
+      {/* Impact numbers editor — feeds the mobile home/about stats.
+          TODO(backend): PUT /admin/config/impact. */}
+      <Card>
+        <SectionHead title="أرقام الأثر (الصفحة الرئيسية للتطبيق)" action={impactSaved ? <Badge tone="green">تم الحفظ</Badge> : <button className="btn btn-sm" onClick={() => setImpactSaved(true)}>حفظ</button>} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {([['governorates', 'عدد المحافظات'], ['beneficiaries', 'عدد المستفيدين'], ['yearsOfService', 'سنوات العطاء']] as const).map(([k, label]) => (
+            <div key={k}>
+              <label className="text-[13px] font-bold text-navy-700 block mb-2 text-right">{label}</label>
+              <input className="field num" value={String(impact[k])} onChange={(e) => { setImpact({ ...impact, [k]: e.target.value }); setImpactSaved(false); }} />
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {TYPES.map((t) => (

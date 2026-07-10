@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { governorates } from '@ahla/shared';
+import { governorates, isEgPhone } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -67,7 +67,7 @@ export default function VolunteerScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState(false);
 
-  const valid = name.trim() && /^01[0125][0-9]{8}$/.test(phone) && gov && interests.length > 0;
+  const valid = name.trim() && isEgPhone(phone) && gov && interests.length > 0;
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string, multi = true) =>
     set(multi ? (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]) : [v]);

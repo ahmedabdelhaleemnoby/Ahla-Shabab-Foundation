@@ -5,9 +5,10 @@ import { useNavigation } from '@react-navigation/native';
 import { donorProfile, donations, egp } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
-import { Card, Stat, SectionHeader } from '../components/ui';
+import { Card, Stat, SectionHeader, Button } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, row, rowBetween } from '../theme';
+import { appState, useAppState } from '../store/appState';
 
 const myDonations = donations.filter((d) => d.donorName === donorProfile.name);
 
@@ -18,21 +19,66 @@ const favorites: { id: string; title: string; amount: number; gradient: [string,
   { id: 'f4', title: 'مساعدات طبية', amount: 18000, gradient: ['#c3a888', '#8f7350'] },
 ];
 
-const SETTINGS: { label: string; danger?: boolean; value?: string; route?: string }[] = [
+type Row = { label: string; danger?: boolean; value?: string; route?: string; action?: 'logout' };
+
+/** حسابي rows — order per UX spec. */
+const SETTINGS: Row[] = [
+  { label: 'بياناتي', route: 'AccountSettings' },
+  { label: 'تبرعاتي', route: 'DonationHistory' },
+  { label: 'إيصالاتي', route: 'Receipts' },
   { label: 'حجوزاتي', route: 'MyBookings' },
-  { label: 'سجل التبرعات', route: 'DonationHistory' },
-  { label: 'تسجيل الدخول / تأكيد الهاتف', route: 'PhoneAuth' },
-  { label: 'تفضيلات الإشعارات', route: 'NotificationPreferences' },
+  { label: 'المفضلة', route: 'Favorites' },
+  { label: 'الإشعارات', route: 'NotificationPreferences' },
   { label: 'اللغة', value: 'العربية ‹', route: 'Language' },
-  { label: 'إعدادات الحساب', route: 'AccountSettings' },
+  { label: 'تواصل معنا', route: 'ContactUs' },
+  { label: 'سياسة الخصوصية', route: 'PrivacyPolicy' },
+  { label: 'تسجيل الخروج', danger: true, action: 'logout' },
+];
+
+const TOOLS: Row[] = [
   { label: 'حاسبة الزكاة', route: 'ZakatCalculator' },
   { label: 'الأسئلة الشائعة', route: 'Faq' },
   { label: 'جولة تعريفية', route: 'Onboarding' },
-  { label: 'تسجيل الخروج', danger: true },
 ];
 
 export default function ProfileScreen() {
   const nav = useNavigation<any>();
+  const { loggedIn, phone } = useAppState();
+
+  if (!loggedIn) {
+    // Guest state (UX v2): clear message + login CTA, tools still reachable.
+    return (
+      <Screen header={<AppBar title="حسابي" />}>
+        <Card style={{ alignItems: 'center', paddingVertical: 28, marginTop: 8 }}>
+          <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="user" size={32} color={colors.navy500} />
+          </View>
+          <Text style={[font('800'), { fontSize: 16, color: colors.navy700, marginTop: 14, textAlign: 'center' }]}>
+            سجل دخولك لمتابعة تبرعاتك وحجوزاتك
+          </Text>
+          <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 18 }]}>
+            بحساب واحد تتابع إيصالاتك ومواعيدك وتصلك الإشعارات المهمة.
+          </Text>
+          <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 16, alignSelf: 'stretch' }} onPress={() => nav.navigate('PhoneAuth')} />
+        </Card>
+
+        <SectionHeader title="أدوات" />
+        <Card style={{ padding: 0 }}>
+          {TOOLS.map((s, i) => (
+            <View key={s.label}>
+              <Pressable style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]} onPress={() => s.route && nav.navigate(s.route)}>
+                <Icon name="chevron-left" size={16} color={colors.muted} />
+                <Text style={[font('700'), { color: colors.navy700 }]}>{s.label}</Text>
+              </Pressable>
+              {i < TOOLS.length - 1 && <View style={{ height: 1, backgroundColor: colors.line2, marginHorizontal: 12 }} />}
+            </View>
+          ))}
+        </Card>
+        <View style={{ height: 12 }} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen header={<AppBar title="حسابي" />}>
       {/* Profile card */}
@@ -77,7 +123,7 @@ export default function ProfileScreen() {
       </Card>
 
       {/* Favorites carousel */}
-      <SectionHeader title="مشاريعي المفضلة" more="عرض الكل" />
+      <SectionHeader title="مشاريعي المفضلة" more="عرض الكل" onMore={() => nav.navigate('Favorites')} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -107,7 +153,7 @@ export default function ProfileScreen() {
           <View key={s.label}>
             <Pressable
               style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]}
-              onPress={() => s.route && nav.navigate(s.route)}
+              onPress={() => (s.action === 'logout' ? appState.logout() : s.route && nav.navigate(s.route))}
             >
               {s.value ? (
                 <Text style={[font('400'), { color: colors.muted, fontSize: 11 }]}>{s.value}</Text>
@@ -117,6 +163,19 @@ export default function ProfileScreen() {
               <Text style={[font('700'), { color: s.danger ? colors.red : colors.navy700 }]}>{s.label}</Text>
             </Pressable>
             {i < SETTINGS.length - 1 && <View style={{ height: 1, backgroundColor: colors.line2, marginHorizontal: 12 }} />}
+          </View>
+        ))}
+      </Card>
+      {/* Tools */}
+      <SectionHeader title="أدوات" />
+      <Card style={{ padding: 0 }}>
+        {TOOLS.map((s, i) => (
+          <View key={s.label}>
+            <Pressable style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]} onPress={() => s.route && nav.navigate(s.route)}>
+              <Icon name="chevron-left" size={16} color={colors.muted} />
+              <Text style={[font('700'), { color: colors.navy700 }]}>{s.label}</Text>
+            </Pressable>
+            {i < TOOLS.length - 1 && <View style={{ height: 1, backgroundColor: colors.line2, marginHorizontal: 12 }} />}
           </View>
         ))}
       </Card>

@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { donations, egp } from '@ahla/shared';
+import { useAppState } from '../store/appState';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill, Chip } from '../components/ui';
@@ -18,16 +19,36 @@ const FILTERS = ['الكل', 'مكتمل', 'قيد المعالجة', 'شهري'
 export default function DonationHistoryScreen() {
   const nav = useNavigation<any>();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
+  const { receipts } = useAppState();
+
+  // Session donations (pending until backend/admin confirms) shown on top.
+  const combined = useMemo(
+    () => [
+      ...receipts.map((r, i) => ({
+        id: `rc-${i}`,
+        donorName: '',
+        cause: r.cause,
+        amount: parseInt(r.amount.replace(/\D/g, ''), 10) || 0,
+        method: r.method,
+        date: r.date,
+        recurring: r.recurring,
+        status: r.status as (typeof mine)[number]['status'],
+      })),
+      ...mine,
+    ],
+    [receipts]
+  );
 
   const list = useMemo(
     () =>
-      mine.filter((d) =>
+      combined.filter((d) =>
         filter === 'الكل' ? true : filter === 'شهري' ? d.recurring : d.status === filter
       ),
-    [filter]
+    [combined, filter]
   );
 
-  const total = mine.filter((d) => d.status === 'مكتمل').reduce((s, d) => s + d.amount, 0);
+  // Only backend/admin-confirmed donations count toward the total.
+  const total = combined.filter((d) => d.status === 'مكتمل').reduce((s, d) => s + d.amount, 0);
 
   return (
     <Screen header={<AppBar title="سجل التبرعات" onBack={() => nav.goBack()} onBell={undefined} />}>
@@ -43,8 +64,8 @@ export default function DonationHistoryScreen() {
           </View>
         </View>
         <View style={[row, { gap: 20, marginTop: 14 }]}>
-          <SummaryStat value={String(mine.length)} label="عملية" />
-          <SummaryStat value={String(mine.filter((d) => d.recurring).length)} label="كفالة شهرية" />
+          <SummaryStat value={String(combined.length)} label="عملية" />
+          <SummaryStat value={String(combined.filter((d) => d.recurring).length)} label="كفالة شهرية" />
         </View>
       </LinearGradient>
 

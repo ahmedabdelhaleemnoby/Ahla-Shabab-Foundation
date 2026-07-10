@@ -5,19 +5,19 @@
  */
 
 export const colors = {
-  // Brand — Navy ramp
-  navy900: '#14284A', // hero gradient end, deepest
-  navy800: '#182F58', // gradient start
-  navy700: '#1B3A6B', // PRIMARY — buttons, logo, headings
-  navy600: '#22467E', // pressed / hover
-  navy500: '#2B5490', // icons, secondary
-  navy300: '#5E7BAA', // accents on dark
+  // Brand ramp — derived from ahlashabab.com (--main-color #18489f, --second-color #e9af31)
+  navy900: '#0D2B66', // hero gradient end, deepest
+  navy800: '#123877', // gradient start
+  navy700: '#18489F', // PRIMARY — buttons, logo, headings
+  navy600: '#2153B3', // pressed / hover
+  navy500: '#2E66C9', // icons, secondary
+  navy300: '#7396D6', // accents on dark
 
   // Semantic
   green: '#2E9E52', // progress, verified, on-track
   greenSoft: '#E4F4E9',
   greenDark: '#227D40',
-  gold: '#F5A623', // ratings, stars, mid progress
+  gold: '#E9AF31', // ratings, stars, mid progress
   goldSoft: '#FDF1DC',
   red: '#E0342F', // عاجل, logout, low coverage
   redSoft: '#FBE6E5',
@@ -54,9 +54,10 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 10, // inputs, small chips
-  md: 14, // buttons
-  lg: 20, // cards, sheets
+  sm: 12, // inputs, small chips
+  md: 14, // compact buttons
+  lg: 16, // cards, sheets
+  btn: 24, // large primary buttons
   pill: 100, // pills, chips, FAB
 } as const;
 

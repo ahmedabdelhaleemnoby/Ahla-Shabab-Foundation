@@ -9,3 +9,12 @@ web-build/
 dashboard/dist/
 mobile/.expo/
 ahla-shabab-v1.0.0.apk
+
+# Build/deliverable binaries (kept on disk, not in git)
+*.apk
+*.zip
+# QA proof artifacts (screenshots, videos, patches) — regenerable
+qa/
+# macOS exFAT AppleDouble sidecars
+._*
+**/._*

@@ -8,7 +8,20 @@ import type {
   FoundationStats,
   AppNotification,
   Article,
+  PaymentMethodInfo,
 } from './types';
+
+/**
+ * Payment methods with live availability + confirmation mode (Offer/UX v2).
+ * TODO(backend): serve from GET /config so the admin can toggle availability.
+ */
+export const paymentMethods: PaymentMethodInfo[] = [
+  { id: 'بطاقة بنكية', group: 'دفع إلكتروني', description: 'فيزا / ماستركارد — تأكيد فوري من بوابة الدفع', availability: 'متاحة', manual: false },
+  { id: 'فوري', group: 'دفع إلكتروني', description: 'ادفع بكود فوري من أقرب منفذ', availability: 'متاحة', manual: false },
+  { id: 'إنستاباي', group: 'تحويل بنكي', description: 'حوِّل عبر إنستاباي — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
+  { id: 'فودافون كاش', group: 'محفظة إلكترونية', description: 'الدفع عبر المحفظة الإلكترونية', availability: 'قيد التفعيل', manual: false },
+  { id: 'تحويل بنكي', group: 'تحويل بنكي', description: 'تحويل على حساب الجمعية — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
+];
 
 export const foundationStats: FoundationStats = {
   governorates: 22,
@@ -30,6 +43,8 @@ export const cases: HumanitarianCase[] = [
     targetAmount: 18000,
     raisedAmount: 10800,
     supporters: 214,
+    sponsorable: true,
+    lastUpdate: 'تم توثيق الحالة وتحديث بياناتها منذ يومين',
     gradient: ['#b98a5e', '#7d5a3c'],
   },
   {
@@ -44,6 +59,8 @@ export const cases: HumanitarianCase[] = [
     targetAmount: 12000,
     raisedAmount: 4800,
     supporters: 96,
+    sponsorable: true,
+    lastUpdate: 'تم صرف الدعم الدراسي للفصل الأول منذ أسبوع',
     gradient: ['#93a7c4', '#617699'],
   },
   {
@@ -58,6 +75,8 @@ export const cases: HumanitarianCase[] = [
     targetAmount: 40000,
     raisedAmount: 20000,
     supporters: 331,
+    sponsorable: false,
+    lastUpdate: 'أُجريت جلسة العلاج الثالثة منذ 3 أيام',
     gradient: ['#a08768', '#6d543a'],
   },
   {
@@ -72,6 +91,8 @@ export const cases: HumanitarianCase[] = [
     targetAmount: 60000,
     raisedAmount: 15000,
     supporters: 120,
+    sponsorable: true,
+    lastUpdate: 'جارٍ استكمال توثيق الحالة',
     gradient: ['#8aa0bf', '#586f92'],
   },
 ];
@@ -86,6 +107,11 @@ export const projects: Project[] = [
     targetAmount: 400000,
     raisedAmount: 245000,
     supporters: 1248,
+    updates: [
+      { date: '2025-05-08', text: 'دخول المحطة مرحلة التركيب والتشغيل التجريبي.' },
+      { date: '2025-04-20', text: 'وصول معدات التحلية واكتمال أعمال التجهيز.' },
+      { date: '2025-03-30', text: 'اكتمال دراسة الاحتياج واختيار الموقع.' },
+    ],
     stages: [
       { label: 'الدراسة', done: true },
       { label: 'التجهيز', done: true },
@@ -102,6 +128,10 @@ export const projects: Project[] = [
     targetAmount: 200000,
     raisedAmount: 132000,
     supporters: 640,
+    updates: [
+      { date: '2025-05-12', text: 'توزيع 1,200 وجبة ساخنة هذا الأسبوع.' },
+      { date: '2025-04-28', text: 'تجهيز المطبخ المركزي الثاني.' },
+    ],
     stages: [
       { label: 'التخطيط', done: true },
       { label: 'التجهيز', done: true },
@@ -117,6 +147,9 @@ export const projects: Project[] = [
     targetAmount: 150000,
     raisedAmount: 90000,
     supporters: 512,
+    updates: [
+      { date: '2025-05-01', text: 'اعتماد كشوف الطلاب المستحقين للفصل الجديد.' },
+    ],
     stages: [
       { label: 'الحصر', done: true },
       { label: 'الكفالة', done: false },
@@ -196,6 +229,8 @@ export const donations: Donation[] = [
   { id: 'd-8', donorName: 'هبة علي', cause: 'كفالة الطالبة نور', amount: 600, method: 'بطاقة بنكية', date: '2025-05-09', recurring: true, status: 'مكتمل' },
   { id: 'd-9', donorName: 'كريم ماهر', cause: 'ترميم مسكن أسرة', amount: 400, method: 'فوري', date: '2025-05-08', recurring: false, status: 'فشل' },
   { id: 'd-10', donorName: 'نورهان أشرف', cause: 'الحالات الإنسانية', amount: 300, method: 'فودافون كاش', date: '2025-05-07', recurring: false, status: 'مكتمل' },
+  { id: 'd-11', donorName: 'شريف عادل', cause: 'محطة تحلية مياه', amount: 2500, method: 'تحويل بنكي', date: '2025-05-15', recurring: false, status: 'قيد المراجعة' },
+  { id: 'd-12', donorName: 'آية مصطفى', cause: 'كفالة أسرة محتاجة', amount: 900, method: 'إنستاباي', date: '2025-05-15', recurring: true, status: 'قيد المراجعة' },
 ];
 
 export const appointments: Appointment[] = [

@@ -63,7 +63,7 @@ export default function ProjectsScreen() {
             </View>
             <View style={[rowBetween, { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.line2, paddingTop: 10 }]}>
               <Text style={[font('600'), num, { fontSize: 10.5, color: colors.muted }]}>
-                {p.supporters.toLocaleString('en-US')} داعم · {doneStages}/{p.stages.length} مراحل
+                {p.supporters.toLocaleString('en-US')} داعم · {doneStages}/{p.stages.length} مراحل · {p.updates?.length ?? 0} تحديثات
               </Text>
               <Button label="ادعم المشروع" variant="green" small onPress={() => nav.navigate('ProjectDetail', { id: p.id })} />
             </View>

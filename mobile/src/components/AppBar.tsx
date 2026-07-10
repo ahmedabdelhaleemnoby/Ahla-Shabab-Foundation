@@ -1,20 +1,18 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, cardShadow, font } from '../theme';
 import { Icon } from './Icon';
 
-/** Brand logo lockup — sits top-right in the RTL app bar. */
+/** Official association logo — sits top-right in the RTL app bar. */
 export function Logo({ small }: { small?: boolean }) {
   return (
-    <View style={{ alignItems: 'flex-end' }}>
-      <Text style={[font('800'), { fontSize: small ? 20 : 24, color: colors.navy700 }]}>خَواطِر</Text>
-      {!small && (
-        <Text style={[font('700'), { fontSize: 8.5, color: colors.navy500, marginTop: 2 }]}>
-          جمعية أحلى شباب
-        </Text>
-      )}
-    </View>
+    <Image
+      source={require('../../assets/logo.png')}
+      style={{ width: small ? 42 : 54, height: small ? 42 : 54 }}
+      resizeMode="contain"
+      accessibilityLabel="جمعية خواطر أحلى شباب"
+    />
   );
 }
 

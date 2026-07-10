@@ -1,8 +1,13 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
+import { enableScreens } from 'react-native-screens';
+
+// react-native-screens renders stacked routes incorrectly on web — use the JS fallback there.
+if (Platform.OS === 'web') enableScreens(false);
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -44,13 +49,23 @@ import DonationHistoryScreen from './src/screens/DonationHistoryScreen';
 import ZakatCalculatorScreen from './src/screens/ZakatCalculatorScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import FaqScreen from './src/screens/FaqScreen';
+import ReceiptsScreen from './src/screens/ReceiptsScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import FavoritesScreen from './src/screens/FavoritesScreen';
 import ServicesBrowseScreen from './src/screens/ServicesBrowseScreen';
 import ProviderDetailScreen from './src/screens/ProviderDetailScreen';
 import ServiceDetailScreen from './src/screens/ServiceDetailScreen';
 import BookAppointmentScreen from './src/screens/BookAppointmentScreen';
 import BookingConfirmationScreen from './src/screens/BookingConfirmationScreen';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+// Native stack renders stacked routes incorrectly on react-native-web — use the JS stack there.
+// (Runtime-only switch; cast keeps a single callable type for TS.)
+const createAppStack = (Platform.OS === 'web' ? createStackNavigator : createNativeStackNavigator) as typeof createNativeStackNavigator;
+const Stack = createAppStack<RootStackParamList>();
+
+// Test/dev-only navigation hook (no-op in release builds where __DEV__ is false).
+export const navRef = createNavigationContainerRef<RootStackParamList>();
+if (__DEV__) (globalThis as unknown as { __nav?: typeof navRef }).__nav = navRef;
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const navTheme = {
@@ -94,7 +109,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer ref={navRef} theme={navTheme}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={Tabs} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
@@ -118,6 +133,9 @@ export default function App() {
           <Stack.Screen name="ZakatCalculator" component={ZakatCalculatorScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Faq" component={FaqScreen} />
+          <Stack.Screen name="Receipts" component={ReceiptsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+          <Stack.Screen name="Favorites" component={FavoritesScreen} />
           <Stack.Screen name="ServicesBrowse" component={ServicesBrowseScreen} />
           <Stack.Screen name="ProviderDetail" component={ProviderDetailScreen} />
           <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />

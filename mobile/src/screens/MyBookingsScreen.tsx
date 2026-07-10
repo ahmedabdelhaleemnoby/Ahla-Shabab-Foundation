@@ -64,7 +64,7 @@ export default function MyBookingsScreen() {
         <Card key={a.id} style={{ marginTop: 12 }}>
           <View style={rowBetween}>
             <Pill label={a.status} tone={statusTone(a.status)} />
-            <Text style={[font('800'), num, { fontSize: 11, color: colors.muted }]}>#{a.id.toUpperCase()}</Text>
+            <Text style={[font('800'), num, { fontSize: 11, color: colors.muted }]}>AS-4829{a.id.replace(/\D/g, '')}</Text>
           </View>
           <View style={[row, { gap: 6, marginTop: 8, justifyContent: 'flex-end' }]}>
             <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>{a.consultantName}</Text>

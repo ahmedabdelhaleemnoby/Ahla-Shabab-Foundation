@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
@@ -52,7 +52,7 @@ export default function ContactUsScreen() {
       </Text>
       <View style={[row, { gap: 10 }]}>
         {SOCIAL.map((s) => (
-          <Pressable key={s.label} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
+          <Pressable key={s.label} onPress={() => Linking.openURL('https://ahlashabab.com').catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
             <Icon name={s.icon} size={20} color={colors.navy700} />
             <Text style={[font('700'), { fontSize: 9.5, color: colors.slate, marginTop: 6 }]}>{s.label}</Text>
           </Pressable>

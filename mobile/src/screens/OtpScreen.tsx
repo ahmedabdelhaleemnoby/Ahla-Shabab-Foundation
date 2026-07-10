@@ -6,6 +6,7 @@ import { AppBar } from '../components/AppBar';
 import { Button } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { colors, font, row } from '../theme';
+import { appState } from '../store/appState';
 import type { RootProps } from '../navigation/types';
 
 const LEN = 6;
@@ -30,7 +31,8 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       setError(true);
       return;
     }
-    // Mock: any 6-digit code is accepted.
+    // Mock: any 6-digit code is accepted. TODO(backend): POST /auth/otp/verify.
+    appState.login(phone);
     nav.navigate('Main', { screen: 'Profile' });
   };
 
