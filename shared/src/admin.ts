@@ -153,3 +153,46 @@ export const portfolioItems: PortfolioItem[] = [
   { id: 'pf-7', title: 'مطابخ أحلى شباب', type: 'مشروع', governorate: 'القاهرة', date: '2025-05-01', published: true },
   { id: 'pf-8', title: 'قافلة إغاثية لسيناء', type: 'قافلة', governorate: 'شمال سيناء', date: '2025-03-30', published: false },
 ];
+
+/* ----------------------- Volunteer applications inbox ----------------------- */
+export type VolunteerStatus = 'جديد' | 'تم التواصل' | 'مقبول' | 'مؤرشف';
+
+export interface VolunteerApplication {
+  id: string;
+  name: string;
+  phone: string; // applicant's own contact — not beneficiary data
+  age?: number;
+  governorate: string;
+  interests: string[];
+  availability: string;
+  submittedAt: string; // ISO datetime
+  status: VolunteerStatus;
+}
+
+export const volunteerApplications: VolunteerApplication[] = [
+  { id: 'v-1', name: 'سارة عبد الرحمن', phone: '01012345678', age: 24, governorate: 'القاهرة', interests: ['تعليم', 'إعلام'], availability: 'العطلات', submittedAt: '2025-05-22 10:20', status: 'جديد' },
+  { id: 'v-2', name: 'محمود حسن', phone: '01123456789', age: 29, governorate: 'الجيزة', interests: ['إغاثة', 'لوجستيات'], availability: 'مرن', submittedAt: '2025-05-21 18:05', status: 'جديد' },
+  { id: 'v-3', name: 'ندى الشاذلي', phone: '01234567890', age: 22, governorate: 'الإسكندرية', interests: ['طبي'], availability: 'أيام الأسبوع', submittedAt: '2025-05-20 14:32', status: 'تم التواصل' },
+  { id: 'v-4', name: 'كريم فوزي', phone: '01087654321', age: 31, governorate: 'أسيوط', interests: ['إغاثة', 'مالية'], availability: 'مرن', submittedAt: '2025-05-18 09:47', status: 'مقبول' },
+  { id: 'v-5', name: 'هاجر مصطفى', phone: '01156781234', age: 26, governorate: 'المنوفية', interests: ['تعليم'], availability: 'العطلات', submittedAt: '2025-05-16 20:15', status: 'مؤرشف' },
+];
+
+/* ----------------------- Contact messages inbox ----------------------- */
+export type MessageStatus = 'جديدة' | 'تم الرد' | 'مؤرشفة';
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  phone: string;
+  message: string;
+  receivedAt: string; // ISO datetime
+  status: MessageStatus;
+}
+
+export const contactMessages: ContactMessage[] = [
+  { id: 'm-1', name: 'عمرو السيد', phone: '01011112222', message: 'أرغب في معرفة تفاصيل التبرع الشهري لكفالة الأيتام، وهل يمكن زيارة مقر الجمعية؟', receivedAt: '2025-05-22 11:40', status: 'جديدة' },
+  { id: 'm-2', name: 'إيمان عادل', phone: '01233334444', message: 'حجزت استشارة أسرية ولم يصلني تأكيد حتى الآن. رقم الحجز AS-482913.', receivedAt: '2025-05-22 09:12', status: 'جديدة' },
+  { id: 'm-3', name: 'حسين عبد الله', phone: '01144445555', message: 'هل تقبلون تبرعات عينية (ملابس وأجهزة كهربائية) في فرع المنصورة؟', receivedAt: '2025-05-21 16:55', status: 'تم الرد' },
+  { id: 'm-4', name: 'منة شوقي', phone: '01055556666', message: 'أمثل شركة وترغب إدارتنا في رعاية إحدى قوافلكم الطبية القادمة.', receivedAt: '2025-05-20 13:08', status: 'تم الرد' },
+  { id: 'm-5', name: 'طارق رمضان', phone: '01266667777', message: 'شكراً لكم على سرعة الاستجابة في حالة أسرة العريش.', receivedAt: '2025-05-19 10:30', status: 'مؤرشفة' },
+];

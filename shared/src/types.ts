@@ -150,6 +150,23 @@ export interface Article {
   gradient: [string, string];
 }
 
+/**
+ * App-wide configuration surfaced in the mobile app and controlled from the
+ * dashboard settings page. TODO(backend): GET/PUT /admin/config.
+ */
+export interface AppConfig {
+  hotline: string;
+  email: string;
+  address: string;
+  workingHours: string;
+  website: string;
+  socials: { facebook: string; instagram: string; youtube: string; twitter: string };
+  heroTitle: string;
+  heroSubtitle: string;
+  /** Zakat nisab in EGP used by the mobile calculator. */
+  zakatNisabEgp: number;
+}
+
 export type NotificationKind = 'donation' | 'case' | 'project' | 'booking' | 'system';
 
 export interface AppNotification {

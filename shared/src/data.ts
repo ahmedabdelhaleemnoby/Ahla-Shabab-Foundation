@@ -9,6 +9,7 @@ import type {
   AppNotification,
   Article,
   PaymentMethodInfo,
+  AppConfig,
 } from './types';
 
 /**
@@ -22,6 +23,24 @@ export const paymentMethods: PaymentMethodInfo[] = [
   { id: 'فودافون كاش', group: 'محفظة إلكترونية', description: 'الدفع عبر المحفظة الإلكترونية', availability: 'قيد التفعيل', manual: false },
   { id: 'تحويل بنكي', group: 'تحويل بنكي', description: 'تحويل على حساب الجمعية — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
 ];
+
+/** Editable from the dashboard (إعدادات التطبيق). TODO(backend): GET /config. */
+export const appConfig: AppConfig = {
+  hotline: '16xxx',
+  email: 'info@ahlashabab.com',
+  address: 'القاهرة، جمهورية مصر العربية',
+  workingHours: 'السبت - الخميس · 9 ص - 5 م',
+  website: 'https://ahlashabab.com',
+  socials: {
+    facebook: 'https://ahlashabab.com',
+    instagram: 'https://ahlashabab.com',
+    youtube: 'https://ahlashabab.com',
+    twitter: 'https://ahlashabab.com',
+  },
+  heroTitle: 'جمعية خواطر أحلى شباب',
+  heroSubtitle: 'جمعية خيرية مصرية تعمل في 22 محافظة — تبرعات موثوقة وخدمات مجانية للأسر الأولى بالرعاية.',
+  zakatNisabEgp: 85 * 4200,
+};
 
 export const foundationStats: FoundationStats = {
   governorates: 22,

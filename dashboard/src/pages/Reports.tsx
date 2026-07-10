@@ -1,6 +1,6 @@
-import { Download, FileText, TrendingUp, Percent, CalendarCheck } from 'lucide-react';
-import { adminBookings, providers, colors } from '@ahla/shared';
-import { Card, Kpi, SectionHead } from '../components/ui';
+import { Download, FileText, TrendingUp, Percent, CalendarCheck, Wallet, HandCoins, Hourglass } from 'lucide-react';
+import { adminBookings, providers, donations, cases, projects, egp, pct, colors } from '@ahla/shared';
+import { Card, Kpi, SectionHead, Badge, ProgressCell } from '../components/ui';
 import { RankedBars, Donut } from '../components/Charts';
 import { exportCsv } from '../lib/csv';
 
@@ -33,6 +33,33 @@ const completed = adminBookings.filter((b) => b.status === 'مكتمل').length;
 const noShow = adminBookings.filter((b) => b.status === 'لم يحضر').length;
 const utilization = Math.round((completed / total) * 100);
 
+/* ---- Donations analytics ---- */
+const confirmedDonations = donations.filter((d) => d.status === 'مكتمل');
+const totalDonated = confirmedDonations.reduce((s, d) => s + d.amount, 0);
+const pendingReview = donations.filter((d) => d.status === 'قيد المراجعة' || d.status === 'قيد التأكيد').length;
+const avgDonation = confirmedDonations.length ? Math.round(totalDonated / confirmedDonations.length) : 0;
+const recurringCount = donations.filter((d) => d.recurring).length;
+
+const methodColors = [colors.navy700, colors.green, colors.gold, colors.navy300, colors.red];
+const byMethod = Object.entries(
+  donations.reduce<Record<string, number>>((acc, d) => {
+    acc[d.method] = (acc[d.method] ?? 0) + 1;
+    return acc;
+  }, {})
+)
+  .map(([label, value], i) => ({ label, value, color: methodColors[i % methodColors.length] }))
+  .sort((a, b) => b.value - a.value);
+
+const byCause = Object.entries(
+  confirmedDonations.reduce<Record<string, number>>((acc, d) => {
+    acc[d.cause] = (acc[d.cause] ?? 0) + d.amount;
+    return acc;
+  }, {})
+)
+  .map(([label, value]) => ({ label, value: Math.round(value / 1000) }))
+  .sort((a, b) => b.value - a.value)
+  .slice(0, 6);
+
 export default function Reports() {
   const exportSummary = () =>
     exportCsv(
@@ -51,6 +78,50 @@ export default function Reports() {
         <span className="text-[13px] text-slate">الفترة: مايو 2025</span>
       </div>
 
+      {/* ---- Donations ---- */}
+      <SectionHead title="تقارير التبرعات" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi icon={Wallet} tone="green" value={egp(totalDonated)} label="إجمالي التبرعات المعتمدة" />
+        <Kpi icon={Hourglass} tone="gold" value={String(pendingReview)} label="بانتظار الاعتماد / التأكيد" />
+        <Kpi icon={HandCoins} value={egp(avgDonation)} label="متوسط قيمة التبرع" />
+        <Kpi icon={TrendingUp} tone="navy" value={String(recurringCount)} label="تبرعات شهرية متكررة" />
+      </div>
+      <div className="grid lg:grid-cols-[1fr_1fr] gap-4">
+        <Card>
+          <SectionHead title="التبرعات حسب وسيلة الدفع" />
+          <Donut segments={byMethod} />
+        </Card>
+        <Card>
+          <SectionHead title="أعلى الأوجه تحصيلاً (بالألف ج.م)" />
+          <RankedBars data={byCause.map((d) => ({ ...d, color: colors.green }))} />
+        </Card>
+      </div>
+
+      {/* Funding progress of live content */}
+      <Card>
+        <SectionHead title="نسب تمويل الحالات والمشروعات المنشورة" />
+        <div className="flex flex-col gap-3">
+          {cases.map((c) => (
+            <div key={c.id} className="flex items-center gap-3 flex-wrap">
+              <span className="text-[13px] font-bold text-navy-700 w-44 shrink-0 text-right truncate">{c.code}</span>
+              <Badge tone={c.tag === 'عاجل' ? 'danger' : 'navy'}>{c.tag}</Badge>
+              <div className="flex-1 min-w-[160px]"><ProgressCell percent={pct(c.raisedAmount, c.targetAmount)} color={colors.red} /></div>
+              <span className="num text-[12px] text-slate shrink-0">{egp(c.raisedAmount)} / {egp(c.targetAmount)}</span>
+            </div>
+          ))}
+          {projects.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 flex-wrap">
+              <span className="text-[13px] font-bold text-navy-700 w-44 shrink-0 text-right truncate">{p.title}</span>
+              <Badge tone="green">مشروع</Badge>
+              <div className="flex-1 min-w-[160px]"><ProgressCell percent={pct(p.raisedAmount, p.targetAmount)} color={colors.green} /></div>
+              <span className="num text-[12px] text-slate shrink-0">{egp(p.raisedAmount)} / {egp(p.targetAmount)}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* ---- Bookings ---- */}
+      <SectionHead title="تقارير الحجوزات والخدمات" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi icon={CalendarCheck} value={String(total)} label="إجمالي الحجوزات" />
         <Kpi icon={TrendingUp} tone="green" value={String(completed)} label="جلسات مكتملة" />

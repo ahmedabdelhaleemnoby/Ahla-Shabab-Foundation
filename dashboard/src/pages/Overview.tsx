@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom';
-import { CalendarCheck, Clock, Stethoscope, ListTree, CheckCircle2 } from 'lucide-react';
-import { adminBookings, services, providers, colors } from '@ahla/shared';
+import { CalendarCheck, Clock, Stethoscope, ListTree, CheckCircle2, Wallet, Inbox as InboxIcon } from 'lucide-react';
+import { adminBookings, services, providers, donations, volunteerApplications, contactMessages, appConfig, colors } from '@ahla/shared';
 import { Card, Kpi, SectionHead, Badge, statusTone, MobileRow } from '../components/ui';
 import { BarChart, Donut } from '../components/Charts';
 
 const pending = adminBookings.filter((b) => b.status === 'قيد الانتظار').length;
+const pendingDonations = donations.filter((d) => d.status === 'قيد المراجعة' || d.status === 'قيد التأكيد').length;
+const newInbox =
+  volunteerApplications.filter((v) => v.status === 'جديد').length +
+  contactMessages.filter((m) => m.status === 'جديدة').length;
 const confirmed = adminBookings.filter((b) => b.status === 'مؤكد').length;
 const completed = adminBookings.filter((b) => b.status === 'مكتمل').length;
 
@@ -30,6 +34,30 @@ const byCategory = Object.entries(
 export default function Overview() {
   return (
     <div className="flex flex-col gap-5">
+      {/* Hero — same visual language as the app's home header */}
+      <div className="rounded-card p-5 sm:p-6 text-white bg-gradient-to-bl from-navy-800 to-navy-900 flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-white grid place-items-center shrink-0">
+            <img src="/logo.png" alt="" className="w-11 h-11 object-contain" />
+          </div>
+          <div className="min-w-0">
+            <b className="text-[18px] sm:text-[20px] font-extrabold block leading-tight">{appConfig.heroTitle}</b>
+            <span className="text-[12.5px] text-[#cfe0f5]">كل ما يظهر في التطبيق يُدار من هذه اللوحة — محتوى وخدمات وتبرعات وإشعارات.</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          <Link to="/donations" className="flex items-center gap-2 bg-white text-navy-700 font-bold text-[12.5px] rounded-full px-4 py-2">
+            <Wallet size={14} /> تبرعات بانتظار الاعتماد <span className="num bg-danger text-white rounded-full px-1.5 text-[11px]">{pendingDonations}</span>
+          </Link>
+          <Link to="/bookings" className="flex items-center gap-2 border-[1.5px] border-white/60 text-white font-bold text-[12.5px] rounded-full px-4 py-2">
+            <Clock size={14} /> حجوزات بانتظار التأكيد <span className="num bg-gold text-navy-900 rounded-full px-1.5 text-[11px]">{pending}</span>
+          </Link>
+          <Link to="/inbox" className="flex items-center gap-2 border-[1.5px] border-white/60 text-white font-bold text-[12.5px] rounded-full px-4 py-2">
+            <InboxIcon size={14} /> وارد جديد <span className="num bg-white text-navy-900 rounded-full px-1.5 text-[11px]">{newInbox}</span>
+          </Link>
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Kpi icon={CalendarCheck} value={String(adminBookings.length)} label="إجمالي الحجوزات" delta={{ text: '12%', up: true }} />

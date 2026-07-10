@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { appConfig } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -8,11 +9,12 @@ import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, radius, row } from '../theme';
 
+/* Contact details come from the shared app config — editable from the dashboard (إعدادات التطبيق). */
 const CONTACTS: { icon: IconName; label: string; value: string; ltr?: boolean }[] = [
-  { icon: 'phone', label: 'الخط الساخن', value: '16xxx', ltr: true },
-  { icon: 'mail', label: 'البريد الإلكتروني', value: 'info@ahlashabab.com', ltr: true },
-  { icon: 'map-pin', label: 'العنوان', value: 'القاهرة، جمهورية مصر العربية' },
-  { icon: 'clock', label: 'مواعيد العمل', value: 'السبت - الخميس · 9 ص - 5 م' },
+  { icon: 'phone', label: 'الخط الساخن', value: appConfig.hotline, ltr: true },
+  { icon: 'mail', label: 'البريد الإلكتروني', value: appConfig.email, ltr: true },
+  { icon: 'map-pin', label: 'العنوان', value: appConfig.address },
+  { icon: 'clock', label: 'مواعيد العمل', value: appConfig.workingHours },
 ];
 
 const SOCIAL: { icon: IconName; label: string }[] = [
@@ -52,7 +54,7 @@ export default function ContactUsScreen() {
       </Text>
       <View style={[row, { gap: 10 }]}>
         {SOCIAL.map((s) => (
-          <Pressable key={s.label} onPress={() => Linking.openURL('https://ahlashabab.com').catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
+          <Pressable key={s.label} onPress={() => Linking.openURL(appConfig.website).catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
             <Icon name={s.icon} size={20} color={colors.navy700} />
             <Text style={[font('700'), { fontSize: 9.5, color: colors.slate, marginTop: 6 }]}>{s.label}</Text>
           </Pressable>

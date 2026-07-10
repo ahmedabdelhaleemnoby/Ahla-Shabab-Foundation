@@ -10,6 +10,9 @@ import {
   Users,
   BarChart3,
   ShieldCheck,
+  BellRing,
+  Inbox as InboxIcon,
+  Settings as SettingsIcon,
   Search,
   Bell,
   Menu,
@@ -34,7 +37,10 @@ export const NAV: NavItem[] = [
   { to: '/providers', label: 'مقدمو الخدمة', icon: Stethoscope, title: 'مقدمو الخدمة', sub: 'الأطباء والمستشارون وجداول المواعيد' },
   { to: '/content', label: 'إدارة المحتوى', icon: FolderKanban, title: 'إدارة المحتوى', sub: 'المشروعات والحالات والقوافل والمقالات' },
   { to: '/users', label: 'المستخدمون', icon: Users, title: 'المستخدمون', sub: 'المستفيدون وسجل حجوزاتهم' },
-  { to: '/reports', label: 'التقارير', icon: BarChart3, title: 'التقارير والإحصاءات', sub: 'تحليلات الحجوزات والخدمات' },
+  { to: '/notifications', label: 'الإشعارات', icon: BellRing, title: 'إشعارات التطبيق', sub: 'إرسال إشعارات للمستخدمين ومتابعة السجل' },
+  { to: '/inbox', label: 'صندوق الوارد', icon: InboxIcon, title: 'صندوق الوارد', sub: 'طلبات التطوع ورسائل تواصل معنا من التطبيق' },
+  { to: '/reports', label: 'التقارير', icon: BarChart3, title: 'التقارير والإحصاءات', sub: 'تحليلات التبرعات والحجوزات والخدمات' },
+  { to: '/settings', label: 'إعدادات التطبيق', icon: SettingsIcon, title: 'إعدادات التطبيق', sub: 'التحكم في كل ما يظهر للمستخدم داخل التطبيق' },
   { to: '/roles', label: 'الأدوار والصلاحيات', icon: ShieldCheck, title: 'الأدوار والصلاحيات', sub: 'مستويات الوصول وسجل النشاط' },
 ];
 

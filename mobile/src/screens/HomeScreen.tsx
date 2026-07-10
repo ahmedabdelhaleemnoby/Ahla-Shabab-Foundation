@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { cases, projects, articles, foundationStats, quickServices, pct, egp } from '@ahla/shared';
+import { cases, projects, articles, foundationStats, quickServices, appConfig, pct, egp } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Pill, Tile, Stat, SectionHeader } from '../components/ui';
@@ -36,9 +36,9 @@ export default function HomeScreen() {
       >
         <View style={[row, { gap: 10, justifyContent: 'flex-end' }]}>
           <View style={{ alignItems: 'flex-end', flex: 1 }}>
-            <Text style={[font('800'), { color: '#fff', fontSize: 20, textAlign: 'right' }]}>جمعية خواطر أحلى شباب</Text>
+            <Text style={[font('800'), { color: '#fff', fontSize: 20, textAlign: 'right' }]}>{appConfig.heroTitle}</Text>
             <Text style={[font('400'), { color: '#cfe', fontSize: 11.5, marginTop: 5, textAlign: 'right', lineHeight: 17 }]}>
-              جمعية خيرية مصرية تعمل في 22 محافظة — تبرعات موثوقة وخدمات مجانية للأسر الأولى بالرعاية.
+              {appConfig.heroSubtitle}
             </Text>
           </View>
           <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>

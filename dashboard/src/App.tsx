@@ -9,6 +9,9 @@ import Content from './pages/Content';
 import UsersPage from './pages/Users';
 import Reports from './pages/Reports';
 import Roles from './pages/Roles';
+import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
+import Inbox from './pages/Inbox';
 
 export default function App() {
   return (
@@ -21,7 +24,10 @@ export default function App() {
         <Route path="/providers" element={<Providers />} />
         <Route path="/content" element={<Content />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/inbox" element={<Inbox />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/roles" element={<Roles />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
