@@ -5,6 +5,7 @@ import {
   defaultMenu,
   defaultHome,
   defaultPages,
+  defaultMedia,
 } from '../cms';
 
 describe('CMS defaults', () => {
@@ -53,5 +54,23 @@ describe('CMS defaults', () => {
     expect(byId('Receipts').loginRequired).toBe(true);
     expect(byId('MyBookings').loginRequired).toBe(true);
     expect(byId('Home').loginRequired).toBe(false);
+  });
+
+  it('seeds a non-empty media library with valid src + unique ids', () => {
+    const s = makeDefaultCmsState();
+    expect(s.media.length).toBeGreaterThan(0);
+    expect(new Set(s.media.map((m) => m.id)).size).toBe(s.media.length);
+    for (const m of defaultMedia) {
+      expect(m.src.startsWith('data:image/')).toBe(true);
+      expect(m.sizeBytes).toBeGreaterThan(0);
+    }
+  });
+
+  it('is at schema v2 (media library) and deep-copies media', () => {
+    expect(CMS_SCHEMA_VERSION).toBe(2);
+    const a = makeDefaultCmsState();
+    const b = makeDefaultCmsState();
+    a.media[0].title = 'x';
+    expect(b.media[0].title).not.toBe('x');
   });
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronUp, ChevronDown, Copy, Trash2, Pencil, Plus, Eye, EyeOff, RotateCcw, Smartphone } from 'lucide-react';
 import type { HomeSection, HomeSectionType } from '@ahla/shared';
 import { Card, Badge, Toggle, Modal, SectionHead, Empty } from '../components/ui';
+import { ImagePicker } from '../components/ImagePicker';
 import { useCms, cms, mutate } from '../store/cmsStore';
 
 const TYPE_LABEL: Record<HomeSectionType, string> = {
@@ -183,6 +184,7 @@ export default function CmsHome() {
             {(editing.type === 'textBlock' || editing.type === 'imageBanner') && (
               <Labeled label="النص"><textarea className="field min-h-[80px]" value={editing.config.body ?? ''} onChange={(e) => setEditing({ ...editing, config: { ...editing.config, body: e.target.value } })} /></Labeled>
             )}
+            <ImagePicker label="صورة القسم (اختياري)" value={editing.config.imageId} onChange={(id) => setEditing({ ...editing, config: { ...editing.config, imageId: id } })} />
           </div>
         )}
       </Modal>

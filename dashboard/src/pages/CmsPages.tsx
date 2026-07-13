@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Copy, Trash2 } from 'lucide-react';
 import type { CmsPage, PageTemplate } from '@ahla/shared';
 import { Card, Badge, Toggle, Modal, TableWrap, MobileRow, Empty } from '../components/ui';
+import { ImagePicker } from '../components/ImagePicker';
 import { useCms, cms, mutate } from '../store/cmsStore';
 
 const TEMPLATES: { key: PageTemplate; label: string }[] = [
@@ -141,6 +142,7 @@ export default function CmsPages() {
               <Labeled label="الأيقونة"><input className="field num" dir="ltr" value={editing.icon} onChange={(e) => setEditing({ ...editing, icon: e.target.value })} /></Labeled>
             </div>
             <Labeled label="وصف قصير"><input className="field" value={editing.description ?? ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Labeled>
+            <ImagePicker label="صورة رأس الصفحة (اختياري)" value={editing.headerImageId} onChange={(id) => setEditing({ ...editing, headerImageId: id })} />
             <div className="grid grid-cols-2 gap-4">
               <Labeled label="القالب">
                 <select className="field" value={editing.template} disabled={editing.builtin} onChange={(e) => setEditing({ ...editing, template: e.target.value as PageTemplate })}>

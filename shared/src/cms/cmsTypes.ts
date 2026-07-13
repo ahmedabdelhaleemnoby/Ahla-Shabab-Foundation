@@ -14,8 +14,10 @@
  */
 
 /** Bump when the shape changes; `cmsMigrations` upgrades older stored blobs. */
-export const CMS_SCHEMA_VERSION = 1;
+export const CMS_SCHEMA_VERSION = 2;
 export const CMS_STORAGE_KEY = 'ahla_cms_v1';
+/** Media blobs live in their own key so a quota problem can't corrupt the core CMS. */
+export const CMS_MEDIA_KEY = 'ahla_cms_media_v1';
 
 /* ------------------------------------------------------------------ */
 /* Navigation targets (serializable — shared by dashboard + mobile)   */
@@ -199,6 +201,27 @@ export interface CmsSettings {
 }
 
 /* ------------------------------------------------------------------ */
+/* Media library                                                      */
+/* ------------------------------------------------------------------ */
+
+export interface MediaItem {
+  id: string;
+  title: string;
+  alt: string;
+  caption?: string;
+  /** Free-text folder/category, e.g. "شعارات" / "حالات". */
+  folder: string;
+  /** Data URL (uploaded, compressed) or a remote https URL. */
+  src: string;
+  type: 'image' | 'svg';
+  width?: number;
+  height?: number;
+  sizeBytes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
 /* Activity log (demo revision trail)                                 */
 /* ------------------------------------------------------------------ */
 
@@ -221,6 +244,7 @@ export interface CmsState {
   menu: MenuGroup[];
   home: HomeSection[];
   pages: CmsPage[];
+  media: MediaItem[];
   activity: CmsActivityEntry[];
   updatedAt: string;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { PageSection } from '@ahla/shared';
@@ -8,7 +8,7 @@ import { AppBar } from '../components/AppBar';
 import { Card, Button, EmptyState } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { colors, font, num, row } from '../theme';
-import { getCmsPageBySlug } from '../store/cms';
+import { getCmsPageBySlug, getMediaSrc } from '../store/cms';
 import type { RootProps } from '../navigation/types';
 
 /**
@@ -121,8 +121,11 @@ function SectionView({ section, onCta }: { section: PageSection; onCta: (t?: Pag
           {c.ctaText ? <Button label={c.ctaText} small onPress={() => onCta(c.ctaTarget)} /> : null}
         </Card>
       );
-    case 'image':
+    case 'image': {
+      const src = getMediaSrc(c.imageId);
+      if (src) return <Image source={{ uri: src }} style={{ width: '100%', height: 160, borderRadius: 16, marginBottom: 12 }} resizeMode="cover" />;
       return <View style={{ height: 140, borderRadius: 16, backgroundColor: colors.paper2, marginBottom: 12, alignItems: 'center', justifyContent: 'center' }}><Icon name="image" size={30} color={colors.muted} /></View>;
+    }
     default:
       return null;
   }

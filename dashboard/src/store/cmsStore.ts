@@ -4,6 +4,7 @@ import {
   CMS_SCHEMA_VERSION,
   type CmsState,
   type CmsActivityEntry,
+  type MediaItem,
 } from '@ahla/shared';
 import { loadCms, saveCms, backupCms, restoreBackup, isValidCmsState, migrate, storageSizeBytes } from './cmsPersistence';
 
@@ -97,7 +98,40 @@ export const cms = {
   },
   sizeBytes: storageSizeBytes,
   newId: uid,
+
+  /* ---- Media library ---- */
+  addMedia(item: Omit<MediaItem, 'id' | 'createdAt' | 'updatedAt'>): MediaItem {
+    const now = new Date().toISOString();
+    const media: MediaItem = { ...item, id: uid('md'), createdAt: now, updatedAt: now };
+    mutate({ action: 'أضاف وسائط', entityType: 'وسائط', entityName: media.title }, (d) => {
+      d.media.unshift(media);
+    });
+    return media;
+  },
+  updateMedia(id: string, fields: Partial<MediaItem>) {
+    mutate({ action: 'عدّل وسائط', entityType: 'وسائط', entityName: fields.title ?? id }, (d) => {
+      const i = d.media.findIndex((m) => m.id === id);
+      if (i >= 0) d.media[i] = { ...d.media[i], ...fields, updatedAt: new Date().toISOString() };
+    });
+  },
+  replaceMedia(id: string, src: string, sizeBytes: number, type: MediaItem['type'], width?: number, height?: number) {
+    mutate({ action: 'استبدل صورة', entityType: 'وسائط', entityName: id }, (d) => {
+      const m = d.media.find((x) => x.id === id);
+      if (m) Object.assign(m, { src, sizeBytes, type, width, height, updatedAt: new Date().toISOString() });
+    });
+  },
+  removeMedia(id: string, title: string) {
+    mutate({ action: 'حذف وسائط', entityType: 'وسائط', entityName: title }, (d) => {
+      d.media = d.media.filter((m) => m.id !== id);
+    });
+  },
 };
+
+/** Resolve a media id to its src (data/URL), or undefined. */
+export function mediaSrc(id?: string): string | undefined {
+  if (!id) return undefined;
+  return state.media.find((m) => m.id === id)?.src;
+}
 
 export function useCms(): CmsState {
   return useSyncExternalStore(

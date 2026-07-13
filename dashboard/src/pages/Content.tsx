@@ -16,6 +16,7 @@ import {
   type ArticleCategory,
 } from '@ahla/shared';
 import { Card, Badge, Toggle, Modal, TableWrap, MobileRow, ProgressCell, Empty } from '../components/ui';
+import { ImagePicker } from '../components/ImagePicker';
 
 /* Content manager v3 — edits the SAME entities the mobile app renders:
    Projects (المشروعات), Humanitarian cases (الحالات), Articles (الأخبار والمقالات).
@@ -158,6 +159,7 @@ function ProjectsEditor({ rows, setRows }: { rows: Project[]; setRows: (fn: (p: 
         {editing && (
           <div className="flex flex-col gap-4">
             <Labeled label="اسم المشروع"><input className="field" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="مثال: محطة تحلية مياه" /></Labeled>
+            <ImagePicker label="صورة المشروع" urlValue={editing.imageUrl} onUrlChange={(src) => setEditing({ ...editing, imageUrl: src })} />
             <Labeled label="الوصف (يظهر في التطبيق)"><textarea className="field min-h-[84px]" value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></Labeled>
             <div className="grid grid-cols-2 gap-4">
               <Labeled label="حالة المشروع">
@@ -281,6 +283,7 @@ function CasesEditor({ rows, setRows }: { rows: HumanitarianCase[]; setRows: (fn
               </Labeled>
             </div>
             <Labeled label="عنوان الحالة"><input className="field" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></Labeled>
+            <ImagePicker label="صورة الحالة (privacy-vetted)" urlValue={editing.imageUrl} onUrlChange={(src) => setEditing({ ...editing, imageUrl: src })} />
             <Labeled label="المحافظة (بدون عنوان تفصيلي — خصوصية المستفيد)">
               <select className="field" value={editing.location.split('،')[0]} onChange={(e) => setEditing({ ...editing, location: `${e.target.value}، مصر` })}>
                 {governorates.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -380,6 +383,7 @@ function ArticlesEditor({ rows, setRows }: { rows: Article[]; setRows: (fn: (p: 
         {editing && (
           <div className="flex flex-col gap-4">
             <Labeled label="العنوان"><input className="field" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></Labeled>
+            <ImagePicker label="صورة الغلاف" urlValue={editing.imageUrl} onUrlChange={(src) => setEditing({ ...editing, imageUrl: src })} />
             <div className="grid grid-cols-2 gap-4">
               <Labeled label="التصنيف">
                 <select className="field" value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value as ArticleCategory })}>

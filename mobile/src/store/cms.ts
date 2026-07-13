@@ -62,3 +62,9 @@ export function getHomeSections(loggedIn: boolean): HomeSection[] {
 export function getCmsPageBySlug(slug: string) {
   return readCms().pages.find((p) => p.slug === slug);
 }
+
+/** Resolve a media id to its src (data URL / remote URL) from the CMS library. */
+export function getMediaSrc(id?: string): string | undefined {
+  if (!id) return undefined;
+  return readCms().media?.find((m) => m.id === id)?.src;
+}

@@ -5,6 +5,7 @@ import {
   type HomeSection,
   type CmsPage,
   type CmsSettings,
+  type MediaItem,
   type NavTarget,
 } from './cmsTypes';
 import { appConfig } from '../data';
@@ -160,6 +161,26 @@ export const defaultPages: CmsPage[] = [
   page('PrivacyPolicy', 'سياسة الخصوصية', 'سياسة الخصوصية', 'shield', 18),
 ];
 
+/* ---------------- Media library (branded placeholders) ---------------- */
+/** Tiny inline SVG placeholder so the library is never empty. */
+function svgPlaceholder(label: string, from: string, to: string): string {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">` +
+    `<defs><linearGradient id="g" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs>` +
+    `<rect width="600" height="360" fill="url(#g)"/>` +
+    `<text x="300" y="190" font-family="Cairo,Arial" font-size="30" font-weight="800" fill="#ffffff" text-anchor="middle">${label}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+export const defaultMedia: MediaItem[] = [
+  { id: 'md-brand-navy', title: 'بانر أزرق', alt: 'خلفية بالهوية الزرقاء', folder: 'بانرات', src: svgPlaceholder('خواطر أحلى شباب', '#123877', '#0D2B66'), type: 'svg', width: 600, height: 360, sizeBytes: 620, createdAt: SEED_AT, updatedAt: SEED_AT },
+  { id: 'md-brand-gold', title: 'بانر ذهبي', alt: 'خلفية باللون الذهبي', folder: 'بانرات', src: svgPlaceholder('معاً نصنع أثراً', '#E9AF31', '#B9791A'), type: 'svg', width: 600, height: 360, sizeBytes: 610, createdAt: SEED_AT, updatedAt: SEED_AT },
+  { id: 'md-case', title: 'صورة حالة (نموذج)', alt: 'صورة عامة لحالة', folder: 'حالات', src: svgPlaceholder('حالة إنسانية', '#8296b5', '#4d6386'), type: 'svg', width: 600, height: 360, sizeBytes: 600, createdAt: SEED_AT, updatedAt: SEED_AT },
+  { id: 'md-project', title: 'صورة مشروع (نموذج)', alt: 'صورة عامة لمشروع', folder: 'مشروعات', src: svgPlaceholder('مشروع خيري', '#8fb4dd', '#5f86b5'), type: 'svg', width: 600, height: 360, sizeBytes: 600, createdAt: SEED_AT, updatedAt: SEED_AT },
+  { id: 'md-news', title: 'صورة خبر (نموذج)', alt: 'صورة عامة لخبر', folder: 'أخبار', src: svgPlaceholder('خبر ونشاط', '#8f9f7d', '#5f6d50'), type: 'svg', width: 600, height: 360, sizeBytes: 600, createdAt: SEED_AT, updatedAt: SEED_AT },
+];
+
 /* ---------------- Root default ---------------- */
 export function makeDefaultCmsState(): CmsState {
   return {
@@ -168,6 +189,7 @@ export function makeDefaultCmsState(): CmsState {
     menu: defaultMenu.map((g) => ({ ...g, items: g.items.map((i) => ({ ...i })) })),
     home: defaultHome.map((s) => ({ ...s, config: { ...s.config } })),
     pages: defaultPages.map((p) => ({ ...p })),
+    media: defaultMedia.map((m) => ({ ...m })),
     activity: [],
     updatedAt: SEED_AT,
   };

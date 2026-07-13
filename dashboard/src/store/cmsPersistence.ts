@@ -1,8 +1,11 @@
 import {
   CMS_SCHEMA_VERSION,
   CMS_STORAGE_KEY,
+  CMS_MEDIA_KEY,
   makeDefaultCmsState,
+  defaultMedia,
   type CmsState,
+  type MediaItem,
 } from '@ahla/shared';
 
 const BACKUP_KEY = `${CMS_STORAGE_KEY}_backup`;
@@ -24,7 +27,10 @@ export function isValidCmsState(x: unknown): x is CmsState {
 /** Upgrade an older stored blob to the current schema version. */
 export function migrate(state: CmsState): CmsState {
   let s = state;
-  // Future migrations: `if (s.version < 2) { … s = { ...s, version: 2 }; }`
+  // v1 → v2: introduced the media library. Seed it if missing.
+  if (!Array.isArray(s.media)) {
+    s = { ...s, media: defaultMedia.map((m) => ({ ...m })) };
+  }
   if (s.version !== CMS_SCHEMA_VERSION) {
     s = { ...s, version: CMS_SCHEMA_VERSION };
   }
@@ -35,25 +41,47 @@ export function migrate(state: CmsState): CmsState {
   };
 }
 
+function loadMedia(): MediaItem[] {
+  if (typeof localStorage === 'undefined') return defaultMedia.map((m) => ({ ...m }));
+  try {
+    const raw = localStorage.getItem(CMS_MEDIA_KEY);
+    if (!raw) return defaultMedia.map((m) => ({ ...m }));
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : defaultMedia.map((m) => ({ ...m }));
+  } catch {
+    return defaultMedia.map((m) => ({ ...m }));
+  }
+}
+
 export function loadCms(): CmsState {
   if (typeof localStorage === 'undefined') return makeDefaultCmsState();
   try {
     const raw = localStorage.getItem(CMS_STORAGE_KEY);
-    if (!raw) return makeDefaultCmsState();
-    const parsed = JSON.parse(raw);
-    if (!isValidCmsState(parsed)) return makeDefaultCmsState();
-    return migrate(parsed);
+    const base = raw ? JSON.parse(raw) : null;
+    const state = base && isValidCmsState(base) ? migrate(base) : makeDefaultCmsState();
+    // Media is stored separately (large blobs) — merge it back in.
+    return { ...state, media: loadMedia() };
   } catch {
     return makeDefaultCmsState();
   }
 }
 
+/**
+ * Persist structural CMS to the main key and media to its own key, so a media
+ * quota failure never blocks saving menu/home/page edits.
+ */
 export function saveCms(state: CmsState): void {
   if (typeof localStorage === 'undefined') return;
+  const { media, ...structural } = state;
   try {
-    localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(structural));
   } catch {
     /* quota exceeded — ignore in the demo */
+  }
+  try {
+    localStorage.setItem(CMS_MEDIA_KEY, JSON.stringify(media ?? []));
+  } catch {
+    /* media quota exceeded — core CMS is still saved above */
   }
 }
 
@@ -78,5 +106,5 @@ export function restoreBackup(): CmsState | null {
 
 export function storageSizeBytes(): number {
   if (typeof localStorage === 'undefined') return 0;
-  return (localStorage.getItem(CMS_STORAGE_KEY) ?? '').length;
+  return (localStorage.getItem(CMS_STORAGE_KEY) ?? '').length + (localStorage.getItem(CMS_MEDIA_KEY) ?? '').length;
 }
