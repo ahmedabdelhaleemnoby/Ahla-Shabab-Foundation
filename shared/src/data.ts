@@ -38,9 +38,28 @@ export const appConfig: AppConfig = {
     twitter: 'https://ahlashabab.com',
   },
   heroTitle: 'جمعية خواطر أحلى شباب',
-  heroSubtitle: 'جمعية خيرية مصرية تعمل في 22 محافظة — تبرعات موثوقة وخدمات مجانية للأسر الأولى بالرعاية.',
+  heroSubtitle: 'جمعية خيرية مصرية — تبرعات موثوقة وخدمات مجانية للأسر الأولى بالرعاية.',
   zakatNisabEgp: 85 * 4200,
 };
+
+/**
+ * Governorates where the foundation currently operates (مناطق عمل الجمعية).
+ * Shown as chips — intentionally NOT a numeric claim (no verified official count).
+ */
+export const workGovernorates: string[] = [
+  'القاهرة',
+  'الجيزة',
+  'الإسكندرية',
+  'الشرقية',
+  'المنوفية',
+  'المنيا',
+  'أسيوط',
+  'سوهاج',
+  'قنا',
+  'أسوان',
+  'الفيوم',
+  'شمال سيناء',
+];
 
 export const foundationStats: FoundationStats = {
   governorates: 22,
@@ -63,6 +82,9 @@ export const cases: HumanitarianCase[] = [
     raisedAmount: 10800,
     supporters: 214,
     sponsorable: true,
+    monthlyAmount: 1500,
+    sponsorshipDuration: '12 شهراً',
+    sponsorshipStatus: 'متاحة للكفالة',
     lastUpdate: 'تم توثيق الحالة وتحديث بياناتها منذ يومين',
     gradient: ['#b98a5e', '#7d5a3c'],
   },
@@ -79,6 +101,9 @@ export const cases: HumanitarianCase[] = [
     raisedAmount: 4800,
     supporters: 96,
     sponsorable: true,
+    monthlyAmount: 1000,
+    sponsorshipDuration: 'عام دراسي كامل',
+    sponsorshipStatus: 'مكفولة جزئياً',
     lastUpdate: 'تم صرف الدعم الدراسي للفصل الأول منذ أسبوع',
     gradient: ['#93a7c4', '#617699'],
   },
@@ -99,6 +124,22 @@ export const cases: HumanitarianCase[] = [
     gradient: ['#a08768', '#6d543a'],
   },
   {
+    id: 'c-3054',
+    code: 'الحاجة أم أحمد',
+    title: 'عملية قلب مفتوح عاجلة',
+    location: 'سوهاج، مصر',
+    summary: 'سيدة مسنة تحتاج إلى عملية قلب مفتوح عاجلة بعد تدهور حالتها الصحية خلال الأسابيع الماضية.',
+    need: 'تكاليف العملية والإقامة بالمستشفى.',
+    tag: 'عاجل',
+    verified: true,
+    targetAmount: 85000,
+    raisedAmount: 34000,
+    supporters: 402,
+    sponsorable: false,
+    lastUpdate: 'تم حجز موعد مبدئي للعملية — بانتظار اكتمال المبلغ',
+    gradient: ['#9b8a9e', '#6b5a6e'],
+  },
+  {
     id: 'c-2201',
     code: 'أسرة رقم 2201',
     title: 'ترميم مسكن أسرة',
@@ -111,6 +152,9 @@ export const cases: HumanitarianCase[] = [
     raisedAmount: 15000,
     supporters: 120,
     sponsorable: true,
+    monthlyAmount: 2000,
+    sponsorshipDuration: '6 أشهر',
+    sponsorshipStatus: 'متاحة للكفالة',
     lastUpdate: 'جارٍ استكمال توثيق الحالة',
     gradient: ['#8aa0bf', '#586f92'],
   },
@@ -123,6 +167,8 @@ export const projects: Project[] = [
     description:
       'توفير مياه نقية وآمنة للأسر والمجتمعات الأكثر احتياجاً، من خلال محطات تحلية متطورة وشبكات توزيع فعّالة.',
     status: 'مستدام',
+    category: 'مياه',
+    timeline: '2024 — مستمر',
     targetAmount: 400000,
     raisedAmount: 245000,
     supporters: 1248,
@@ -144,6 +190,8 @@ export const projects: Project[] = [
     title: 'مطابخ أحلى شباب',
     description: 'إعداد وتوزيع وجبات يومية للأسر الأكثر احتياجاً في المناطق المستهدفة.',
     status: 'جارٍ',
+    category: 'إطعام',
+    timeline: '2025 — جارٍ التنفيذ',
     targetAmount: 200000,
     raisedAmount: 132000,
     supporters: 640,
@@ -163,6 +211,8 @@ export const projects: Project[] = [
     title: 'دعم الطلاب',
     description: 'كفالة تعليمية للطلاب المتفوقين غير القادرين لضمان استمرار مسيرتهم الدراسية.',
     status: 'جارٍ',
+    category: 'تعليم',
+    timeline: 'العام الدراسي 2025/2026',
     targetAmount: 150000,
     raisedAmount: 90000,
     supporters: 512,
@@ -276,12 +326,12 @@ export const quickServices = [
 ] as const;
 
 export const notifications: AppNotification[] = [
-  { id: 'n-1', kind: 'booking', title: 'تم تأكيد موعدك', body: 'تم تأكيد جلسة الاستشارة النفسية مع د. محمد العربي يوم الخميس 11:00 ص.', time: 'منذ 5 دقائق', read: false },
-  { id: 'n-2', kind: 'case', title: 'اقتربت حالة من هدفها', body: 'حالة «أسرة رقم 1427» وصلت إلى 62% من المبلغ المطلوب. ساهم في إتمامها.', time: 'منذ ساعة', read: false },
-  { id: 'n-3', kind: 'donation', title: 'شكراً لتبرعك', body: 'تم استلام تبرعك بمبلغ 250 ج.م لصالح كفالة أسرة محتاجة. جزاك الله خيراً.', time: 'منذ 3 ساعات', read: false },
-  { id: 'n-4', kind: 'project', title: 'تحديث مشروع', body: 'مشروع «محطة تحلية مياه» انتقل إلى مرحلة التركيب والتشغيل.', time: 'أمس', read: true },
-  { id: 'n-5', kind: 'system', title: 'تذكير بموعد', body: 'لديك موعد استشارة غداً الساعة 1:00 م. برجاء الحضور في الوقت المحدد.', time: 'أمس', read: true },
-  { id: 'n-6', kind: 'donation', title: 'كفالة شهرية', body: 'تم تجديد كفالتك الشهرية للطالبة نور بنجاح.', time: 'منذ يومين', read: true },
+  { id: 'n-1', kind: 'booking', title: 'تم تأكيد موعدك', body: 'تم تأكيد جلسة الاستشارة النفسية مع د. محمد العربي يوم الخميس 11:00 ص.', time: 'منذ 5 دقائق', date: '2025-05-22', clock: '10:40 ص', read: false },
+  { id: 'n-2', kind: 'case', title: 'اقتربت حالة من هدفها', body: 'حالة «أسرة رقم 1427» وصلت إلى 62% من المبلغ المطلوب. ساهم في إتمامها.', time: 'منذ ساعة', date: '2025-05-22', clock: '9:45 ص', read: false, targetId: 'c-1427' },
+  { id: 'n-3', kind: 'donation', title: 'شكراً لتبرعك', body: 'تم استلام تبرعك بمبلغ 250 ج.م لصالح كفالة أسرة محتاجة. جزاك الله خيراً.', time: 'منذ 3 ساعات', date: '2025-05-22', clock: '7:30 ص', read: false },
+  { id: 'n-4', kind: 'project', title: 'تحديث مشروع', body: 'مشروع «محطة تحلية مياه» انتقل إلى مرحلة التركيب والتشغيل.', time: 'أمس', date: '2025-05-21', clock: '6:15 م', read: true, targetId: 'p-water' },
+  { id: 'n-5', kind: 'system', title: 'تذكير بموعد', body: 'لديك موعد استشارة غداً الساعة 1:00 م. برجاء الحضور في الوقت المحدد.', time: 'أمس', date: '2025-05-21', clock: '4:00 م', read: true },
+  { id: 'n-6', kind: 'donation', title: 'كفالة شهرية', body: 'تم تجديد كفالتك الشهرية للطالبة نور بنجاح.', time: 'منذ يومين', date: '2025-05-20', clock: '11:00 ص', read: true },
 ];
 
 export const articles: Article[] = [

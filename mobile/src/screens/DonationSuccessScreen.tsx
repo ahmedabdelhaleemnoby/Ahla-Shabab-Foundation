@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -42,11 +42,15 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
   const nav = useNavigation<any>();
   const { amount, cause, method, recurring, reference, date, status } = route.params;
   const ui = STATUS_UI[status] ?? STATUS_UI['قيد التأكيد'];
+  const [downloaded, setDownloaded] = useState(false);
 
   const shareReceipt = () =>
     Share.share({
-      message: `إيصال تبرع — جمعية خواطر أحلى شباب\nرقم العملية: ${reference}\nالتاريخ: ${date}\nالمبلغ: ${amount}\nوجهة التبرع: ${cause}\nطريقة الدفع: ${method}\nالحالة: ${status}`,
+      message: `إيصال تجريبي لغرض العرض فقط — جمعية خواطر أحلى شباب\nرقم العملية: ${reference}\nالتاريخ: ${date}\nالمبلغ: ${amount}\nوجهة التبرع: ${cause}\nطريقة الدفع: ${method}\nالحالة: ${status}\nنسخة عرض — لا يتم تنفيذ أي عملية دفع فعلية.`,
     }).catch(() => {});
+
+  // Demo download — visual feedback only, nothing is written to storage.
+  const downloadReceipt = () => setDownloaded(true);
 
   return (
     <Screen
@@ -71,8 +75,16 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
         </Text>
       </View>
 
+      {/* Demo watermark (§1/§15) */}
+      <Card style={[row, { gap: 9, marginTop: 16, backgroundColor: colors.goldSoft }]}>
+        <Icon name="alert-triangle" size={14} color="#B9791A" />
+        <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
+          نسخة عرض — لا يتم تنفيذ أي عملية دفع فعلية.{'\n'}إيصال تجريبي لغرض العرض فقط.
+        </Text>
+      </Card>
+
       {/* Receipt */}
-      <Card style={{ marginTop: 20 }}>
+      <Card style={{ marginTop: 12 }}>
         <View style={{ alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line2 }}>
           <Text style={[font('400'), { fontSize: 11, color: colors.slate }]}>مبلغ التبرع</Text>
           <Text style={[font('800'), num, { fontSize: 28, color: colors.navy700, marginTop: 4 }]}>{amount}</Text>
@@ -92,6 +104,15 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
           </View>
         </View>
       </Card>
+
+      {/* Download (demo) */}
+      <Button
+        label={downloaded ? 'تم حفظ الإيصال (نسخة عرض) ✓' : 'تحميل الإيصال PDF'}
+        variant={downloaded ? 'green' : 'outline'}
+        icon={downloaded ? 'check' : 'download'}
+        style={{ marginTop: 12 }}
+        onPress={downloadReceipt}
+      />
 
       {recurring && status !== 'فشل' && (
         <Card style={[row, { gap: 11, marginTop: 12, backgroundColor: '#EAF0F8' }]}>

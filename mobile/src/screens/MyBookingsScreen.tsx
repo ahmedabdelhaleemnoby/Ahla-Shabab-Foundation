@@ -6,6 +6,7 @@ import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
+import { LoginGate } from '../components/LoginGate';
 import { colors, font, num, row, rowBetween } from '../theme';
 
 const UPCOMING: AppointmentStatus[] = ['مؤكد', 'قيد الانتظار'];
@@ -31,6 +32,11 @@ export default function MyBookingsScreen() {
   );
 
   return (
+    <LoginGate
+      icon="calendar"
+      title="حجوزاتك في حسابك"
+      benefits={['متابعة مواعيدك القادمة وتذكيرات بها', 'سجل جلساتك السابقة ومرجع كل حجز', 'إعادة الجدولة والإلغاء بسهولة']}
+    >
     <Screen header={<AppBar title="حجوزاتي" onBack={() => nav.goBack()} onBell={undefined} />}>
       {/* Tabs */}
       <View style={{ flexDirection: 'row-reverse', backgroundColor: colors.paper2, borderRadius: 12, padding: 4, marginBottom: 4 }}>
@@ -92,6 +98,7 @@ export default function MyBookingsScreen() {
       )}
       <View style={{ height: 12 }} />
     </Screen>
+    </LoginGate>
   );
 }
 

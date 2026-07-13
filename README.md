@@ -8,12 +8,14 @@ Built from the approved `Ahla-Shabab-App-Design.html` spec — the same navy pal
 
 ```
 .
-├── shared/        @ahla/shared — design tokens, TS types, mock data (single source of truth)
-├── mobile/        Expo + React Native app (9 screens, RTL)
-└── dashboard/     Vite + React admin dashboard (5 pages, RTL)
+├── shared/        @ahla/shared — design tokens, TS types, mock data + business rules (single source of truth)
+├── mobile/        Expo + React Native app (31 screens, RTL, sidebar navigation)
+└── dashboard/     Vite + React + Tailwind admin dashboard (12 modules, RTL)
 ```
 
 Both apps import tokens/data from `@ahla/shared`, so the palette and content stay in sync.
+
+> 📐 **Full project map:** see [STRUCTURE.md](STRUCTURE.md) — every file, screen, page, rule, and the APK build pipeline.
 
 ## Prerequisites
 
@@ -49,7 +51,7 @@ Then scan the QR code with **Expo Go** (Android) or the Camera app (iOS). Press 
 
 Catalog, providers, schedules, governorates, and the form schema live in `shared/src/services.ts`, so the dashboard/backend will manage the exact same shapes.
 
-Navigation: bottom tab bar (with the raised "تبرع" button) + a native stack for detail and booking screens.
+Navigation: sidebar drawer (☰ in the app bar, slides from the right) + a native stack for detail and booking screens. The five main sections (Home/Discover/Donate/News/Profile) live in a hidden tab navigator so deep links keep working.
 
 ## Run the dashboard (Vite)
 

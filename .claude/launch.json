@@ -16,9 +16,9 @@
     },
     {
       "name": "mobile-web",
-      "runtimeExecutable": "npx",
+      "runtimeExecutable": "/Users/ahmedabuzyad/.nvm/versions/node/v22.22.2/bin/node",
       "runtimeArgs": [
-        "expo",
+        "node_modules/expo/bin/cli",
         "start",
         "--web",
         "--port",

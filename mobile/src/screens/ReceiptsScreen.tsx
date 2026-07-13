@@ -5,6 +5,7 @@ import { donations, donorProfile } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill, EmptyState, Button } from '../components/ui';
+import { LoginGate } from '../components/LoginGate';
 import { Icon } from '../components/Icon';
 import { colors, font, num, row, rowBetween } from '../theme';
 import { useAppState, type Receipt } from '../store/appState';
@@ -30,10 +31,21 @@ export default function ReceiptsScreen() {
   const all = [...receipts, ...history];
 
   return (
+    <LoginGate
+      icon="file-text"
+      title="إيصالاتك في حسابك"
+      benefits={['أرشيف كامل لكل إيصالات تبرعاتك', 'متابعة حالة كل تبرع حتى اعتماده', 'مشاركة وحفظ الإيصالات في أي وقت']}
+    >
     <Screen header={<AppBar title="إيصالاتي" onBack={() => nav.goBack()} onBell={undefined} />}>
       <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', marginBottom: 10, marginHorizontal: 2, lineHeight: 18 }]}>
         كل إيصالات تبرعاتك في مكان واحد. الإيصالات قيد التأكيد/المراجعة تُعتمد بعد تأكيد الدفع أو مراجعة الإدارة.
       </Text>
+      <Card style={[row, { gap: 9, marginBottom: 12, backgroundColor: colors.goldSoft }]}>
+        <Icon name="alert-triangle" size={14} color="#B9791A" />
+        <Text style={[font('700'), { flex: 1, fontSize: 10, color: '#8A5B10', textAlign: 'right' }]}>
+          إيصالات تجريبية لغرض العرض فقط — لا تمثل عمليات دفع حقيقية.
+        </Text>
+      </Card>
 
       {all.map((r, i) => (
         <Pressable key={`${r.reference}-${i}`} onPress={() => nav.navigate('DonationSuccess', r)}>
@@ -68,5 +80,6 @@ export default function ReceiptsScreen() {
       )}
       <View style={{ height: 12 }} />
     </Screen>
+    </LoginGate>
   );
 }

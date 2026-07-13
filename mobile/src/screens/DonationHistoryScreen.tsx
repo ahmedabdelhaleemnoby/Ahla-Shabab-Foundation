@@ -8,6 +8,7 @@ import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill, Chip } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { LoginGate } from '../components/LoginGate';
 import { colors, font, num, row, rowBetween } from '../theme';
 
 // Broaden to all donations so the demo history has depth.
@@ -51,6 +52,11 @@ export default function DonationHistoryScreen() {
   const total = combined.filter((d) => d.status === 'مكتمل').reduce((s, d) => s + d.amount, 0);
 
   return (
+    <LoginGate
+      icon="heart"
+      title="تبرعاتك في حسابك"
+      benefits={['سجل كامل بكل تبرعاتك وكفالاتك', 'متابعة التبرعات الشهرية المتكررة', 'إحصاءات أثرك عبر الشهور']}
+    >
     <Screen header={<AppBar title="سجل التبرعات" onBack={() => nav.goBack()} onBell={undefined} />}>
       {/* Summary */}
       <LinearGradient colors={[colors.navy800, colors.navy900]} start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }} style={{ borderRadius: 18, padding: 18 }}>
@@ -97,6 +103,7 @@ export default function DonationHistoryScreen() {
       ))}
       <View style={{ height: 16 }} />
     </Screen>
+    </LoginGate>
   );
 }
 

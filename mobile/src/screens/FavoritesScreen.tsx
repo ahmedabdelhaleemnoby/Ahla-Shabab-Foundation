@@ -7,6 +7,7 @@ import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, ProgressBar, Pill, EmptyState } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { LoginGate } from '../components/LoginGate';
 import { colors, font, num, row, rowBetween } from '../theme';
 
 /** Mock favorites: first two projects + first sponsorable case. TODO(backend): GET /me/favorites. */
@@ -18,6 +19,11 @@ export default function FavoritesScreen() {
   const empty = favProjects.length + favCases.length === 0;
 
   return (
+    <LoginGate
+      icon="star"
+      title="مفضلتك في حسابك"
+      benefits={['احفظ الحالات والمشروعات لمتابعتها', 'تنبيهات عند اقتراب أهدافها من الاكتمال', 'وصول سريع من أي جهاز بعد تسجيل الدخول']}
+    >
     <Screen header={<AppBar title="المفضلة" onBack={() => nav.goBack()} onBell={undefined} />}>
       {empty ? (
         <EmptyState icon="heart" title="لا توجد عناصر مفضلة" hint="اضغط على أيقونة القلب في أي حالة أو مشروع لحفظه هنا" />
@@ -55,5 +61,6 @@ export default function FavoritesScreen() {
       )}
       <View style={{ height: 12 }} />
     </Screen>
+    </LoginGate>
   );
 }

@@ -3,8 +3,10 @@ import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, cardShadow, font } from '../theme';
 import { Icon } from './Icon';
+import { openDrawer } from '../store/drawer';
+import { useUnreadCount } from '../store/notifications';
 
-/** Official association logo — sits top-right in the RTL app bar. */
+/** Official association logo. */
 export function Logo({ small }: { small?: boolean }) {
   return (
     <Image
@@ -16,11 +18,17 @@ export function Logo({ small }: { small?: boolean }) {
   );
 }
 
+/**
+ * App bar. Two modes:
+ * - Main screens (no onBack): hamburger (opens the sidebar) on the right,
+ *   bell on the left, title — or the logo on Home — in the middle.
+ * - Pushed screens (onBack): back arrow right, title middle, logo left.
+ */
 export function AppBar({
   title,
   onBack,
   onBell,
-  notifications = 3,
+  notifications,
 }: {
   title?: string;
   onBack?: () => void;
@@ -30,31 +38,42 @@ export function AppBar({
 }) {
   const nav = useNavigation<any>();
   const openBell = onBell ?? (() => nav.navigate('Notifications'));
-  return (
-    <View style={styles.bar}>
-      {onBack ? (
+  const unread = useUnreadCount();
+  const badge = notifications ?? unread;
+
+  if (onBack) {
+    return (
+      <View style={styles.bar}>
         <Pressable style={[styles.iconBtn, cardShadow]} onPress={onBack}>
           {/* Back arrow points right in RTL */}
           <Icon name="chevron-right" size={20} color={colors.navy700} />
         </Pressable>
-      ) : (
-        <Pressable style={[styles.iconBtn, cardShadow]} onPress={openBell}>
-          <Icon name="bell" size={20} color={colors.navy700} />
-          {notifications > 0 && (
-            <View style={styles.badge}>
-              <Text style={[font('800'), { color: '#fff', fontSize: 9 }]}>{notifications}</Text>
-            </View>
-          )}
-        </Pressable>
-      )}
+        {title ? <Text style={[font('800'), { fontSize: 17, color: colors.navy700 }]}>{title}</Text> : <View />}
+        <Logo small={!!title} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.bar}>
+      <Pressable style={[styles.iconBtn, cardShadow]} onPress={openDrawer} accessibilityLabel="القائمة">
+        <Icon name="menu" size={20} color={colors.navy700} />
+      </Pressable>
 
       {title ? (
         <Text style={[font('800'), { fontSize: 17, color: colors.navy700 }]}>{title}</Text>
       ) : (
-        <View />
+        <Logo small />
       )}
 
-      <Logo small={!!title} />
+      <Pressable style={[styles.iconBtn, cardShadow]} onPress={openBell}>
+        <Icon name="bell" size={20} color={colors.navy700} />
+        {badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={[font('800'), { color: '#fff', fontSize: 9 }]}>{badge}</Text>
+          </View>
+        )}
+      </Pressable>
     </View>
   );
 }

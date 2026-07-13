@@ -43,8 +43,9 @@ export default function ProjectsScreen() {
             <View style={[row, { gap: 11, alignItems: 'flex-start' }]}>
               <LinearGradient colors={p.gradient} style={{ width: 78, height: 96, borderRadius: 12 }} />
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row-reverse' }}>
+                <View style={{ flexDirection: 'row-reverse', gap: 6, flexWrap: 'wrap' }}>
                   <Pill label={`مشروع ${p.status}`} tone="navy" />
+                  {p.category ? <Pill label={p.category} tone="gold" /> : null}
                 </View>
                 <Text style={[font('800'), { fontSize: 14, color: colors.navy700, textAlign: 'right', marginTop: 5 }]}>{p.title}</Text>
                 <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, textAlign: 'right', lineHeight: 15, marginTop: 3 }]} numberOfLines={2}>
@@ -62,10 +63,20 @@ export default function ProjectsScreen() {
               </View>
             </View>
             <View style={[rowBetween, { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.line2, paddingTop: 10 }]}>
-              <Text style={[font('600'), num, { fontSize: 10.5, color: colors.muted }]}>
-                {p.supporters.toLocaleString('en-US')} داعم · {doneStages}/{p.stages.length} مراحل · {p.updates?.length ?? 0} تحديثات
+              <Text style={[font('600'), num, { fontSize: 10, color: colors.muted, flex: 1, textAlign: 'left' }]} numberOfLines={1}>
+                {p.timeline ? `${p.timeline} · ` : ''}{p.supporters.toLocaleString('en-US')} داعم · {doneStages}/{p.stages.length} مراحل
               </Text>
-              <Button label="ادعم المشروع" variant="green" small onPress={() => nav.navigate('ProjectDetail', { id: p.id })} />
+            </View>
+            <View style={[row, { gap: 8, marginTop: 9 }]}>
+              <Button label="التفاصيل" variant="outline" small style={{ width: 96 }} onPress={() => nav.navigate('ProjectDetail', { id: p.id })} />
+              <Button
+                label="ادعم المشروع"
+                variant="green"
+                small
+                icon="heart"
+                style={{ flex: 1 }}
+                onPress={() => nav.navigate('Main', { screen: 'Donate', params: { projectId: p.id } })}
+              />
             </View>
           </Card>
         );

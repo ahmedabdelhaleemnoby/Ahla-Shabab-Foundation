@@ -1,26 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { consultants, consultationTypes, type ConsultationType } from '@ahla/shared';
+import { consultants } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
-import { Card, Button, Tile } from '../components/ui';
+import { Card, Button } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
-import { colors, font, row, rowBetween } from '../theme';
+import { colors, font, row } from '../theme';
 
-const typeIcon: Record<ConsultationType, IconName> = {
-  نفسية: 'heart',
-  دينية: 'book-open',
-  أسرية: 'users',
-  تربوية: 'award',
-  مهنية: 'briefcase',
-  قانونية: 'shield',
-};
+/* Each type opens its own dedicated request form (§7). */
+const FORM_TYPES: { type: string; icon: IconName; hint: string }[] = [
+  { type: 'نفسية', icon: 'heart', hint: 'قلق · اكتئاب · ضغوط' },
+  { type: 'دينية', icon: 'book-open', hint: 'فتاوى ومعاملات' },
+  { type: 'طبية', icon: 'activity', hint: 'رأي طبي مبدئي' },
+  { type: 'أسرية', icon: 'users', hint: 'زوجية · أبناء' },
+  { type: 'أعمال', icon: 'briefcase', hint: 'مشروعك ومسارك' },
+];
 
 export default function ConsultationsScreen() {
   const nav = useNavigation<any>();
-  const [type, setType] = useState<ConsultationType>('نفسية');
   const featured = consultants.find((c) => c.featured)!;
 
   return (
@@ -33,13 +32,26 @@ export default function ConsultationsScreen() {
       </View>
 
       <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700, textAlign: 'center', marginTop: 12, marginBottom: 12 }]}>
-        اختر نوع الاستشارة
+        اختر نوع الاستشارة لفتح نموذج الطلب
       </Text>
       <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 9 }}>
-        {consultationTypes.map((t) => (
-          <View key={t.type} style={{ width: '31%' }}>
-            <Tile label={t.label} icon={typeIcon[t.type]} active={type === t.type} onPress={() => setType(t.type)} />
-          </View>
+        {FORM_TYPES.map((t) => (
+          <Pressable
+            key={t.type}
+            onPress={() => nav.navigate('ConsultationRequest', { type: t.type })}
+            style={{ width: '48%', flexGrow: 1, backgroundColor: '#fff', borderRadius: 15, borderWidth: 1, borderColor: colors.line, padding: 12, alignItems: 'flex-end' }}
+          >
+            <View style={[row, { gap: 8, alignSelf: 'stretch', justifyContent: 'flex-end' }]}>
+              <View style={{ alignItems: 'flex-end', flex: 1 }}>
+                <Text style={[font('800'), { fontSize: 13, color: colors.navy700 }]}>استشارة {t.type}</Text>
+                <Text style={[font('400'), { fontSize: 9.5, color: colors.muted, marginTop: 2 }]}>{t.hint}</Text>
+              </View>
+              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={t.icon} size={17} color={colors.navy700} />
+              </View>
+            </View>
+            <Text style={[font('700'), { fontSize: 10.5, color: colors.navy500, marginTop: 8 }]}>اطلب الآن ‹</Text>
+          </Pressable>
         ))}
       </View>
 

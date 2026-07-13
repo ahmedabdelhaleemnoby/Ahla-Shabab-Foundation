@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable, Image } from 'react-native';
+import { View, Text, Pressable, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { cases, projects, articles, foundationStats, quickServices, appConfig, pct, egp } from '@ahla/shared';
+import { cases, projects, articles, foundationStats, quickServices, appConfig, workGovernorates, pct, egp } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Pill, Tile, Stat, SectionHeader } from '../components/ui';
@@ -65,10 +65,20 @@ export default function HomeScreen() {
 
       {/* 2 — Impact numbers */}
       <View style={[row, { gap: 9, marginTop: 14 }]}>
-        <Stat icon="map-pin" value={String(foundationStats.governorates)} label="محافظة" />
         <Stat icon="users" value={foundationStats.beneficiaries} label="مستفيد" />
         <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنة عطاء" />
       </View>
+
+      {/* مناطق عمل الجمعية (§2) — factual chips instead of a numeric claim */}
+      <SectionHeader title="مناطق عمل الجمعية" more="عن الجمعية ‹" onMore={() => nav.navigate('About')} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row-reverse', gap: 7, paddingHorizontal: 2 }}>
+        {workGovernorates.map((g) => (
+          <View key={g} style={[row, { gap: 5, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 100, paddingVertical: 6, paddingHorizontal: 13 }]}>
+            <Icon name="map-pin" size={11} color={colors.navy500} />
+            <Text style={[font('700'), { fontSize: 10.5, color: colors.navy700 }]}>{g}</Text>
+          </View>
+        ))}
+      </ScrollView>
 
       {/* 3 — Quick services */}
       <SectionHeader title="خدمات سريعة" />
@@ -79,11 +89,11 @@ export default function HomeScreen() {
             label={s.label}
             icon={serviceIcon[s.icon] ?? 'circle'}
             onPress={() => {
-              if (s.id === 'consult') nav.navigate('ServicesBrowse', { parentId: null });
-              else if (s.id === 'cases') nav.navigate('Discover');
+              if (s.id === 'consult') nav.navigate('Consultations');
+              else if (s.id === 'cases') nav.navigate('UrgentCases');
               else if (s.id === 'donate') nav.navigate('Main', { screen: 'Donate' });
               else if (s.id === 'projects') nav.navigate('Projects');
-              else if (s.id === 'water') nav.navigate('ContactUs');
+              else if (s.id === 'water') nav.navigate('ProjectDetail', { id: 'p-water' });
             }}
           />
         ))}
@@ -91,7 +101,7 @@ export default function HomeScreen() {
 
       {/* 4 — Urgent cases */}
       <View style={[rowBetween, { marginTop: 16, marginBottom: 10, marginHorizontal: 2 }]}>
-        <Pressable onPress={() => nav.navigate('Discover')}>
+        <Pressable onPress={() => nav.navigate('UrgentCases')}>
           <Text style={[font('700'), { color: colors.navy500, fontSize: 11.5 }]}>عرض المزيد ‹</Text>
         </Pressable>
         <View style={[row, { gap: 7 }]}>
@@ -101,16 +111,16 @@ export default function HomeScreen() {
       </View>
       <CaseRow item={urgent} onPress={() => nav.navigate('CaseDetail', { id: urgent.id })} />
 
-      {/* أكفل حالة — sponsorship entry */}
+      {/* اكفل أسرة — monthly sponsorship entry (§5) */}
       <Pressable
-        onPress={() => nav.navigate('Main', { screen: 'Discover', params: { initialFilter: 'كفالة شهرية' } })}
+        onPress={() => nav.navigate('Sponsorship')}
         style={[row, { gap: 11, marginTop: 12, backgroundColor: colors.greenSoft, borderRadius: 16, padding: 13 }]}
       >
         <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="users" size={20} color={colors.greenDark} />
         </View>
         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <Text style={[font('800'), { fontSize: 13.5, color: colors.greenDark }]}>أكفل حالة</Text>
+          <Text style={[font('800'), { fontSize: 13.5, color: colors.greenDark }]}>اكفل أسرة</Text>
           <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 2 }]}>كفالة شهرية ثابتة تغيّر حياة أسرة كاملة</Text>
         </View>
         <Icon name="chevron-left" size={18} color={colors.greenDark} />

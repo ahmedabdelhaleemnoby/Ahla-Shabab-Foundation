@@ -5,7 +5,7 @@ import { enableScreens } from 'react-native-screens';
 // react-native-screens renders stacked routes incorrectly on web — use the JS fallback there.
 if (Platform.OS === 'web') enableScreens(false);
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,7 +20,8 @@ import {
 } from '@expo-google-fonts/cairo';
 
 import { colors } from './src/theme';
-import { TabBar } from './src/components/TabBar';
+import { AppDrawer } from './src/components/AppDrawer';
+import { navRef } from './src/navigation/ref';
 import type { RootStackParamList, TabParamList } from './src/navigation/types';
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -28,6 +29,11 @@ import CasesScreen from './src/screens/CasesScreen';
 import DonateScreen from './src/screens/DonateScreen';
 import NewsScreen from './src/screens/NewsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import OurServicesScreen from './src/screens/OurServicesScreen';
+import UrgentCasesScreen from './src/screens/UrgentCasesScreen';
+import SponsorshipScreen from './src/screens/SponsorshipScreen';
+import ConsultationRequestScreen from './src/screens/ConsultationRequestScreen';
+import PaymentInfoScreen from './src/screens/PaymentInfoScreen';
 import ProjectDetailScreen from './src/screens/ProjectDetailScreen';
 import CaseDetailScreen from './src/screens/CaseDetailScreen';
 import ConsultationsScreen from './src/screens/ConsultationsScreen';
@@ -64,7 +70,7 @@ const createAppStack = (Platform.OS === 'web' ? createStackNavigator : createNat
 const Stack = createAppStack<RootStackParamList>();
 
 // Test/dev-only navigation hook (no-op in release builds where __DEV__ is false).
-export const navRef = createNavigationContainerRef<RootStackParamList>();
+export { navRef };
 if (__DEV__) (globalThis as unknown as { __nav?: typeof navRef }).__nav = navRef;
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -77,13 +83,16 @@ function Tabs() {
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <TabBar {...props} />}
-      // Visual RTL order is handled inside TabBar (row-reverse); keep logical order here.
+      // Navigation moved to the sidebar (AppDrawer) — the bottom bar is gone,
+      // but the tab navigator stays so nav.navigate('Main', { screen }) keeps working.
+      tabBar={() => null}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Discover" component={CasesScreen} />
+      {/* خدماتنا (§8) — the old "اكتشف" cases browser lives on as the Cases route. */}
+      <Tab.Screen name="Discover" component={OurServicesScreen} />
       <Tab.Screen name="Donate" component={DonateScreen} />
-      <Tab.Screen name="News" component={NewsScreen} />
+      {/* أخبارنا (§9) — the about content moved to the dedicated About route. */}
+      <Tab.Screen name="News" component={NewsFeedScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -114,6 +123,12 @@ export default function App() {
           <Stack.Screen name="Main" component={Tabs} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
           <Stack.Screen name="CaseDetail" component={CaseDetailScreen} />
+          <Stack.Screen name="Cases" component={CasesScreen} />
+          <Stack.Screen name="UrgentCases" component={UrgentCasesScreen} />
+          <Stack.Screen name="Sponsorship" component={SponsorshipScreen} />
+          <Stack.Screen name="About" component={NewsScreen} />
+          <Stack.Screen name="ConsultationRequest" component={ConsultationRequestScreen} />
+          <Stack.Screen name="PaymentInfo" component={PaymentInfoScreen} />
           <Stack.Screen name="Consultations" component={ConsultationsScreen} />
           <Stack.Screen name="Booking" component={BookingScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
@@ -142,6 +157,7 @@ export default function App() {
           <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
           <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
         </Stack.Navigator>
+        <AppDrawer />
       </NavigationContainer>
     </SafeAreaProvider>
   );

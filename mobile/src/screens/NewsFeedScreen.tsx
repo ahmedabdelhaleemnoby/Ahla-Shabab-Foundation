@@ -25,7 +25,7 @@ export default function NewsFeedScreen() {
   const [featured, ...rest] = list;
 
   return (
-    <Screen header={<AppBar title="أخبارنا وأنشطتنا" onBack={() => nav.goBack()} onBell={undefined} />}>
+    <Screen header={<AppBar title="أخبارنا وأنشطتنا" onBack={nav.canGoBack() ? () => nav.goBack() : undefined} />}>
       {/* Filters */}
       <View style={[row, { gap: 7, flexWrap: 'wrap', marginBottom: 4 }]}>
         {FILTERS.map((f) => (

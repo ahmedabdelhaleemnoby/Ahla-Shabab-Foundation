@@ -19,6 +19,12 @@ export interface HumanitarianCase {
   imageUrl?: string;
   /** Eligible for monthly sponsorship (كفالة شهرية). */
   sponsorable?: boolean;
+  /** Suggested monthly sponsorship amount in EGP (اكفل أسرة). */
+  monthlyAmount?: number;
+  /** Expected sponsorship duration label, e.g. "12 شهراً". */
+  sponsorshipDuration?: string;
+  /** Sponsorship state shown on the اكفل أسرة card. */
+  sponsorshipStatus?: 'متاحة للكفالة' | 'مكفولة جزئياً' | 'مكتملة';
   /** Latest public update label, e.g. "تم توثيق الحالة منذ يومين". */
   lastUpdate?: string;
   gradient: [string, string];
@@ -36,6 +42,10 @@ export interface Project {
   title: string;
   description: string;
   status: ProjectStatus;
+  /** Project category label, e.g. "مياه" / "إطعام" / "تعليم". */
+  category?: string;
+  /** Human timeline label, e.g. "2024 — مستمر". */
+  timeline?: string;
   targetAmount: number;
   raisedAmount: number;
   supporters: number;
@@ -175,5 +185,13 @@ export interface AppNotification {
   title: string;
   body: string;
   time: string; // relative Arabic label
+  /** Calendar date (ISO) + wall-clock label for the notification center. */
+  date?: string;
+  clock?: string;
   read: boolean;
+  /** Id of the related entity (case/project/article/booking) for tap-through. */
+  targetId?: string;
 }
+
+/** Consultation request lifecycle (demo — stored locally on the device). */
+export type ConsultationStatus = 'جديد' | 'قيد المراجعة' | 'تم تحديد موعد' | 'مكتمل' | 'ملغي';

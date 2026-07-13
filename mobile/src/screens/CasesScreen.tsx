@@ -42,13 +42,11 @@ export default function CasesScreen() {
 
   return (
     <Screen
-      header={<AppBar />}
+      header={<AppBar title="الحالات الإنسانية" onBack={nav.canGoBack() ? () => nav.goBack() : undefined} />}
       footer={
-        filter !== 'كفالة شهرية' ? (
-          <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: colors.line }}>
-            <Button label={`أكفل حالة (${sponsorableCount} حالة متاحة للكفالة)`} variant="green" icon="users" onPress={() => setFilter('كفالة شهرية')} />
-          </View>
-        ) : undefined
+        <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: colors.line }}>
+          <Button label={`اكفل أسرة (${sponsorableCount} أسرة متاحة للكفالة)`} variant="green" icon="users" onPress={() => nav.navigate('Sponsorship')} />
+        </View>
       }
     >
       <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 12 }}>

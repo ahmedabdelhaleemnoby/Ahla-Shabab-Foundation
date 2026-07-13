@@ -1,9 +1,21 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 export type RootStackParamList = {
-  Main: { screen?: keyof TabParamList } | undefined;
+  Main: { screen?: keyof TabParamList; params?: TabParamList[keyof TabParamList] } | undefined;
   ProjectDetail: { id: string };
   CaseDetail: { id: string };
+  /** Browse all humanitarian cases (search + tag filters). */
+  Cases: { initialFilter?: string } | undefined;
+  /** حالات عاجلة — urgent cases section (§6). */
+  UrgentCases: undefined;
+  /** اكفل أسرة — monthly sponsorship page (§5). */
+  Sponsorship: undefined;
+  /** عن الجمعية — dedicated about page (§9). */
+  About: undefined;
+  /** Per-type consultation request form (§7). */
+  ConsultationRequest: { type: string };
+  /** Server payment-confirmation explainer (§13 — visual placeholder). */
+  PaymentInfo: undefined;
   Consultations: undefined;
   Booking: { consultantId?: string } | undefined;
   Notifications: undefined;
@@ -53,8 +65,9 @@ export type RootStackParamList = {
 
 export type TabParamList = {
   Home: undefined;
-  Discover: { initialFilter?: string } | undefined;
-  Donate: { caseId?: string; projectId?: string } | undefined;
+  /** خدماتنا — the foundation's service sections (§8, was "Discover"). */
+  Discover: undefined;
+  Donate: { caseId?: string; projectId?: string; sponsor?: boolean } | undefined;
   News: undefined;
   Profile: undefined;
 };

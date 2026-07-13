@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { foundationStats, foundationValues, foundationInitiatives, articles } from '@ahla/shared';
+import { foundationStats, foundationValues, foundationInitiatives, articles, workGovernorates } from '@ahla/shared';
 
 const MILESTONES = [
   { year: '2013', label: 'بداية الفكرة' },
@@ -14,7 +14,6 @@ const MILESTONES = [
 
 const IMPACT = [
   { value: '+1,200,000', label: 'مستفيد من خدماتنا' },
-  { value: '22', label: 'محافظة في أنحاء مصر' },
   { value: '+650', label: 'مبادرة ومشروع' },
   { value: '+10,000', label: 'متطوع فعّال' },
 ];
@@ -46,7 +45,7 @@ export default function NewsScreen() {
   const nav = useNavigation<any>();
   return (
     <Screen
-      header={<AppBar title="عن الجمعية" />}
+      header={<AppBar title="عن الجمعية" onBack={nav.canGoBack() ? () => nav.goBack() : undefined} />}
       footer={
         <StickyFooter>
           <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ width: 130 }} onPress={() => nav.navigate('ContactUs')} />
@@ -59,17 +58,34 @@ export default function NewsScreen() {
         <View style={{ width: '65%', alignSelf: 'flex-end' }}>
           <Text style={[font('800'), { fontSize: 17, color: '#fff', textAlign: 'right' }]}>معاً نصنع أثرا</Text>
           <Text style={[font('400'), { fontSize: 9.5, color: '#cde', lineHeight: 15, marginTop: 8, textAlign: 'right' }]}>
-            جمعية شبابية مصرية تعمل في 22 محافظة. نؤمن بأن الدين والتفوق والتطوع طريقنا في بناء إنسان ومجتمع أفضل.
+            جمعية شبابية مصرية. نؤمن بأن الدين والتفوق والتطوع طريقنا في بناء إنسان ومجتمع أفضل.
           </Text>
         </View>
       </LinearGradient>
 
       {/* Stats */}
       <View style={[row, { gap: 9, marginTop: 12 }]}>
-        <Stat icon="map-pin" value={String(foundationStats.governorates)} label="محافظة" />
         <Stat icon="users" value={foundationStats.beneficiaries} label="مستفيد" />
-        <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنوات" />
+        <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنوات عطاء" />
       </View>
+
+      {/* Work areas — a factual list instead of a numeric claim */}
+      <Card style={{ marginTop: 12 }}>
+        <View style={[row, { gap: 6, justifyContent: 'flex-end', marginBottom: 10 }]}>
+          <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700 }]}>مناطق عمل الجمعية</Text>
+          <Icon name="map-pin" size={15} color={colors.navy700} />
+        </View>
+        <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 7 }}>
+          {workGovernorates.map((g) => (
+            <View key={g} style={{ backgroundColor: colors.paper2, borderRadius: 100, paddingVertical: 5, paddingHorizontal: 12 }}>
+              <Text style={[font('700'), { fontSize: 10.5, color: colors.navy700 }]}>{g}</Text>
+            </View>
+          ))}
+          <View style={{ backgroundColor: '#EAF0F8', borderRadius: 100, paddingVertical: 5, paddingHorizontal: 12 }}>
+            <Text style={[font('700'), { fontSize: 10.5, color: colors.navy500 }]}>وفي توسع مستمر…</Text>
+          </View>
+        </View>
+      </Card>
 
       {/* News & activities */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 10, marginHorizontal: 2 }}>
