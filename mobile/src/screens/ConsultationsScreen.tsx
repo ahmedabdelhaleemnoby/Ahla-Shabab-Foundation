@@ -2,25 +2,26 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { consultants } from '@ahla/shared';
+import { consultants, makeDefaultCmsState } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, row } from '../theme';
+import { getConsultationTypes } from '../store/cms';
 
-/* Each type opens its own dedicated request form (§7). */
-const FORM_TYPES: { type: string; icon: IconName; hint: string }[] = [
-  { type: 'نفسية', icon: 'heart', hint: 'قلق · اكتئاب · ضغوط' },
-  { type: 'دينية', icon: 'book-open', hint: 'فتاوى ومعاملات' },
-  { type: 'طبية', icon: 'activity', hint: 'رأي طبي مبدئي' },
-  { type: 'أسرية', icon: 'users', hint: 'زوجية · أبناء' },
-  { type: 'أعمال', icon: 'briefcase', hint: 'مشروعك ومسارك' },
-];
-
+/* Each type opens its own dedicated request form (§7 / §12).
+   The list is CMS-authored (Form Builder) with a safe default fallback. */
 export default function ConsultationsScreen() {
   const nav = useNavigation<any>();
   const featured = consultants.find((c) => c.featured)!;
+  const cmsTypes = getConsultationTypes();
+  const types = (cmsTypes.length > 0 ? cmsTypes : makeDefaultCmsState().consultations).map((c) => ({
+    type: c.key,
+    name: c.name,
+    icon: c.icon as IconName,
+    hint: c.description,
+  }));
 
   return (
     <Screen header={<AppBar onBack={() => nav.goBack()} />}>
@@ -35,7 +36,7 @@ export default function ConsultationsScreen() {
         اختر نوع الاستشارة لفتح نموذج الطلب
       </Text>
       <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 9 }}>
-        {FORM_TYPES.map((t) => (
+        {types.map((t) => (
           <Pressable
             key={t.type}
             onPress={() => nav.navigate('ConsultationRequest', { type: t.type })}
@@ -43,8 +44,8 @@ export default function ConsultationsScreen() {
           >
             <View style={[row, { gap: 8, alignSelf: 'stretch', justifyContent: 'flex-end' }]}>
               <View style={{ alignItems: 'flex-end', flex: 1 }}>
-                <Text style={[font('800'), { fontSize: 13, color: colors.navy700 }]}>استشارة {t.type}</Text>
-                <Text style={[font('400'), { fontSize: 9.5, color: colors.muted, marginTop: 2 }]}>{t.hint}</Text>
+                <Text style={[font('800'), { fontSize: 13, color: colors.navy700 }]} numberOfLines={1}>{t.name}</Text>
+                <Text style={[font('400'), { fontSize: 9.5, color: colors.muted, marginTop: 2 }]} numberOfLines={1}>{t.hint}</Text>
               </View>
               <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name={t.icon} size={17} color={colors.navy700} />

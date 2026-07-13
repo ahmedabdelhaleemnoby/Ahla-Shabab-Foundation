@@ -16,6 +16,7 @@ import CmsHome from './pages/CmsHome';
 import CmsMenu from './pages/CmsMenu';
 import CmsPages from './pages/CmsPages';
 import CmsMedia from './pages/CmsMedia';
+import CmsForms from './pages/CmsForms';
 import CmsTools from './pages/CmsTools';
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/cms/menu" element={<CmsMenu />} />
         <Route path="/cms/pages" element={<CmsPages />} />
         <Route path="/cms/media" element={<CmsMedia />} />
+        <Route path="/cms/forms" element={<CmsForms />} />
         <Route path="/cms/tools" element={<CmsTools />} />
         <Route path="/roles" element={<Roles />} />
         <Route path="*" element={<Navigate to="/" replace />} />

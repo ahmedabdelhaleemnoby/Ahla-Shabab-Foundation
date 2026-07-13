@@ -4,6 +4,7 @@ import {
   CMS_MEDIA_KEY,
   makeDefaultCmsState,
   defaultMedia,
+  defaultConsultations,
   type CmsState,
   type MediaItem,
 } from '@ahla/shared';
@@ -30,6 +31,10 @@ export function migrate(state: CmsState): CmsState {
   // v1 → v2: introduced the media library. Seed it if missing.
   if (!Array.isArray(s.media)) {
     s = { ...s, media: defaultMedia.map((m) => ({ ...m })) };
+  }
+  // v2 → v3: introduced the consultation form builder. Seed it if missing.
+  if (!Array.isArray(s.consultations)) {
+    s = { ...s, consultations: defaultConsultations.map((c) => ({ ...c, fields: c.fields.map((f) => ({ ...f })) })) };
   }
   if (s.version !== CMS_SCHEMA_VERSION) {
     s = { ...s, version: CMS_SCHEMA_VERSION };

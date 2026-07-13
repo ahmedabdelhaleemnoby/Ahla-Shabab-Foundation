@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { governorates, isEgPhone, isEmail, makeBookingRef, type ConsultationStatus } from '@ahla/shared';
+import {
+  governorates,
+  isEgPhone,
+  isEmail,
+  makeBookingRef,
+  makeDefaultCmsState,
+  type ConsultationStatus,
+  type ConsultationTypeConfig,
+  type FormField,
+} from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -10,46 +19,13 @@ import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, radius, row } from '../theme';
 import { appState } from '../store/appState';
+import { getConsultationType } from '../store/cms';
 import type { RootProps } from '../navigation/types';
 
-/* Per-type consultation request forms (§7). Demo: the request is saved
-   locally on the device only — nothing is sent to any server. */
+/* Per-type consultation forms (§7 / §12). The schema is authored in the
+   dashboard Form Builder and rendered here dynamically. Demo: the request is
+   saved locally on the device only — nothing is sent to any server. */
 
-export type ConsultationFormType = 'نفسية' | 'دينية' | 'طبية' | 'أسرية' | 'أعمال';
-
-const TYPE_META: Record<ConsultationFormType, { icon: IconName; blurb: string }> = {
-  نفسية: { icon: 'heart', blurb: 'جلسة سرية مع أخصائي نفسي معتمد.' },
-  دينية: { icon: 'book-open', blurb: 'إجابة موثوقة من مختص شرعي.' },
-  طبية: { icon: 'activity', blurb: 'رأي طبي مبدئي وتوجيه للتخصص المناسب.' },
-  أسرية: { icon: 'users', blurb: 'إرشاد أسري لحل الخلافات وتحسين العلاقات.' },
-  أعمال: { icon: 'briefcase', blurb: 'توجيه مهني لمشروعك أو مسارك الوظيفي.' },
-};
-
-/** Extra fields per consultation type (from the review document). */
-const EXTRA_FIELDS: Record<ConsultationFormType, { key: string; label: string; options: string[] }[]> = {
-  نفسية: [
-    { key: 'topic', label: 'طبيعة الحالة', options: ['قلق وتوتر', 'اكتئاب', 'ضغوط حياتية', 'علاقات', 'أخرى'] },
-    { key: 'previous', label: 'هل سبق تلقي جلسات نفسية؟', options: ['نعم', 'لا'] },
-  ],
-  دينية: [
-    { key: 'topic', label: 'موضوع الاستشارة', options: ['عبادات', 'معاملات مالية', 'أسرة وزواج', 'أخرى'] },
-  ],
-  طبية: [
-    { key: 'specialty', label: 'التخصص المطلوب', options: ['طب عام', 'أطفال', 'أسنان', 'رمد وعيون', 'غير متأكد'] },
-    { key: 'chronic', label: 'هل توجد أمراض مزمنة؟', options: ['نعم', 'لا'] },
-  ],
-  أسرية: [
-    { key: 'topic', label: 'أطراف المشكلة', options: ['علاقة زوجية', 'الأبناء', 'الوالدين', 'أخرى'] },
-    { key: 'familySize', label: 'عدد أفراد الأسرة', options: ['2-3', '4-6', 'أكثر من 6'] },
-  ],
-  أعمال: [
-    { key: 'field', label: 'مجال العمل', options: ['تجارة', 'حرف ومهن', 'خدمات', 'زراعة', 'أخرى'] },
-    { key: 'stage', label: 'مرحلة المشروع', options: ['فكرة', 'بدء التشغيل', 'قائم بالفعل', 'توسع'] },
-  ],
-};
-
-const COMM = ['واتساب', 'مكالمة هاتفية', 'مكالمة فيديو', 'بريد إلكتروني'];
-const TIMES = ['صباحاً (9-12)', 'ظهراً (12-3)', 'مساءً (3-6)', 'أي وقت'];
 const STATUSES: ConsultationStatus[] = ['جديد', 'قيد المراجعة', 'تم تحديد موعد', 'مكتمل', 'ملغي'];
 
 const inputStyle = {
@@ -66,57 +42,75 @@ const inputStyle = {
   backgroundColor: '#fff',
 };
 
-function Labeled({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Labeled({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: React.ReactNode }) {
   return (
     <View style={{ marginBottom: 13 }}>
       <Text style={[font('700'), { fontSize: 12, color: colors.navy700, textAlign: 'right', marginBottom: 6 }]}>
         {label} {required ? <Text style={{ color: colors.red }}>*</Text> : <Text style={{ color: colors.muted, fontSize: 10 }}>(اختياري)</Text>}
       </Text>
       {children}
+      {help ? <Text style={[font('400'), { fontSize: 9.5, color: colors.muted, textAlign: 'right', marginTop: 4 }]}>{help}</Text> : null}
     </View>
   );
 }
 
+const sortF = (f: FormField[]) => [...f].sort((a, b) => a.sortOrder - b.sortOrder);
+type Val = string | string[];
+
 export default function ConsultationRequestScreen({ route }: RootProps<'ConsultationRequest'>) {
   const nav = useNavigation<any>();
-  const type = (route.params?.type ?? 'نفسية') as ConsultationFormType;
-  const meta = TYPE_META[type];
-  const extras = EXTRA_FIELDS[type];
+  const key = route.params?.type ?? 'نفسية';
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [email, setEmail] = useState('');
-  const [age, setAge] = useState('');
-  const [gov, setGov] = useState('');
-  const [comm, setComm] = useState('');
-  const [time, setTime] = useState('');
-  const [summary, setSummary] = useState('');
-  const [extraVals, setExtraVals] = useState<Record<string, string>>({});
+  // CMS-authored schema with a safe fallback to the built-in defaults.
+  const config: ConsultationTypeConfig = useMemo(
+    () => getConsultationType(key) ?? makeDefaultCmsState().consultations.find((c) => c.key === key) ?? makeDefaultCmsState().consultations[0],
+    [key]
+  );
+
+  const fields = useMemo(() => sortF(config.fields).filter((f) => !f.hidden), [config]);
+  const [values, setValues] = useState<Record<string, Val>>({});
   const [err, setErr] = useState<string | null>(null);
   const [doneRef, setDoneRef] = useState<string | null>(null);
 
+  const set = (k: string, v: Val) => setValues((prev) => ({ ...prev, [k]: v }));
+  const visible = (f: FormField) => !f.showIfKey || values[f.showIfKey] === f.showIfValue;
+
+  const validate = (): string | null => {
+    for (const f of fields) {
+      if (!visible(f)) continue;
+      if (f.type === 'info') continue;
+      const v = values[f.key];
+      const empty = v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
+      if (f.type === 'consent') {
+        if (v !== 'yes') return f.validationMessage ?? 'يجب الموافقة للمتابعة';
+        continue;
+      }
+      if (f.required && empty) return f.validationMessage ?? `أدخل: ${f.label}`;
+      if (empty) continue;
+      const s = String(v);
+      if (f.key === 'name' && s.trim().length < 3) return f.validationMessage ?? 'اكتب اسمك بالكامل';
+      if ((f.type === 'phone' || f.type === 'whatsapp') && !isEgPhone(s)) return f.validationMessage ?? 'رقم هاتف غير صحيح';
+      if (f.type === 'email' && !isEmail(s)) return f.validationMessage ?? 'البريد الإلكتروني غير صحيح';
+      if (f.type === 'textarea' && f.required && s.trim().length < 10) return f.validationMessage ?? 'اكتب ملخصاً موجزاً';
+    }
+    return null;
+  };
+
   const submit = () => {
-    if (name.trim().length < 3) return setErr('اكتب اسمك بالكامل (3 أحرف على الأقل)');
-    if (!isEgPhone(phone)) return setErr('أدخل رقم هاتف مصري صحيح (11 رقماً يبدأ بـ 01)');
-    if (whatsapp && !isEgPhone(whatsapp)) return setErr('رقم الواتساب غير صحيح');
-    if (email && !isEmail(email)) return setErr('البريد الإلكتروني غير صحيح');
-    if (!gov) return setErr('اختر المحافظة');
-    if (!comm) return setErr('اختر وسيلة التواصل المفضلة');
-    if (!time) return setErr('اختر الوقت المفضل');
-    if (summary.trim().length < 10) return setErr('اكتب ملخصاً موجزاً للمشكلة (10 أحرف على الأقل)');
-    for (const f of extras) if (!extraVals[f.key]) return setErr(`اختر: ${f.label}`);
-    setErr(null);
+    const e = validate();
+    setErr(e);
+    if (e) return;
     const reference = makeBookingRef(Math.floor(Date.now() / 1000));
+    const name = String(values['name'] ?? '').trim() || 'مستخدم';
     // Demo only — stored on this device, never sent to a server.
-    appState.addConsultation({ reference, type: `استشارة ${type}`, name: name.trim(), date: new Date().toISOString().slice(0, 10), status: 'جديد' });
+    appState.addConsultation({ reference, type: `استشارة ${config.key}`, name, date: new Date().toISOString().slice(0, 10), status: 'جديد' });
     setDoneRef(reference);
   };
 
   /* -------- submitted state -------- */
   if (doneRef) {
     return (
-      <Screen header={<AppBar title={`استشارة ${type}`} onBack={() => nav.goBack()} onBell={undefined} />}>
+      <Screen header={<AppBar title={`استشارة ${config.key}`} onBack={() => nav.goBack()} onBell={undefined} />}>
         <View style={{ alignItems: 'center', marginTop: 26 }}>
           <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="check" size={40} color={colors.green} />
@@ -128,7 +122,6 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
           </Text>
         </View>
 
-        {/* Status timeline */}
         <Card style={{ marginTop: 20 }}>
           <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700, textAlign: 'right', marginBottom: 10 }]}>مراحل متابعة الطلب</Text>
           {STATUSES.filter((s) => s !== 'ملغي').map((s, i) => {
@@ -158,10 +151,10 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
     );
   }
 
-  /* -------- form -------- */
+  /* -------- dynamic form -------- */
   return (
     <Screen
-      header={<AppBar title={`استشارة ${type}`} onBack={() => nav.goBack()} onBell={undefined} />}
+      header={<AppBar title={`استشارة ${config.key}`} onBack={() => nav.goBack()} onBell={undefined} />}
       footer={
         <StickyFooter>
           <Button label="إرسال الطلب" icon="send" style={{ flex: 1 }} onPress={submit} />
@@ -170,77 +163,109 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
     >
       <Card style={[row, { gap: 11, backgroundColor: '#EAF0F8', marginBottom: 14 }]}>
         <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={meta.icon} size={20} color={colors.navy700} />
+          <Icon name={config.icon as IconName} size={20} color={colors.navy700} />
         </View>
         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <Text style={[font('800'), { fontSize: 13, color: colors.navy700 }]}>استشارة {type} مجانية</Text>
-          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 2, textAlign: 'right' }]}>{meta.blurb} جميع البيانات سرية تماماً.</Text>
+          <Text style={[font('800'), { fontSize: 13, color: colors.navy700 }]}>{config.name} مجانية</Text>
+          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 2, textAlign: 'right' }]}>{config.description} جميع البيانات سرية تماماً.</Text>
         </View>
       </Card>
 
-      <Labeled label="الاسم بالكامل" required>
-        <TextInput value={name} onChangeText={setName} placeholder="اكتب اسمك" placeholderTextColor={colors.muted} style={inputStyle} />
-      </Labeled>
-      <View style={[row, { gap: 10 }]}>
-        <View style={{ flex: 1 }}>
-          <Labeled label="رقم الهاتف" required>
-            <TextInput value={phone} onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="01xxxxxxxxx" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={inputStyle} />
-          </Labeled>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Labeled label="واتساب">
-            <TextInput value={whatsapp} onChangeText={(t) => setWhatsapp(t.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="إن وجد" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={inputStyle} />
-          </Labeled>
-        </View>
-      </View>
-      <View style={[row, { gap: 10 }]}>
-        <View style={{ flex: 1 }}>
-          <Labeled label="السن">
-            <TextInput value={age} onChangeText={(t) => setAge(t.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="العمر" placeholderTextColor={colors.muted} keyboardType="number-pad" style={inputStyle} />
-          </Labeled>
-        </View>
-        <View style={{ flex: 2 }}>
-          <Labeled label="البريد الإلكتروني">
-            <TextInput value={email} onChangeText={setEmail} placeholder="example@mail.com" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" style={inputStyle} />
-          </Labeled>
-        </View>
-      </View>
-
-      <SelectField label="المحافظة" required value={gov} options={governorates} onChange={setGov} />
-      <View style={{ height: 13 }} />
-      <SelectField label="وسيلة التواصل المفضلة" required value={comm} options={COMM} onChange={setComm} />
-      <View style={{ height: 13 }} />
-      <SelectField label="الوقت المفضل للتواصل" required value={time} options={TIMES} onChange={setTime} />
-      <View style={{ height: 13 }} />
-
-      {/* Type-specific fields */}
-      {extras.map((f) => (
-        <View key={f.key}>
-          <SelectField label={f.label} required value={extraVals[f.key] ?? ''} options={f.options} onChange={(v) => setExtraVals((prev) => ({ ...prev, [f.key]: v }))} />
-          <View style={{ height: 13 }} />
-        </View>
-      ))}
-
-      <Labeled label="ملخص المشكلة" required>
-        <TextInput
-          value={summary}
-          onChangeText={setSummary}
-          placeholder="اشرح باختصار ما تريد الاستشارة بشأنه..."
-          placeholderTextColor={colors.muted}
-          multiline
-          style={[inputStyle, { minHeight: 96, textAlignVertical: 'top' }]}
-        />
-      </Labeled>
+      {fields.map((f) => (visible(f) ? <FieldView key={f.id} f={f} value={values[f.key]} onChange={(v) => set(f.key, v)} /> : null))}
 
       {err ? <Text style={[font('700'), { fontSize: 11.5, color: colors.red, textAlign: 'right', marginBottom: 8 }]}>{err}</Text> : null}
 
-      <Card style={[row, { gap: 10, backgroundColor: colors.greenSoft }]}>
-        <Icon name="lock" size={15} color={colors.greenDark} />
-        <Text style={[font('600'), { flex: 1, fontSize: 10.5, color: colors.greenDark, textAlign: 'right', lineHeight: 16 }]}>
-          بياناتك سرية ولا تُشارك مع أي جهة. نسخة العرض تحفظ الطلب على جهازك فقط.
-        </Text>
-      </Card>
+      {config.disclaimer ? (
+        <Card style={[row, { gap: 10, backgroundColor: colors.greenSoft }]}>
+          <Icon name="lock" size={15} color={colors.greenDark} />
+          <Text style={[font('600'), { flex: 1, fontSize: 10.5, color: colors.greenDark, textAlign: 'right', lineHeight: 16 }]}>{config.disclaimer}</Text>
+        </Card>
+      ) : null}
       <View style={{ height: 12 }} />
     </Screen>
   );
+}
+
+/* ---------------- Field renderers ---------------- */
+function FieldView({ f, value, onChange }: { f: FormField; value: string | string[] | undefined; onChange: (v: string | string[]) => void }) {
+  const v = value;
+
+  switch (f.type) {
+    case 'info':
+      return (
+        <Card style={[row, { gap: 10, marginBottom: 13, backgroundColor: '#EAF0F8' }]}>
+          <Icon name="info" size={15} color={colors.navy700} />
+          <Text style={[font('600'), { flex: 1, fontSize: 10.5, color: colors.navy700, textAlign: 'right', lineHeight: 16 }]}>{f.label}</Text>
+        </Card>
+      );
+    case 'consent':
+      return (
+        <Pressable onPress={() => onChange(v === 'yes' ? '' : 'yes')} style={[row, { gap: 10, marginBottom: 13, alignItems: 'flex-start' }]}>
+          <View style={{ width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: v === 'yes' ? colors.navy700 : colors.line, backgroundColor: v === 'yes' ? colors.navy700 : '#fff', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+            {v === 'yes' ? <Icon name="check" size={13} color="#fff" /> : null}
+          </View>
+          <Text style={[font('600'), { flex: 1, fontSize: 11, color: colors.slate, textAlign: 'right', lineHeight: 17 }]}>{f.label}{f.required ? <Text style={{ color: colors.red }}> *</Text> : null}</Text>
+        </Pressable>
+      );
+    case 'textarea':
+      return (
+        <Labeled label={f.label} required={f.required} help={f.help}>
+          <TextInput value={typeof v === 'string' ? v : ''} onChangeText={onChange} placeholder={f.placeholder} placeholderTextColor={colors.muted} multiline style={[inputStyle, { minHeight: 96, textAlignVertical: 'top' }]} />
+        </Labeled>
+      );
+    case 'governorate':
+      return (
+        <View style={{ marginBottom: 13 }}>
+          <SelectField label={f.label} required={f.required} value={typeof v === 'string' ? v : ''} options={governorates} onChange={onChange} />
+        </View>
+      );
+    case 'radio':
+      return (
+        <View style={{ marginBottom: 13 }}>
+          <SelectField label={f.label} required={f.required} value={typeof v === 'string' ? v : ''} options={f.options ?? []} onChange={onChange} />
+        </View>
+      );
+    case 'checkbox':
+    case 'multiselect': {
+      const arr = Array.isArray(v) ? v : [];
+      return (
+        <Labeled label={f.label} required={f.required} help={f.help}>
+          <View style={[row, { flexWrap: 'wrap', gap: 7 }]}>
+            {(f.options ?? []).map((o) => {
+              const on = arr.includes(o);
+              return (
+                <Pressable key={o} onPress={() => onChange(on ? arr.filter((x) => x !== o) : [...arr, o])} style={{ borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, backgroundColor: on ? colors.navy700 : '#fff', borderRadius: 100, paddingVertical: 7, paddingHorizontal: 13 }}>
+                  <Text style={[font('700'), { fontSize: 11.5, color: on ? '#fff' : colors.slate }]}>{o}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Labeled>
+      );
+    }
+    case 'file':
+      return (
+        <Labeled label={f.label} required={f.required} help={f.help}>
+          <Pressable style={[row, { gap: 8, justifyContent: 'center', borderWidth: 1, borderColor: colors.line, borderStyle: 'dashed', borderRadius: radius.sm, paddingVertical: 14, backgroundColor: '#fff' }]}>
+            <Icon name="upload" size={16} color={colors.muted} />
+            <Text style={[font('600'), { fontSize: 11.5, color: colors.muted }]}>إرفاق ملف (غير مفعّل في نسخة العرض)</Text>
+          </Pressable>
+        </Labeled>
+      );
+    default: {
+      // text / phone / whatsapp / email / number / age / date / time
+      const kb = f.type === 'phone' || f.type === 'whatsapp' ? 'phone-pad' : f.type === 'number' || f.type === 'age' ? 'number-pad' : f.type === 'email' ? 'email-address' : 'default';
+      const onText = (t: string) => {
+        if (f.type === 'phone' || f.type === 'whatsapp') return onChange(t.replace(/[^0-9]/g, '').slice(0, 11));
+        if (f.type === 'age') return onChange(t.replace(/[^0-9]/g, '').slice(0, 2));
+        if (f.type === 'number') return onChange(t.replace(/[^0-9]/g, ''));
+        return onChange(t);
+      };
+      return (
+        <Labeled label={f.label} required={f.required} help={f.help}>
+          <TextInput value={typeof v === 'string' ? v : ''} onChangeText={onText} placeholder={f.placeholder} placeholderTextColor={colors.muted} keyboardType={kb as any} autoCapitalize={f.type === 'email' ? 'none' : 'sentences'} style={inputStyle} />
+        </Labeled>
+      );
+    }
+  }
 }

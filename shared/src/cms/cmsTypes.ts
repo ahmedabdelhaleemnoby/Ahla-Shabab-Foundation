@@ -14,7 +14,7 @@
  */
 
 /** Bump when the shape changes; `cmsMigrations` upgrades older stored blobs. */
-export const CMS_SCHEMA_VERSION = 2;
+export const CMS_SCHEMA_VERSION = 3;
 export const CMS_STORAGE_KEY = 'ahla_cms_v1';
 /** Media blobs live in their own key so a quota problem can't corrupt the core CMS. */
 export const CMS_MEDIA_KEY = 'ahla_cms_media_v1';
@@ -179,6 +179,66 @@ export interface CmsPage {
 }
 
 /* ------------------------------------------------------------------ */
+/* Consultation form builder                                          */
+/* ------------------------------------------------------------------ */
+
+export type FormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'phone'
+  | 'whatsapp'
+  | 'email'
+  | 'number'
+  | 'age'
+  | 'governorate'
+  | 'radio'
+  | 'checkbox'
+  | 'multiselect'
+  | 'date'
+  | 'time'
+  | 'file'
+  | 'info'
+  | 'consent';
+
+export interface FormField {
+  id: string;
+  /** Machine key used to store the submitted value. */
+  key: string;
+  type: FormFieldType;
+  label: string;
+  required: boolean;
+  hidden: boolean;
+  placeholder?: string;
+  help?: string;
+  /** For radio/checkbox/multiselect. */
+  options?: string[];
+  validationMessage?: string;
+  sortOrder: number;
+  /** Simple conditional: show only when another field's value equals this. */
+  showIfKey?: string;
+  showIfValue?: string;
+}
+
+export interface ConsultationTypeConfig {
+  id: string;
+  /** Short key, e.g. "نفسية". */
+  key: string;
+  name: string;
+  icon: string;
+  imageId?: string;
+  description: string;
+  disclaimer: string;
+  status: PageStatus;
+  visible: boolean;
+  /** Surface on the Home consultations section. */
+  homeVisible: boolean;
+  availableTimes: string[];
+  sortOrder: number;
+  /** The dynamic form schema rendered by the mobile request screen. */
+  fields: FormField[];
+}
+
+/* ------------------------------------------------------------------ */
 /* App settings (extends the runtime appConfig)                       */
 /* ------------------------------------------------------------------ */
 
@@ -245,6 +305,7 @@ export interface CmsState {
   home: HomeSection[];
   pages: CmsPage[];
   media: MediaItem[];
+  consultations: ConsultationTypeConfig[];
   activity: CmsActivityEntry[];
   updatedAt: string;
 }

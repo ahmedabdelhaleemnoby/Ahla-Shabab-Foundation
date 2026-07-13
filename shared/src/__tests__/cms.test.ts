@@ -66,11 +66,32 @@ describe('CMS defaults', () => {
     }
   });
 
-  it('is at schema v2 (media library) and deep-copies media', () => {
-    expect(CMS_SCHEMA_VERSION).toBe(2);
+  it('is at schema v3 and deep-copies media + consultations', () => {
+    expect(CMS_SCHEMA_VERSION).toBe(3);
     const a = makeDefaultCmsState();
     const b = makeDefaultCmsState();
     a.media[0].title = 'x';
+    a.consultations[0].fields[0].label = 'y';
     expect(b.media[0].title).not.toBe('x');
+    expect(b.consultations[0].fields[0].label).not.toBe('y');
+  });
+
+  it('seeds 5 consultation types, each with a valid form schema', () => {
+    const s = makeDefaultCmsState();
+    expect(s.consultations.length).toBe(5);
+    for (const c of s.consultations) {
+      expect(c.fields.length).toBeGreaterThan(0);
+      // every field has a unique key + a required consent + a name field
+      const keys = c.fields.map((f) => f.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(keys).toContain('name');
+      expect(c.fields.some((f) => f.type === 'consent' && f.required)).toBe(true);
+      // radio/checkbox fields must carry options
+      for (const f of c.fields) {
+        if (f.type === 'radio' || f.type === 'checkbox' || f.type === 'multiselect') {
+          expect((f.options ?? []).length).toBeGreaterThan(0);
+        }
+      }
+    }
   });
 });

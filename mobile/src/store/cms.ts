@@ -5,6 +5,7 @@ import {
   type CmsState,
   type MenuGroup,
   type HomeSection,
+  type ConsultationTypeConfig,
 } from '@ahla/shared';
 
 /**
@@ -67,4 +68,15 @@ export function getCmsPageBySlug(slug: string) {
 export function getMediaSrc(id?: string): string | undefined {
   if (!id) return undefined;
   return readCms().media?.find((m) => m.id === id)?.src;
+}
+
+/** Published + visible consultation types, ordered — for the type picker. */
+export function getConsultationTypes(): ConsultationTypeConfig[] {
+  const list = readCms().consultations ?? [];
+  return sorted(list).filter((c) => c.visible && c.status === 'published');
+}
+
+/** A single consultation type by its key (e.g. "نفسية"), or undefined. */
+export function getConsultationType(key: string): ConsultationTypeConfig | undefined {
+  return (readCms().consultations ?? []).find((c) => c.key === key);
 }

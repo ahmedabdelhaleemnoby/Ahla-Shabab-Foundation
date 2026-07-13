@@ -133,6 +133,62 @@ export function mediaSrc(id?: string): string | undefined {
   return state.media.find((m) => m.id === id)?.src;
 }
 
+/* ---- Consultation form builder ops ---- */
+export const forms = {
+  updateType(id: string, fields: Partial<import('@ahla/shared').ConsultationTypeConfig>, name: string) {
+    mutate({ action: 'عدّل نوع استشارة', entityType: 'استشارة', entityName: name }, (d) => {
+      const i = d.consultations.findIndex((c) => c.id === id);
+      if (i >= 0) d.consultations[i] = { ...d.consultations[i], ...fields };
+    });
+  },
+  addType() {
+    mutate({ action: 'أضاف نوع استشارة', entityType: 'استشارة', entityName: 'نوع جديد' }, (d) => {
+      d.consultations.push({
+        id: uid('ct'), key: 'جديدة', name: 'استشارة جديدة', icon: 'message-circle', description: '', disclaimer: 'استشارة استرشادية.',
+        status: 'draft', visible: true, homeVisible: false, availableTimes: ['أي وقت'],
+        sortOrder: Math.max(0, ...d.consultations.map((c) => c.sortOrder)) + 1, fields: [],
+      });
+    });
+  },
+  removeType(id: string, name: string) {
+    mutate({ action: 'حذف نوع استشارة', entityType: 'استشارة', entityName: name }, (d) => {
+      d.consultations = d.consultations.filter((c) => c.id !== id);
+    });
+  },
+  addField(typeId: string, field: import('@ahla/shared').FormField) {
+    mutate({ action: 'أضاف حقلاً', entityType: 'حقل نموذج', entityName: field.label }, (d) => {
+      const c = d.consultations.find((x) => x.id === typeId);
+      if (c) c.fields.push({ ...field, sortOrder: Math.max(0, ...c.fields.map((f) => f.sortOrder)) + 1 });
+    });
+  },
+  updateField(typeId: string, field: import('@ahla/shared').FormField) {
+    mutate({ action: 'عدّل حقلاً', entityType: 'حقل نموذج', entityName: field.label }, (d) => {
+      const c = d.consultations.find((x) => x.id === typeId);
+      const i = c?.fields.findIndex((f) => f.id === field.id) ?? -1;
+      if (c && i >= 0) c.fields[i] = field;
+    });
+  },
+  removeField(typeId: string, fieldId: string, label: string) {
+    mutate({ action: 'حذف حقلاً', entityType: 'حقل نموذج', entityName: label }, (d) => {
+      const c = d.consultations.find((x) => x.id === typeId);
+      if (c) c.fields = c.fields.filter((f) => f.id !== fieldId);
+    });
+  },
+  moveField(typeId: string, fieldId: string, dir: -1 | 1) {
+    mutate(null, (d) => {
+      const c = d.consultations.find((x) => x.id === typeId);
+      if (!c) return;
+      const sorted = [...c.fields].sort((a, b) => a.sortOrder - b.sortOrder);
+      const idx = sorted.findIndex((f) => f.id === fieldId);
+      const swap = idx + dir;
+      if (swap < 0 || swap >= sorted.length) return;
+      const a = c.fields.find((f) => f.id === sorted[idx].id)!;
+      const b = c.fields.find((f) => f.id === sorted[swap].id)!;
+      [a.sortOrder, b.sortOrder] = [b.sortOrder, a.sortOrder];
+    });
+  },
+};
+
 export function useCms(): CmsState {
   return useSyncExternalStore(
     (cb) => {

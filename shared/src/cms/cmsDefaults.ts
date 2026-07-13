@@ -6,6 +6,8 @@ import {
   type CmsPage,
   type CmsSettings,
   type MediaItem,
+  type ConsultationTypeConfig,
+  type FormField,
   type NavTarget,
 } from './cmsTypes';
 import { appConfig } from '../data';
@@ -181,6 +183,86 @@ export const defaultMedia: MediaItem[] = [
   { id: 'md-news', title: 'صورة خبر (نموذج)', alt: 'صورة عامة لخبر', folder: 'أخبار', src: svgPlaceholder('خبر ونشاط', '#8f9f7d', '#5f6d50'), type: 'svg', width: 600, height: 360, sizeBytes: 600, createdAt: SEED_AT, updatedAt: SEED_AT },
 ];
 
+/* ---------------- Consultation forms (Form Builder) ---------------- */
+const COMM_OPTIONS = ['واتساب', 'مكالمة هاتفية', 'مكالمة فيديو', 'بريد إلكتروني'];
+const TIME_OPTIONS = ['صباحاً (9-12)', 'ظهراً (12-3)', 'مساءً (3-6)', 'أي وقت'];
+
+/** Common fields every consultation form starts with. */
+function baseFields(): FormField[] {
+  const f = (o: Partial<FormField> & Pick<FormField, 'key' | 'type' | 'label' | 'sortOrder'>): FormField => ({
+    id: `fld-${o.key}`,
+    required: false,
+    hidden: false,
+    ...o,
+  });
+  return [
+    f({ key: 'name', type: 'text', label: 'الاسم بالكامل', required: true, placeholder: 'اكتب اسمك', validationMessage: 'اكتب اسمك بالكامل (3 أحرف على الأقل)', sortOrder: 0 }),
+    f({ key: 'phone', type: 'phone', label: 'رقم الهاتف', required: true, placeholder: '01xxxxxxxxx', validationMessage: 'أدخل رقم هاتف مصري صحيح', sortOrder: 1 }),
+    f({ key: 'whatsapp', type: 'whatsapp', label: 'واتساب', placeholder: 'إن وجد', sortOrder: 2 }),
+    f({ key: 'email', type: 'email', label: 'البريد الإلكتروني', placeholder: 'example@mail.com', sortOrder: 3 }),
+    f({ key: 'age', type: 'age', label: 'السن', placeholder: 'العمر', sortOrder: 4 }),
+    f({ key: 'governorate', type: 'governorate', label: 'المحافظة', required: true, validationMessage: 'اختر المحافظة', sortOrder: 5 }),
+    f({ key: 'comm', type: 'radio', label: 'وسيلة التواصل المفضلة', required: true, options: COMM_OPTIONS, validationMessage: 'اختر وسيلة التواصل', sortOrder: 6 }),
+    f({ key: 'time', type: 'radio', label: 'الوقت المفضل للتواصل', required: true, options: TIME_OPTIONS, validationMessage: 'اختر الوقت المفضل', sortOrder: 7 }),
+  ];
+}
+
+function extra(key: string, label: string, options: string[], sortOrder: number, required = true): FormField {
+  return { id: `fld-${key}`, key, type: 'radio', label, options, required, hidden: false, sortOrder, validationMessage: `اختر: ${label}` };
+}
+function summaryField(sortOrder: number): FormField {
+  return { id: 'fld-summary', key: 'summary', type: 'textarea', label: 'ملخص المشكلة', required: true, hidden: false, placeholder: 'اشرح باختصار ما تريد الاستشارة بشأنه...', validationMessage: 'اكتب ملخصاً موجزاً (10 أحرف على الأقل)', sortOrder };
+}
+function consentField(sortOrder: number): FormField {
+  return { id: 'fld-consent', key: 'consent', type: 'consent', label: 'أوافق على أن تُعالَج بياناتي بسرية لغرض الاستشارة فقط', required: true, hidden: false, validationMessage: 'يجب الموافقة للمتابعة', sortOrder };
+}
+
+const ct = (
+  key: string,
+  name: string,
+  icon: string,
+  description: string,
+  extras: FormField[],
+  sortOrder: number,
+  imageId?: string
+): ConsultationTypeConfig => ({
+  id: `ct-${sortOrder}`,
+  key,
+  name,
+  icon,
+  imageId,
+  description,
+  disclaimer: 'هذه استشارة استرشادية ولا تُغني عن التشخيص أو العلاج المتخصص عند الحاجة.',
+  status: 'published',
+  visible: true,
+  homeVisible: true,
+  availableTimes: TIME_OPTIONS,
+  sortOrder,
+  fields: [...baseFields(), ...extras, summaryField(20), consentField(21)].map((f, i) => ({ ...f, sortOrder: f.sortOrder ?? i })),
+});
+
+export const defaultConsultations: ConsultationTypeConfig[] = [
+  ct('نفسية', 'استشارة نفسية', 'heart', 'جلسة سرية مع أخصائي نفسي معتمد.', [
+    extra('topic', 'طبيعة الحالة', ['قلق وتوتر', 'اكتئاب', 'ضغوط حياتية', 'علاقات', 'أخرى'], 10),
+    extra('previous', 'هل سبق تلقي جلسات نفسية؟', ['نعم', 'لا'], 11),
+  ], 0, 'md-case'),
+  ct('دينية', 'استشارة دينية', 'book-open', 'إجابة موثوقة من مختص شرعي.', [
+    extra('topic', 'موضوع الاستشارة', ['عبادات', 'معاملات مالية', 'أسرة وزواج', 'أخرى'], 10),
+  ], 1),
+  ct('طبية', 'استشارة طبية', 'activity', 'رأي طبي مبدئي وتوجيه للتخصص المناسب.', [
+    extra('specialty', 'التخصص المطلوب', ['طب عام', 'أطفال', 'أسنان', 'رمد وعيون', 'غير متأكد'], 10),
+    extra('chronic', 'هل توجد أمراض مزمنة؟', ['نعم', 'لا'], 11),
+  ], 2),
+  ct('أسرية', 'استشارة أسرية', 'users', 'إرشاد أسري لحل الخلافات وتحسين العلاقات.', [
+    extra('topic', 'أطراف المشكلة', ['علاقة زوجية', 'الأبناء', 'الوالدين', 'أخرى'], 10),
+    extra('familySize', 'عدد أفراد الأسرة', ['2-3', '4-6', 'أكثر من 6'], 11),
+  ], 3),
+  ct('أعمال', 'استشارة أعمال', 'briefcase', 'توجيه مهني لمشروعك أو مسارك الوظيفي.', [
+    extra('field', 'مجال العمل', ['تجارة', 'حرف ومهن', 'خدمات', 'زراعة', 'أخرى'], 10),
+    extra('stage', 'مرحلة المشروع', ['فكرة', 'بدء التشغيل', 'قائم بالفعل', 'توسع'], 11),
+  ], 4),
+];
+
 /* ---------------- Root default ---------------- */
 export function makeDefaultCmsState(): CmsState {
   return {
@@ -190,6 +272,7 @@ export function makeDefaultCmsState(): CmsState {
     home: defaultHome.map((s) => ({ ...s, config: { ...s.config } })),
     pages: defaultPages.map((p) => ({ ...p })),
     media: defaultMedia.map((m) => ({ ...m })),
+    consultations: defaultConsultations.map((c) => ({ ...c, fields: c.fields.map((f) => ({ ...f })) })),
     activity: [],
     updatedAt: SEED_AT,
   };
