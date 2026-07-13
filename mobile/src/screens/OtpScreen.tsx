@@ -14,7 +14,7 @@ const RESEND_SECONDS = 30;
 
 export default function OtpScreen({ route }: RootProps<'Otp'>) {
   const nav = useNavigation<any>();
-  const { phone } = route.params;
+  const { email } = route.params;
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
@@ -32,7 +32,7 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       return;
     }
     // Mock: any 6-digit code is accepted. TODO(backend): POST /auth/otp/verify.
-    appState.login(phone);
+    appState.login(email);
     nav.navigate('Main', { screen: 'Profile' });
   };
 
@@ -55,8 +55,8 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       <View style={{ alignItems: 'center', marginTop: 16 }}>
         <Text style={[font('800'), { fontSize: 20, color: colors.navy700 }]}>أدخل رمز التحقق</Text>
         <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
-          أرسلنا رمزاً مكوّناً من 6 أرقام إلى الرقم{'\n'}
-          <Text style={[font('700'), { color: colors.navy700, writingDirection: 'ltr' }]}>{phone}</Text>
+          أرسلنا رمزاً مكوّناً من 6 أرقام إلى بريدك{'\n'}
+          <Text style={[font('700'), { color: colors.navy700, writingDirection: 'ltr' }]}>{email}</Text>
         </Text>
       </View>
 

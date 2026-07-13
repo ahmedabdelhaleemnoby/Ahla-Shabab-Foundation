@@ -43,7 +43,7 @@ const TOOLS: Row[] = [
 
 export default function ProfileScreen() {
   const nav = useNavigation<any>();
-  const { loggedIn, phone } = useAppState();
+  const { loggedIn, email } = useAppState();
 
   if (!loggedIn) {
     // Guest state (UX v2): clear message + login CTA, tools still reachable.
@@ -59,7 +59,7 @@ export default function ProfileScreen() {
           <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 18 }]}>
             بحساب واحد تتابع إيصالاتك ومواعيدك وتصلك الإشعارات المهمة.
           </Text>
-          <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 16, alignSelf: 'stretch' }} onPress={() => nav.navigate('PhoneAuth')} />
+          <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 16, alignSelf: 'stretch' }} onPress={() => nav.navigate('EmailAuth')} />
         </Card>
 
         <SectionHeader title="أدوات" />
@@ -89,6 +89,12 @@ export default function ProfileScreen() {
             <Icon name="check-circle" size={16} color="#7FC8FF" />
           </View>
           <Text style={[font('400'), { fontSize: 11, color: '#bcd', marginTop: 3 }]}>{donorProfile.role}</Text>
+          {email ? (
+            <View style={[row, { gap: 5, marginTop: 5 }]}>
+              <Text style={[font('600'), { fontSize: 10.5, color: '#cde', writingDirection: 'ltr' }]}>{email}</Text>
+              <Icon name="mail" size={11} color="#9fc3e8" />
+            </View>
+          ) : null}
           <Text style={[font('400'), { fontSize: 10, color: '#cde', lineHeight: 15, marginTop: 8, textAlign: 'right' }]}>
             {donorProfile.bio}
           </Text>

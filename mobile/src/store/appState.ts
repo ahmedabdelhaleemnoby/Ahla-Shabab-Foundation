@@ -30,23 +30,23 @@ export interface ConsultationRequest {
 
 interface AppState {
   loggedIn: boolean;
-  phone: string | null;
+  email: string | null;
   receipts: Receipt[];
   consultations: ConsultationRequest[];
 }
 
-let state: AppState = { loggedIn: false, phone: null, receipts: [], consultations: [] };
+let state: AppState = { loggedIn: false, email: null, receipts: [], consultations: [] };
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 
 export const appState = {
   get: (): AppState => state,
-  login(phone: string) {
-    state = { ...state, loggedIn: true, phone };
+  login(email: string) {
+    state = { ...state, loggedIn: true, email };
     emit();
   },
   logout() {
-    state = { ...state, loggedIn: false, phone: null };
+    state = { ...state, loggedIn: false, email: null };
     emit();
   },
   addReceipt(r: Receipt) {

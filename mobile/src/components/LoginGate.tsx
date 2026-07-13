@@ -61,7 +61,7 @@ export function LoginGate({
             ))}
           </View>
 
-          <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 20 }} onPress={() => nav.navigate('PhoneAuth')} />
+          <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 20 }} onPress={() => nav.navigate('EmailAuth')} />
           <Pressable onPress={() => nav.goBack()} style={{ alignItems: 'center', marginTop: 14 }}>
             <Text style={[font('700'), { fontSize: 12.5, color: colors.slate }]}>لاحقاً — متابعة التصفح</Text>
           </Pressable>

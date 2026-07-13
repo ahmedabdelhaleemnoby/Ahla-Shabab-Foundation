@@ -19,8 +19,8 @@ export type RootStackParamList = {
   Consultations: undefined;
   Booking: { consultantId?: string } | undefined;
   Notifications: undefined;
-  PhoneAuth: undefined;
-  Otp: { phone: string };
+  EmailAuth: undefined;
+  Otp: { email: string };
   Projects: undefined;
   MyBookings: undefined;
   NewsFeed: undefined;

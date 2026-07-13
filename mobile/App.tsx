@@ -39,7 +39,7 @@ import CaseDetailScreen from './src/screens/CaseDetailScreen';
 import ConsultationsScreen from './src/screens/ConsultationsScreen';
 import BookingScreen from './src/screens/BookingScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
-import PhoneAuthScreen from './src/screens/PhoneAuthScreen';
+import EmailAuthScreen from './src/screens/EmailAuthScreen';
 import OtpScreen from './src/screens/OtpScreen';
 import ProjectsScreen from './src/screens/ProjectsScreen';
 import MyBookingsScreen from './src/screens/MyBookingsScreen';
@@ -132,7 +132,7 @@ export default function App() {
           <Stack.Screen name="Consultations" component={ConsultationsScreen} />
           <Stack.Screen name="Booking" component={BookingScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="PhoneAuth" component={PhoneAuthScreen} />
+          <Stack.Screen name="EmailAuth" component={EmailAuthScreen} />
           <Stack.Screen name="Otp" component={OtpScreen} />
           <Stack.Screen name="Projects" component={ProjectsScreen} />
           <Stack.Screen name="MyBookings" component={MyBookingsScreen} />

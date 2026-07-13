@@ -68,7 +68,7 @@ function go(target: Target) {
 
 export function AppDrawer() {
   const open = useDrawerOpen();
-  const { loggedIn, phone } = useAppState();
+  const { loggedIn, email } = useAppState();
   const insets = useSafeAreaInsets();
   const slide = useRef(new Animated.Value(0)).current;
 
@@ -95,7 +95,7 @@ export function AppDrawer() {
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Text style={[font('800'), { fontSize: 14.5, color: colors.navy700 }]}>{appConfig.heroTitle}</Text>
               <Text style={[font('600'), { fontSize: 10.5, color: colors.muted, marginTop: 1 }]}>
-                {loggedIn && phone ? `مرحباً · ${phone}` : 'زائر — سجّل دخولك'}
+                {loggedIn && email ? email : 'زائر — سجّل دخولك'}
               </Text>
             </View>
             <Pressable onPress={closeDrawer} style={styles.closeBtn} accessibilityLabel="إغلاق">
@@ -141,7 +141,7 @@ export function AppDrawer() {
                 <Icon name="log-out" size={16} color={colors.red} />
               </Pressable>
             ) : (
-              <Pressable onPress={() => go({ route: 'PhoneAuth' })} style={[styles.authBtn, { backgroundColor: colors.navy700 }]}>
+              <Pressable onPress={() => go({ route: 'EmailAuth' })} style={[styles.authBtn, { backgroundColor: colors.navy700 }]}>
                 <Text style={[font('800'), { fontSize: 12.5, color: '#fff' }]}>تسجيل الدخول</Text>
                 <Icon name="log-in" size={16} color="#fff" />
               </Pressable>
