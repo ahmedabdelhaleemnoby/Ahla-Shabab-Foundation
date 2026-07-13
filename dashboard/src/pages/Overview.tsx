@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { CalendarCheck, Clock, Stethoscope, ListTree, CheckCircle2, Wallet, Inbox as InboxIcon } from 'lucide-react';
+import { CalendarCheck, Clock, Stethoscope, ListTree, CheckCircle2, Wallet, Inbox as InboxIcon, LayoutTemplate, Files, PanelRightClose, EyeOff } from 'lucide-react';
 import { adminBookings, services, providers, donations, volunteerApplications, contactMessages, appConfig, colors } from '@ahla/shared';
 import { Card, Kpi, SectionHead, Badge, statusTone, MobileRow } from '../components/ui';
 import { BarChart, Donut } from '../components/Charts';
+import { useCms } from '../store/cmsStore';
 
 const pending = adminBookings.filter((b) => b.status === 'قيد الانتظار').length;
 const pendingDonations = donations.filter((d) => d.status === 'قيد المراجعة' || d.status === 'قيد التأكيد').length;
@@ -32,6 +33,14 @@ const byCategory = Object.entries(
 ).map(([label, value]) => ({ label, value, color: catColors[label] ?? colors.navy500 }));
 
 export default function Overview() {
+  const cmsState = useCms();
+  const hiddenPages = cmsState.pages.filter((p) => !p.visible).length;
+  const draftPages = cmsState.pages.filter((p) => p.status === 'draft').length;
+  const menuItems = cmsState.menu.reduce((n, g) => n + g.items.length, 0);
+  const hiddenMenuItems = cmsState.menu.reduce((n, g) => n + g.items.filter((i) => !i.visible).length, 0);
+  const homeSections = cmsState.home.length;
+  const hiddenHomeSections = cmsState.home.filter((s) => !s.visible).length;
+
   return (
     <div className="flex flex-col gap-5">
       {/* Hero — same visual language as the app's home header */}
@@ -65,6 +74,30 @@ export default function Overview() {
         <Kpi icon={CheckCircle2} tone="green" value={String(confirmed + completed)} label="مؤكدة / مكتملة" delta={{ text: '8%', up: true }} />
         <Kpi icon={Stethoscope} value={String(providers.length)} label="مقدمو الخدمة" />
       </div>
+
+      {/* CMS status — content-management snapshot */}
+      <Card>
+        <SectionHead
+          title="إدارة محتوى التطبيق (CMS)"
+          action={<Link to="/cms/home" className="btn btn-outline btn-sm"><LayoutTemplate size={14} /> بناء الرئيسية</Link>}
+        />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { to: '/cms/pages', icon: Files, v: cmsState.pages.length, l: 'إجمالي الصفحات' },
+            { to: '/cms/pages', icon: EyeOff, v: hiddenPages, l: 'صفحات مخفية' },
+            { to: '/cms/pages', icon: Files, v: draftPages, l: 'مسودات' },
+            { to: '/cms/menu', icon: PanelRightClose, v: menuItems, l: 'عناصر القائمة' },
+            { to: '/cms/menu', icon: EyeOff, v: hiddenMenuItems, l: 'عناصر مخفية' },
+            { to: '/cms/home', icon: LayoutTemplate, v: `${homeSections - hiddenHomeSections}/${homeSections}`, l: 'أقسام الرئيسية الظاهرة' },
+          ].map((s, i) => (
+            <Link key={i} to={s.to} className="rounded-2xl border border-line bg-paper-2/40 hover:bg-paper-2 p-3.5 text-center transition-colors">
+              <s.icon size={17} className="mx-auto text-navy-500" />
+              <div className="num text-[20px] font-extrabold text-navy-700 mt-1.5">{s.v}</div>
+              <div className="text-[11px] text-slate mt-0.5">{s.l}</div>
+            </Link>
+          ))}
+        </div>
+      </Card>
 
       {/* Charts */}
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">

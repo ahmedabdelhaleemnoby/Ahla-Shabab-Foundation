@@ -13,6 +13,10 @@ import {
   BellRing,
   Inbox as InboxIcon,
   Settings as SettingsIcon,
+  LayoutTemplate,
+  PanelRightClose,
+  Files,
+  Wrench,
   Search,
   Bell,
   Menu,
@@ -27,11 +31,13 @@ interface NavItem {
   icon: LucideIcon;
   title: string;
   sub: string;
+  /** Renders a group heading above this item in the sidebar. */
+  groupStart?: string;
 }
 
 export const NAV: NavItem[] = [
   { to: '/', label: 'لوحة المعلومات', icon: LayoutDashboard, title: 'لوحة المعلومات', sub: 'ملخص أداء المنصة والحجوزات' },
-  { to: '/bookings', label: 'الحجوزات', icon: CalendarCheck, title: 'إدارة الحجوزات', sub: 'متابعة وتأكيد وإعادة جدولة المواعيد' },
+  { to: '/bookings', label: 'الحجوزات', icon: CalendarCheck, title: 'إدارة الحجوزات', sub: 'متابعة وتأكيد وإعادة جدولة المواعيد', groupStart: 'العمليات' },
   { to: '/donations', label: 'التبرعات والإيصالات', icon: Wallet, title: 'التبرعات والإيصالات', sub: 'اعتماد التحويلات اليدوية ومتابعة تأكيدات الدفع' },
   { to: '/services', label: 'الخدمات والفئات', icon: ListTree, title: 'الخدمات والفئات', sub: 'فئات متعددة المستويات وخدمات قابلة للحجز' },
   { to: '/providers', label: 'مقدمو الخدمة', icon: Stethoscope, title: 'مقدمو الخدمة', sub: 'الأطباء والمستشارون وجداول المواعيد' },
@@ -39,7 +45,11 @@ export const NAV: NavItem[] = [
   { to: '/users', label: 'المستخدمون', icon: Users, title: 'المستخدمون', sub: 'المستفيدون وسجل حجوزاتهم' },
   { to: '/notifications', label: 'الإشعارات', icon: BellRing, title: 'إشعارات التطبيق', sub: 'إرسال إشعارات للمستخدمين ومتابعة السجل' },
   { to: '/inbox', label: 'صندوق الوارد', icon: InboxIcon, title: 'صندوق الوارد', sub: 'طلبات التطوع ورسائل تواصل معنا من التطبيق' },
-  { to: '/reports', label: 'التقارير', icon: BarChart3, title: 'التقارير والإحصاءات', sub: 'تحليلات التبرعات والحجوزات والخدمات' },
+  { to: '/cms/home', label: 'بناء الرئيسية', icon: LayoutTemplate, title: 'بناء الصفحة الرئيسية', sub: 'إضافة وإخفاء وترتيب أقسام الرئيسية في التطبيق', groupStart: 'إدارة التطبيق (CMS)' },
+  { to: '/cms/menu', label: 'القائمة الجانبية', icon: PanelRightClose, title: 'إدارة القائمة الجانبية', sub: 'مجموعات وعناصر قائمة البرجر داخل التطبيق' },
+  { to: '/cms/pages', label: 'صفحات التطبيق', icon: Files, title: 'إدارة صفحات التطبيق', sub: 'كل الشاشات + إنشاء صفحات مخصّصة' },
+  { to: '/cms/tools', label: 'أدوات النظام', icon: Wrench, title: 'أدوات وحفظ CMS', sub: 'تصدير/استيراد/إعادة ضبط بيانات العرض' },
+  { to: '/reports', label: 'التقارير', icon: BarChart3, title: 'التقارير والإحصاءات', sub: 'تحليلات التبرعات والحجوزات والخدمات', groupStart: 'التحليلات والإعداد' },
   { to: '/settings', label: 'إعدادات التطبيق', icon: SettingsIcon, title: 'إعدادات التطبيق', sub: 'التحكم في كل ما يظهر للمستخدم داخل التطبيق' },
   { to: '/roles', label: 'الأدوار والصلاحيات', icon: ShieldCheck, title: 'الأدوار والصلاحيات', sub: 'مستويات الوصول وسجل النشاط' },
 ];
@@ -58,20 +68,24 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex flex-col gap-1 overflow-y-auto scroll-thin">
         {NAV.map((n) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end={n.to === '/'}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-semibold transition-colors ${
-                isActive ? 'bg-white/[.12] text-white' : 'text-[#C6D4E8] hover:bg-white/[.07] hover:text-white'
-              }`
-            }
-          >
-            <n.icon size={18} className="shrink-0" />
-            {n.label}
-          </NavLink>
+          <div key={n.to}>
+            {n.groupStart && (
+              <div className="text-[10.5px] font-bold text-navy-300 px-3.5 pt-3 pb-1 tracking-wide">{n.groupStart}</div>
+            )}
+            <NavLink
+              to={n.to}
+              end={n.to === '/'}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-semibold transition-colors ${
+                  isActive ? 'bg-white/[.12] text-white' : 'text-[#C6D4E8] hover:bg-white/[.07] hover:text-white'
+                }`
+              }
+            >
+              <n.icon size={18} className="shrink-0" />
+              {n.label}
+            </NavLink>
+          </div>
         ))}
       </nav>
 
@@ -149,6 +163,12 @@ export function Layout() {
             </button>
           </div>
         </header>
+
+        {/* Demo persistence badge — CMS edits are local to this browser */}
+        <div className="flex items-center gap-2 justify-center bg-gold-soft text-[#8A5B10] text-[11.5px] font-bold px-4 py-1.5 border-b border-[#EAD9A8]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#B9791A]" />
+          نسخة عرض — يتم حفظ التعديلات على هذا الجهاز فقط
+        </div>
 
         <main className="p-4 sm:p-6 lg:p-7 max-w-[1200px] w-full mx-auto">
           <Outlet />

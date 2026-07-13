@@ -16,6 +16,8 @@ export type RootStackParamList = {
   ConsultationRequest: { type: string };
   /** Server payment-confirmation explainer (§13 — visual placeholder). */
   PaymentInfo: undefined;
+  /** Generic CMS-rendered page (created from the dashboard Page Manager). */
+  CmsPage: { slug: string };
   Consultations: undefined;
   Booking: { consultantId?: string } | undefined;
   Notifications: undefined;

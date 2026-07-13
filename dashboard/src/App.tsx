@@ -12,6 +12,10 @@ import Roles from './pages/Roles';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Inbox from './pages/Inbox';
+import CmsHome from './pages/CmsHome';
+import CmsMenu from './pages/CmsMenu';
+import CmsPages from './pages/CmsPages';
+import CmsTools from './pages/CmsTools';
 
 export default function App() {
   return (
@@ -28,6 +32,10 @@ export default function App() {
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/cms/home" element={<CmsHome />} />
+        <Route path="/cms/menu" element={<CmsMenu />} />
+        <Route path="/cms/pages" element={<CmsPages />} />
+        <Route path="/cms/tools" element={<CmsTools />} />
         <Route path="/roles" element={<Roles />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

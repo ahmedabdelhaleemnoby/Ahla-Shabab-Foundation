@@ -1,69 +1,37 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Pressable, Modal, Animated, ScrollView, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, Animated, ScrollView, Image, StyleSheet, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { appConfig } from '@ahla/shared';
+import { appConfig, makeDefaultCmsState, type NavTarget, type MenuGroup } from '@ahla/shared';
 import { colors, font } from '../theme';
 import { Icon, IconName } from './Icon';
 import { navRef } from '../navigation/ref';
 import { useDrawerOpen, closeDrawer } from '../store/drawer';
 import { useAppState, appState } from '../store/appState';
-import type { RootStackParamList, TabParamList } from '../navigation/types';
+import { getMenu } from '../store/cms';
 
 const DRAWER_W = 296;
 
-type Target =
-  | { tab: keyof TabParamList }
-  | { route: keyof RootStackParamList; params?: RootStackParamList[keyof RootStackParamList] };
-
-interface Item {
-  icon: IconName;
-  label: string;
-  target: Target;
+/** Navigate a CMS menu target. Unknown/invalid targets are ignored safely. */
+function go(target: NavTarget) {
+  closeDrawer();
+  if (target.kind === 'external') {
+    Linking.openURL(target.url).catch(() => {});
+    return;
+  }
+  if (!navRef.isReady()) return;
+  const nav = navRef.navigate as (name: string, params?: object) => void;
+  if (target.kind === 'tab') nav('Main', { screen: target.tab });
+  else if (target.kind === 'route') nav(target.route);
+  else if (target.kind === 'cmsPage') nav('CmsPage', { slug: target.slug });
 }
 
-/* Sidebar menu (§11) — the full drawer from the review document. */
-const SECTIONS: { title?: string; items: Item[] }[] = [
-  {
-    items: [
-      { icon: 'home', label: 'الرئيسية', target: { tab: 'Home' } },
-      { icon: 'zap', label: 'حالات عاجلة', target: { route: 'UrgentCases' } },
-      { icon: 'users', label: 'اكفل أسرة', target: { route: 'Sponsorship' } },
-      { icon: 'briefcase', label: 'المشروعات', target: { route: 'Projects' } },
-      { icon: 'grid', label: 'خدماتنا', target: { tab: 'Discover' } },
-      { icon: 'message-circle', label: 'الاستشارات', target: { route: 'Consultations' } },
-      { icon: 'heart', label: 'طرق التبرع', target: { tab: 'Donate' } },
-    ],
-  },
-  {
-    title: 'حسابك',
-    items: [
-      { icon: 'user', label: 'حسابي', target: { tab: 'Profile' } },
-      { icon: 'credit-card', label: 'تبرعاتي', target: { route: 'DonationHistory' } },
-      { icon: 'file-text', label: 'الإيصالات', target: { route: 'Receipts' } },
-      { icon: 'calendar', label: 'حجوزاتي', target: { route: 'MyBookings' } },
-      { icon: 'star', label: 'المفضلة', target: { route: 'Favorites' } },
-      { icon: 'bell', label: 'الإشعارات', target: { route: 'Notifications' } },
-      { icon: 'percent', label: 'حاسبة الزكاة', target: { route: 'ZakatCalculator' } },
-    ],
-  },
-  {
-    title: 'الجمعية',
-    items: [
-      { icon: 'info', label: 'عن الجمعية', target: { route: 'About' } },
-      { icon: 'rss', label: 'أخبارنا', target: { tab: 'News' } },
-      { icon: 'user-plus', label: 'انضم متطوعاً', target: { route: 'Volunteer' } },
-      { icon: 'phone', label: 'تواصل معنا', target: { route: 'ContactUs' } },
-      { icon: 'help-circle', label: 'الأسئلة الشائعة', target: { route: 'Faq' } },
-      { icon: 'shield', label: 'سياسة الخصوصية', target: { route: 'PrivacyPolicy' } },
-    ],
-  },
-];
-
-function go(target: Target) {
-  closeDrawer();
-  if (!navRef.isReady()) return;
-  if ('tab' in target) navRef.navigate('Main', { screen: target.tab });
-  else (navRef.navigate as (name: string, params?: object) => void)(target.route, target.params as object | undefined);
+/** Read visible CMS menu; fall back to the built-in default if it's empty/invalid. */
+function useMenu(loggedIn: boolean): MenuGroup[] {
+  const menu = getMenu(loggedIn);
+  if (menu.length > 0) return menu;
+  return makeDefaultCmsState()
+    .menu.filter((g) => g.visible)
+    .map((g) => ({ ...g, items: g.items.filter((i) => i.visible && (!i.loginRequired || loggedIn)) }));
 }
 
 export function AppDrawer() {
@@ -71,6 +39,7 @@ export function AppDrawer() {
   const { loggedIn, email } = useAppState();
   const insets = useSafeAreaInsets();
   const slide = useRef(new Animated.Value(0)).current;
+  const sections = useMenu(loggedIn);
 
   useEffect(() => {
     if (open) {
@@ -104,20 +73,20 @@ export function AppDrawer() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-            {SECTIONS.map((section, si) => (
-              <View key={section.title ?? 'main'} style={si > 0 ? styles.section : undefined}>
+            {sections.map((section, si) => (
+              <View key={section.id} style={si > 0 ? styles.section : undefined}>
                 {section.title ? (
                   <Text style={[font('700'), styles.sectionTitle]}>{section.title}</Text>
                 ) : null}
                 {section.items.map((item) => (
                   <Pressable
-                    key={item.label}
+                    key={item.id}
                     onPress={() => go(item.target)}
                     style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.paper2 }]}
                   >
                     {/* row-reverse: icon chip sits right, chevron points toward content (left) */}
                     <View style={styles.itemIcon}>
-                      <Icon name={item.icon} size={17} color={colors.navy700} />
+                      <Icon name={item.icon as IconName} size={17} color={colors.navy700} />
                     </View>
                     <Text style={[font('700'), styles.itemLabel]}>{item.label}</Text>
                     <Icon name="chevron-left" size={15} color={colors.muted} />
@@ -141,7 +110,7 @@ export function AppDrawer() {
                 <Icon name="log-out" size={16} color={colors.red} />
               </Pressable>
             ) : (
-              <Pressable onPress={() => go({ route: 'EmailAuth' })} style={[styles.authBtn, { backgroundColor: colors.navy700 }]}>
+              <Pressable onPress={() => go({ kind: 'route', route: 'EmailAuth' })} style={[styles.authBtn, { backgroundColor: colors.navy700 }]}>
                 <Text style={[font('800'), { fontSize: 12.5, color: '#fff' }]}>تسجيل الدخول</Text>
                 <Icon name="log-in" size={16} color="#fff" />
               </Pressable>

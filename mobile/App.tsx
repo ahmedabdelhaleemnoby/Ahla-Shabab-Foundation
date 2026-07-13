@@ -34,6 +34,7 @@ import UrgentCasesScreen from './src/screens/UrgentCasesScreen';
 import SponsorshipScreen from './src/screens/SponsorshipScreen';
 import ConsultationRequestScreen from './src/screens/ConsultationRequestScreen';
 import PaymentInfoScreen from './src/screens/PaymentInfoScreen';
+import CmsPageScreen from './src/screens/CmsPageScreen';
 import ProjectDetailScreen from './src/screens/ProjectDetailScreen';
 import CaseDetailScreen from './src/screens/CaseDetailScreen';
 import ConsultationsScreen from './src/screens/ConsultationsScreen';
@@ -129,6 +130,7 @@ export default function App() {
           <Stack.Screen name="About" component={NewsScreen} />
           <Stack.Screen name="ConsultationRequest" component={ConsultationRequestScreen} />
           <Stack.Screen name="PaymentInfo" component={PaymentInfoScreen} />
+          <Stack.Screen name="CmsPage" component={CmsPageScreen} />
           <Stack.Screen name="Consultations" component={ConsultationsScreen} />
           <Stack.Screen name="Booking" component={BookingScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
