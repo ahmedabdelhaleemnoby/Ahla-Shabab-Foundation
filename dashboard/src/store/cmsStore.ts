@@ -133,6 +133,22 @@ export function mediaSrc(id?: string): string | undefined {
   return state.media.find((m) => m.id === id)?.src;
 }
 
+/* ---- Rich page content ops ---- */
+export const pageContent = {
+  get(id: string): import('@ahla/shared').ContentBlock[] {
+    return state.pages.find((p) => p.id === id)?.content ?? [];
+  },
+  set(id: string, blocks: import('@ahla/shared').ContentBlock[], title: string) {
+    mutate({ action: 'حرّر محتوى صفحة', entityType: 'محتوى صفحة', entityName: title }, (d) => {
+      const p = d.pages.find((x) => x.id === id);
+      if (p) {
+        p.content = blocks;
+        p.updatedAt = new Date().toISOString();
+      }
+    });
+  },
+};
+
 /* ---- Consultation form builder ops ---- */
 export const forms = {
   updateType(id: string, fields: Partial<import('@ahla/shared').ConsultationTypeConfig>, name: string) {

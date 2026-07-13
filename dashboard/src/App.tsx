@@ -15,6 +15,7 @@ import Inbox from './pages/Inbox';
 import CmsHome from './pages/CmsHome';
 import CmsMenu from './pages/CmsMenu';
 import CmsPages from './pages/CmsPages';
+import CmsContentEditor from './pages/CmsContentEditor';
 import CmsMedia from './pages/CmsMedia';
 import CmsForms from './pages/CmsForms';
 import CmsTools from './pages/CmsTools';
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/cms/home" element={<CmsHome />} />
         <Route path="/cms/menu" element={<CmsMenu />} />
         <Route path="/cms/pages" element={<CmsPages />} />
+        <Route path="/cms/content/:id" element={<CmsContentEditor />} />
         <Route path="/cms/media" element={<CmsMedia />} />
         <Route path="/cms/forms" element={<CmsForms />} />
         <Route path="/cms/tools" element={<CmsTools />} />

@@ -152,6 +152,50 @@ export interface PageSection {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* Rich content blocks (structured — no raw HTML, so no sanitization) */
+/* ------------------------------------------------------------------ */
+
+export type ContentBlockType =
+  | 'heading'
+  | 'paragraph'
+  | 'bulletList'
+  | 'orderedList'
+  | 'quote'
+  | 'highlight'
+  | 'image'
+  | 'cta'
+  | 'contact'
+  | 'divider';
+
+export type ContactActionKind = 'phone' | 'email' | 'whatsapp' | 'facebook' | 'instagram' | 'youtube' | 'twitter' | 'website';
+
+export interface ContentBlock {
+  id: string;
+  type: ContentBlockType;
+  sortOrder: number;
+  /** heading / paragraph / quote / highlight. */
+  text?: string;
+  /** heading level. */
+  level?: 1 | 2 | 3;
+  /** quote attribution. */
+  author?: string;
+  /** highlight box tone. */
+  tone?: 'navy' | 'green' | 'gold' | 'danger';
+  /** bullet / ordered list items. */
+  items?: string[];
+  /** image block. */
+  mediaId?: string;
+  caption?: string;
+  /** cta block. */
+  ctaLabel?: string;
+  ctaTarget?: NavTarget;
+  /** contact-action block. */
+  contactKind?: ContactActionKind;
+  contactValue?: string;
+  contactLabel?: string;
+}
+
 export interface CmsPage {
   id: string;
   /** URL-ish key. For native pages this matches the RN route name. */
@@ -172,6 +216,8 @@ export interface CmsPage {
   builtin: boolean;
   /** Sections for generic (non-native) pages. */
   sections: PageSection[];
+  /** Rich block content for generic pages (edited in the content editor). */
+  content?: ContentBlock[];
   emptyStateText?: string;
   sortOrder: number;
   createdAt: string;

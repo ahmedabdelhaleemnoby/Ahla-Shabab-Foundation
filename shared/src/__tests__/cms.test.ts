@@ -76,6 +76,25 @@ describe('CMS defaults', () => {
     expect(b.consultations[0].fields[0].label).not.toBe('y');
   });
 
+  it('seeds a generic content page with well-formed rich blocks', () => {
+    const s = makeDefaultCmsState();
+    const pg = s.pages.find((p) => p.slug === 'success-stories');
+    expect(pg).toBeTruthy();
+    expect(pg!.builtin).toBe(false);
+    expect(pg!.template).not.toBe('native');
+    const blocks = pg!.content ?? [];
+    expect(blocks.length).toBeGreaterThan(0);
+    // unique ids + contiguous ordering
+    expect(new Set(blocks.map((b) => b.id)).size).toBe(blocks.length);
+    const orders = blocks.map((b) => b.sortOrder).sort((a, b) => a - b);
+    expect(orders[0]).toBe(0);
+    // list blocks carry items; cta carries a target
+    for (const b of blocks) {
+      if (b.type === 'bulletList' || b.type === 'orderedList') expect((b.items ?? []).length).toBeGreaterThan(0);
+      if (b.type === 'cta') expect(b.ctaTarget).toBeTruthy();
+    }
+  });
+
   it('seeds 5 consultation types, each with a valid form schema', () => {
     const s = makeDefaultCmsState();
     expect(s.consultations.length).toBe(5);

@@ -161,6 +161,36 @@ export const defaultPages: CmsPage[] = [
   page('Volunteer', 'التطوع', 'انضم متطوعاً', 'user-plus', 16),
   page('ContactUs', 'تواصل معنا', 'تواصل معنا', 'phone', 17),
   page('PrivacyPolicy', 'سياسة الخصوصية', 'سياسة الخصوصية', 'shield', 18),
+  // A demo generic page (not a native screen) to showcase the rich content editor.
+  {
+    id: 'pg-success-stories',
+    slug: 'success-stories',
+    title: 'قصص نجاح',
+    navTitle: 'قصص نجاح',
+    description: 'نماذج ملهمة من أثر تبرعاتكم',
+    icon: 'award',
+    status: 'published',
+    visible: true,
+    inSidebar: false,
+    loginRequired: false,
+    template: 'standard',
+    builtin: false,
+    sections: [],
+    content: [
+      { id: 'cb-1', type: 'heading', level: 1, text: 'قصص نجاح من أرض الواقع', sortOrder: 0 },
+      { id: 'cb-2', type: 'paragraph', text: 'خلف كل تبرع قصة إنسان تغيّرت حياته. نستعرض هنا نماذج حقيقية لأثر دعمكم المستمر للأسر الأولى بالرعاية.', sortOrder: 1 },
+      { id: 'cb-3', type: 'image', mediaId: 'md-case', caption: 'من إحدى زياراتنا الميدانية', sortOrder: 2 },
+      { id: 'cb-4', type: 'highlight', tone: 'green', text: 'بفضل الكفالة الشهرية، عاد 120 طالباً إلى مدارسهم هذا العام.', sortOrder: 3 },
+      { id: 'cb-5', type: 'heading', level: 2, text: 'كيف تُصنع القصة؟', sortOrder: 4 },
+      { id: 'cb-6', type: 'orderedList', items: ['توثيق الحالة ميدانياً', 'اعتماد الدعم من الإدارة', 'صرف المساعدة ومتابعة الأثر'], sortOrder: 5 },
+      { id: 'cb-7', type: 'quote', text: 'لم أكن أتخيل أن أعود لمقعد الدراسة… شكراً لكل من ساهم.', author: 'أحد المستفيدين', sortOrder: 6 },
+      { id: 'cb-8', type: 'cta', ctaLabel: 'كن سبباً في قصة جديدة', ctaTarget: { kind: 'tab', tab: 'Donate' }, sortOrder: 7 },
+    ],
+    emptyStateText: 'لا يوجد محتوى بعد',
+    sortOrder: 19,
+    createdAt: now,
+    updatedAt: now,
+  },
 ];
 
 /* ---------------- Media library (branded placeholders) ---------------- */

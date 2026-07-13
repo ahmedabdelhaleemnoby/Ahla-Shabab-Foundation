@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Copy, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Copy, Trash2, FileText } from 'lucide-react';
 import type { CmsPage, PageTemplate } from '@ahla/shared';
 import { Card, Badge, Toggle, Modal, TableWrap, MobileRow, Empty } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
@@ -97,6 +98,7 @@ export default function CmsPages() {
                   <td className="td">
                     <div className="flex gap-1.5">
                       <button title="تعديل" onClick={() => { setCreating(false); setEditing({ ...p }); }} className="w-8 h-8 grid place-items-center rounded-lg border border-line text-navy-700 hover:bg-paper-2"><Pencil size={14} /></button>
+                      <Link title="تحرير المحتوى" to={`/cms/content/${p.id}`} className={`w-8 h-8 grid place-items-center rounded-lg border border-line hover:bg-paper-2 ${p.builtin ? 'text-muted pointer-events-none opacity-40' : 'text-navy-700'}`}><FileText size={14} /></Link>
                       <button title="تكرار" onClick={() => duplicate(p)} className="w-8 h-8 grid place-items-center rounded-lg border border-line text-navy-700 hover:bg-paper-2"><Copy size={14} /></button>
                       <button title="حذف" disabled={p.builtin} onClick={() => remove(p)} className="w-8 h-8 grid place-items-center rounded-lg border border-line text-danger hover:bg-danger-soft disabled:opacity-30"><Trash2 size={14} /></button>
                     </div>
