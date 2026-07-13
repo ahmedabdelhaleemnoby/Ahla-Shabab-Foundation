@@ -2,9 +2,11 @@
 
 Backend requirements for **جمعية خواطر أحلى شباب**, derived from the Technical Offer (§5–§8) and the already-built frontend (`mobile/` app + `dashboard/`). Every entity and endpoint below maps to a real screen or module that already consumes it via mock data in `@ahla/shared` — the job of the backend is to replace those mocks with a real REST API + database, changing nothing about the UI contracts.
 
-> Status: **not started** (deferred). This document is the source of truth for what to build.
+> Status: **not started** (deferred). This document is the source of truth for what to build. The frontend is a demo on `@ahla/shared` mock data (app v1.2.1).
 >
-> **Updated 2026-07-05** to cover the newer mobile screens (~29 total): in-app Notifications + preferences, News/Articles feed, Volunteer applications, Contact-us messages, My Bookings, Donation history/receipts, Account settings, Zakat calculator (nisab config), FAQ, Onboarding. Sections marked **(v1.1)** are the additions.
+> **Updated 2026-07-05** to cover the newer mobile screens: in-app Notifications + preferences, News/Articles feed, Volunteer applications, Contact-us messages, My Bookings, Donation history/receipts, Account settings, Zakat calculator (nisab config), FAQ, Onboarding. Sections marked **(v1.1)** are those additions.
+>
+> **Updated 2026-07-13 (v1.2)** for the UX-review pass: **passwordless email login** (replaces phone/OTP — see §5), the multi-step **donation wizard**, **اكفل أسرة** (monthly sponsorship) + **حالات عاجلة** (urgent cases) with sponsorship fields on `cases`, **per-type consultation request forms** (new `consultation_requests` inbox), the notification center, `workGovernorates` replacing the "22 محافظة" claim, and `appConfig`-driven app settings. Sections marked **(v1.2)** are those additions.
 
 ---
 
@@ -28,7 +30,7 @@ Non-goals for v1: real payment-gateway settlement (integrate provider sandboxes 
 └─────────────┘                    └──────┬───────┘      └─────────────┘
                                           │
                                           ▼
-                              FCM (push) · SMS (OTP)
+                              FCM (push) · Email (OTP)
 ```
 
 - **Presentation:** mobile app + dashboard (built).
@@ -50,7 +52,8 @@ The Offer allows **Laravel (PHP)** or **Node/Express**. Recommendation: **Node.j
 | Validation | zod | Validate every request body/query |
 | Files | Local filesystem (`/uploads`) | Served behind the API; S3-compatible later |
 | Push | Firebase Cloud Messaging | Booking status + reminders |
-| SMS/OTP | Pluggable provider (e.g. Twilio / local aggregator) | Optional add-on |
+| Email/OTP | Pluggable provider (SES / SendGrid / SMTP) | Passwordless user login + transactional email |
+| SMS | Pluggable provider (e.g. Twilio / local aggregator) | Optional — guest-booking verification |
 | Jobs | node-cron / BullMQ | Reminders, slot cleanup |
 
 New workspace: `backend/` alongside `mobile/`, `dashboard/`, `shared/`.
@@ -70,8 +73,12 @@ JWT_REFRESH_TTL=30d
 UPLOAD_DIR=/var/app/uploads
 PUBLIC_BASE_URL=https://api.ahlashabab.com
 FCM_SERVER_KEY=...
-OTP_PROVIDER_KEY=...          # optional
-OTP_ENABLED=false             # feature flag
+EMAIL_PROVIDER=ses            # ses | sendgrid | smtp — powers passwordless login
+EMAIL_FROM=no-reply@ahlashabab.com
+EMAIL_PROVIDER_KEY=...
+OTP_TTL=10m                   # email verification code lifetime
+SMS_PROVIDER_KEY=...          # optional (guest-booking verification)
+SMS_ENABLED=false             # feature flag
 CORS_ORIGINS=https://dashboard.ahlashabab.com
 RATE_LIMIT_WINDOW=60
 RATE_LIMIT_MAX=100
@@ -84,14 +91,15 @@ Per Offer pricing note: hosting, domains, gateway/SMS/FCM accounts are the found
 ## 5. Authentication & authorization
 
 ### 5.1 Actors
-- **Guest** — books a service with just a phone number (Offer §4.4). No account.
-- **Registered user** — optional account (phone + name, optional password), tracks booking history, favorites, reminders.
+- **Guest** — browses everything and books a service with just a contact phone number (Offer §4.4). No account.
+- **Registered user** — account keyed on **email** (passwordless), tracks donations/receipts, booking history, favorites, notifications, reminders. Phone is optional contact info, not the login identity.
 - **Admin** — dashboard user with a role.
 
 ### 5.2 Mechanism
+- **User login is passwordless email OTP** (matches the mobile app since v1.2.1): `EmailAuthScreen` collects the email → `POST /auth/otp/request` emails a 6-digit code → `OtpScreen` submits it → `POST /auth/otp/verify` returns JWT access + refresh tokens. No password is stored for end users.
 - **JWT** access + refresh tokens. Access token in `Authorization: Bearer`. Refresh rotation on `/auth/refresh`.
-- Passwords hashed with **argon2/bcrypt**.
-- **OTP (optional, `OTP_ENABLED`)** — phone verification to reduce no-shows; `POST /auth/otp/request` → `POST /auth/otp/verify` returns a short-lived token that authorizes a guest booking.
+- Admin accounts keep email + password (hashed with **argon2/bcrypt**) — separate from the passwordless end-user flow.
+- The email-OTP provider is pluggable (SES / SendGrid / SMTP); an optional SMS channel can back guest-booking verification via the same request/verify endpoints.
 
 ### 5.3 Roles & permissions (Offer §5-F) — matches dashboard `adminRoles`
 Roles: `مدير عام` (Super Admin), `مدير محتوى` (Content Manager), `مدير حجوزات` (Bookings Manager), `اطّلاع فقط` (Read-Only).
@@ -116,16 +124,17 @@ Entities mirror `@ahla/shared` (`types.ts`, `services.ts`, `admin.ts`). Suggeste
 - **service_form_fields** — per-service overrides of the booking form (`key, label, type, required, hidden, options_json`) so admins can configure required/optional/custom fields (Offer §4.3)
 
 ### Bookings & users
-- **users** — `id, name, phone (unique), password_hash (nullable for guests), governorate, is_guest, blocked, created_at`
+- **users** — `id, name, email (unique — login identity), phone (nullable contact), governorate, is_guest, blocked, created_at` (passwordless; no `password_hash` for end users)
 - **bookings** — `id, reference (unique, e.g. AS-482910), service_id, provider_id, user_id (nullable), applicant_name, phone, age, gender, governorate, city, national_id, notes, date, time_slot, status, created_at`
   - `status ∈ {قيد الانتظار, مؤكد, مكتمل, ملغي, لم يحضر}` (Pending/Confirmed/Completed/Cancelled/No-Show)
 - **favorites** — `id, user_id, entity_type (project|case|service), entity_id`
 
 ### Portfolio / CMS (Offer §5-A) — `portfolioItems`
 - **portfolio_items** — `id, type (مشروع|حالة|قافلة|برنامج|رحلة|مقال), title, description, governorate, date, published, cover_url, body, metadata_json`
-- **cases** — `id, code, title, location, summary, need, tag, verified, target_amount, raised_amount, supporters, cover_url` (+ `case_updates`: `id, case_id, text, kind, created_at` for "آخر التحديثات")
-- **projects** — `id, title, description, status, target_amount, raised_amount, supporters, cover_url` (+ `project_stages`: `id, project_id, label, done, sort_order`)
-- **foundation_stats / milestones / values / initiatives** — small content tables (governorates count, beneficiaries, years, timeline entries) feeding the mobile Home + About screens
+- **cases** — `id, code, title, location, summary, need, tag, verified, target_amount, raised_amount, supporters, cover_url` + sponsorship fields (`sponsorable, monthly_amount, sponsorship_duration, sponsorship_status ∈ {متاحة للكفالة, مكفولة جزئياً, مكتملة}`) powering the **اكفل أسرة** (Sponsorship) + **حالات عاجلة** (UrgentCases) screens; (+ `case_updates`: `id, case_id, text, kind, created_at` for "آخر التحديثات")
+- **projects** — `id, title, description, status, category, timeline, target_amount, raised_amount, supporters, cover_url` (+ `project_stages`: `id, project_id, label, done, sort_order`, and `project_updates` timeline)
+- **work_areas** — governorates where the foundation operates (feeds Home + About "مناطق عمل الجمعية" chips; seed from `workGovernorates`). Replaces the former unverified "22 محافظة" numeric claim.
+- **foundation_stats / milestones / values / initiatives** — small content tables (beneficiaries, years of service, timeline entries) feeding the mobile Home + About screens
 - **consultants** — advisory profiles for the Consultations screen
 
 ### Donations (mobile checkout)
@@ -137,6 +146,7 @@ Entities mirror `@ahla/shared` (`types.ts`, `services.ts`, `admin.ts`). Suggeste
 - **articles** — news/activities feed: `id, category (خبر|نشاط|مقال|قافلة), title, excerpt, body, date, location, read_minutes, cover_url, published` (mobile NewsFeed/ArticleDetail; managed from dashboard Content)
 - **volunteer_applications** — `id, name, phone, age, governorate, interests_json, availability, status (جديد|تم التواصل|مقبول|مرفوض), created_at` (mobile Volunteer form)
 - **contact_messages** — `id, name, phone, message, status (جديد|تم الرد), created_at` (mobile ContactUs form)
+- **consultation_requests** — per-type consultation forms (mobile Consultations → ConsultationRequest): `id, reference (AS-######), user_id (nullable), type (نفسية|دينية|طبية|أسرية|أعمال), name, phone, whatsapp, email, age, governorate, preferred_channel, preferred_time, summary, extra_fields_json (type-specific answers), status (جديد|قيد المراجعة|تم تحديد موعد|مكتمل|ملغي), created_at`. In the demo these are saved on-device only; the backend receives them and surfaces them in a dashboard inbox for the consultations team.
 - **notifications** — per-user in-app feed: `id, user_id, kind (donation|case|project|booking|system), title, body, read, created_at` (mobile Notifications screen; most rows generated by backend events — booking status changes, donation receipts, case/project updates)
 - **notification_preferences** — `user_id, key (donations|cases|projects|bookings|news|system), enabled` (mobile NotificationPreferences; must be respected before any push/in-app fan-out)
 - **device_tokens** — `id, user_id, token, platform, updated_at` (FCM)
@@ -191,15 +201,17 @@ Base: `/api/v1`. All list endpoints support `?page=&limit=&q=`. Read endpoints a
 |---|---|---|
 | POST | `/volunteers` | Submit a volunteer application (name*, phone*, age, governorate*, interests*[], availability) |
 | POST | `/contact` | Submit a contact-us message (name*, phone*, message*) |
-Both are guest-friendly (no auth), rate-limited, and land in dashboard inboxes.
+| POST | `/consultations` | Submit a consultation request (type*, name*, phone*, whatsapp, email, age, governorate*, preferred_channel*, preferred_time*, summary*, extra_fields) — returns `{ reference, status: 'جديد' }` |
+All three are guest-friendly (no auth), rate-limited, and land in dashboard inboxes.
 
 ### Auth & account
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/auth/otp/request` · `/auth/otp/verify` | Optional phone OTP |
-| POST | `/auth/register` · `/auth/login` · `/auth/refresh` | Accounts |
-| GET | `/me` · `/me/bookings` · `/me/donations` · `/me/favorites` | Profile data (MyBookings tabs upcoming/past; DonationHistory with totals) |
-| PATCH | `/me` | **(v1.1)** Update profile: name, phone, email, governorate, bio (AccountSettings) |
+| POST | `/auth/otp/request` · `/auth/otp/verify` | **Passwordless email OTP** — request emails a 6-digit code to the address, verify returns JWT access + refresh (mobile EmailAuth → Otp) |
+| POST | `/auth/refresh` · `/auth/logout` | Rotate / revoke tokens |
+| POST | `/admin/auth/login` | Admin email + password login (dashboard only) |
+| GET | `/me` · `/me/bookings` · `/me/donations` · `/me/favorites` · `/me/consultations` | Profile data (MyBookings tabs upcoming/past; DonationHistory with totals; consultation requests) |
+| PATCH | `/me` | **(v1.1)** Update profile: name, phone, governorate, bio (AccountSettings). Email is the login identity — change requires re-verification |
 | POST/DELETE | `/me/favorites` | Add/remove favorite |
 | GET | `/me/notifications` | **(v1.1)** In-app notification feed (paginated, unread count) |
 | PATCH | `/me/notifications/:id/read` · POST `/me/notifications/read-all` | **(v1.1)** Mark read / mark all read |
@@ -321,22 +333,22 @@ These imply two new sidebar modules in the dashboard (Volunteers inbox, Messages
 
 ## 13. Seed data
 Seed the DB directly from the existing mocks in `@ahla/shared` so the apps look identical on day one:
-`serviceCategories, providers, services, governorates, bookingFormSchema, adminBookings, adminUsers, adminRoles, permissionModules, activityLog, portfolioItems, cases, projects, consultants, donations, foundationStats`, **(v1.1)** `articles, notifications` — plus seed `faqs` from the questions hard-coded in `mobile/src/screens/FaqScreen.tsx`, `app_config` from the contact details in `ContactUsScreen.tsx` + the `DEFAULT_NISAB` in `ZakatCalculatorScreen.tsx`, and default `notification_preferences` from `NotificationPreferencesScreen.tsx`.
+`serviceCategories, providers, services, governorates, bookingFormSchema, adminBookings, adminUsers, adminRoles, permissionModules, activityLog, portfolioItems, cases (incl. sponsorship fields), projects (incl. category/timeline), consultants, donations, foundationStats`, **(v1.1)** `articles, notifications, volunteerApplications, contactMessages`, **(v1.2)** `appConfig` (contact/hero/socials/zakat nisab) and `workGovernorates` (مناطق عمل الجمعية) — plus seed `faqs` from `mobile/src/screens/FaqScreen.tsx` and default `notification_preferences` from `NotificationPreferencesScreen.tsx`. Consultation requests start empty (submitted from the app). `app_config` now comes from `shared/appConfig` rather than being hard-coded in screens.
 
 ---
 
 ## 14. Build order (milestones)
 1. **Scaffold** `backend/` + DB schema + migrations + seed from `@ahla/shared`.
-2. **Auth**: admin login + JWT + RBAC middleware; guest + OTP flag.
+2. **Auth**: admin email+password login; passwordless **email-OTP** user login + JWT + RBAC middleware; guest booking path.
 3. **Catalog read APIs** → point mobile ServicesBrowse/ProviderDetail/ServiceDetail at them.
 4. **Booking engine**: availability + create booking + confirmation → wire mobile BookAppointment.
 5. **Dashboard admin APIs**: bookings ops, categories/services, providers/schedules → replace dashboard in-session state.
 6. **Portfolio CMS + Users + Roles/Activity** — including **(v1.1)** articles, FAQs, and app-config.
-7. **Engagement (v1.1)**: volunteer applications + contact messages (public POST + dashboard inboxes), `PATCH /me`, notification preferences.
+7. **Engagement (v1.1+)**: volunteer applications + contact messages + consultation requests (public POST + dashboard inboxes), `PATCH /me`, notification preferences.
 8. **Reports/analytics + exports**.
 9. **Notifications**: in-app feed + FCM + reminders cron + admin broadcast **(v1.1: preference-filtered pipeline)**.
 10. **Donations** endpoints (+ gateway sandbox), receipts by reference.
-11. **Hardening**: rate limits (now also on `/volunteers`, `/contact`), load test the booking endpoint (Offer §11), OWASP pass.
+11. **Hardening**: rate limits (now also on `/volunteers`, `/contact`, `/consultations`, `/auth/otp/*`), load test the booking endpoint (Offer §11), OWASP pass.
 
 ---
 

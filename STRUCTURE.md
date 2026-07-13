@@ -2,7 +2,7 @@
 
 Full map of the **جمعية خواطر أحلى شباب** platform: an npm-workspaces monorepo with a React Native mobile app, a React admin dashboard, and one shared package that keeps them in sync. Arabic-first, fully RTL, official brand identity from [ahlashabab.com](https://ahlashabab.com).
 
-> Current release: **v1.2.0** (versionCode 5) · demo on mock data — the backend is specced in [BACKEND.md](BACKEND.md) but not built yet.
+> Current release: **v1.2.1** (versionCode 6) · demo on mock data — the backend is specced in [BACKEND.md](BACKEND.md) but not built yet. Every donation/consultation flow is a **presentation demo**: no real payment, server, or database runs.
 
 ---
 
@@ -13,23 +13,23 @@ Ahla Shabab Foundation/
 ├── shared/               @ahla/shared — the single source of truth
 │   └── src/
 │       ├── tokens.ts             Design tokens (brand palette, type scale, spacing, radius)
-│       ├── types.ts              Domain types (Case, Project, Article, Donation, AppConfig…)
-│       ├── data.ts               Mock content data + appConfig (contact, hero, zakat)
+│       ├── types.ts              Domain types (Case, Project, Article, Donation, AppConfig, Consultation…)
+│       ├── data.ts               Mock content data + appConfig + workGovernorates
 │       ├── services.ts           Services-booking catalog (categories, providers, slots)
 │       ├── admin.ts              Dashboard data (bookings, users, roles, inboxes, audit log)
 │       ├── rules.ts              Business rules (validation + donation-status security)
 │       ├── __tests__/rules.test.ts   18 vitest unit tests enforcing the rules
 │       └── index.ts              Re-exports everything
 │
-├── mobile/               Expo + React Native app (31 screens)
+├── mobile/               Expo + React Native app (39 screens)
 │   ├── App.tsx                   Navigation container: root stack + hidden tab navigator + sidebar
 │   ├── app.json                  Expo config (name, icons, splash, versionCode)
 │   ├── assets/                   logo.png (official), icon, adaptive-icon, splash
 │   └── src/
-│       ├── components/           AppBar, AppDrawer (sidebar), Screen, ui, Icon, SelectField, RemoteImage, TabBar (unused)
+│       ├── components/           AppBar, AppDrawer (sidebar), LoginGate, Screen, ui, Icon, SelectField, RemoteImage, TabBar (unused)
 │       ├── navigation/           types.ts (route params) + ref.ts (global navRef)
-│       ├── screens/              31 screens (see §3)
-│       ├── store/                appState.ts (session + receipts) + drawer.ts (sidebar open/close)
+│       ├── screens/              39 screens (see §3)
+│       ├── store/                appState.ts (session+receipts+consultations) · drawer.ts · notifications.ts
 │       └── theme.ts              RN styles bridge over shared tokens
 │
 ├── dashboard/            Vite + React + Tailwind admin panel (12 modules)
@@ -56,8 +56,8 @@ Ahla Shabab Foundation/
 | File | Exports | Used by |
 |---|---|---|
 | `tokens.ts` | Brand palette — primary **#18489F**, gold **#E9AF31**, navy ramp 300–900, radius (sm 12 / lg 16 / btn 24), Cairo type scale, spacing | Both apps |
-| `types.ts` | `HumanitarianCase`, `Project` (+`ProjectUpdate`), `Article`, `Consultant`, `Donation`, `DonationStatus`, `PaymentMethodInfo`, `AppNotification`, `AppConfig`, `FoundationStats` | Both apps |
-| `data.ts` | `cases`, `projects`, `articles`, `consultants`, `donations`, `paymentMethods`, `notifications`, `foundationStats`, **`appConfig`** (hotline, email, address, socials, hero texts, zakat nisab), helpers `pct()`/`egp()` | Both apps |
+| `types.ts` | `HumanitarianCase` (+ sponsorship fields), `Project` (+`ProjectUpdate`, category, timeline), `Article`, `Consultant`, `Donation`, `DonationStatus`, `PaymentMethodInfo`, `AppNotification` (+ date/clock/targetId), `ConsultationStatus`, `AppConfig`, `FoundationStats` | Both apps |
+| `data.ts` | `cases`, `projects`, `articles`, `consultants`, `donations`, `paymentMethods`, `notifications`, `foundationStats`, **`appConfig`** (hotline, email, address, socials, hero texts, zakat nisab), **`workGovernorates`** (مناطق عمل الجمعية chips), helpers `pct()`/`egp()` | Both apps |
 | `services.ts` | `serviceCategories` (nested tree), `providers` (schedules + slots), `services`, `governorates` (27), `bookingFormSchema`, `buildAvailableDays()`, `makeBookingRef()` | Both apps |
 | `admin.ts` | `adminBookings`, `adminUsers`, `adminRoles` + permission matrix, `activityLog`, `volunteerApplications`, `contactMessages` | Dashboard |
 | `rules.ts` | `isEgPhone`, `isEmail`, `isValidDonationAmount`, `isMethodUsable`, **`initialDonationStatus()`** | Both apps + tests |
@@ -66,7 +66,8 @@ Ahla Shabab Foundation/
 
 1. **Donations are never marked successful by the app.** `initialDonationStatus()` returns only `قيد التأكيد` (gateway methods) or `قيد المراجعة` (manual: إنستاباي / تحويل بنكي). `مكتمل` is a compile-time-unassignable value for the client (`ClientDonationStatus`) — it can only come from a server callback or dashboard admin approval (اعتماد).
 2. **Beneficiary privacy.** Cases carry governorate-level `location` only — no phone numbers, exact addresses, or national IDs anywhere in app-visible data. Tests scan the data to enforce this.
-3. Egyptian phone validation `01[0125]xxxxxxxx`, donation amounts integer 5–1,000,000, booking refs `AS-xxxxxx`.
+3. **No unverified numeric claims.** The old "22 محافظة" stat was removed in favor of `workGovernorates` (a factual chip list — مناطق عمل الجمعية).
+4. Egyptian phone validation `01[0125]xxxxxxxx`, email validation, donation amounts integer 5–1,000,000, booking refs `AS-xxxxxx`.
 
 Run the tests: `cd shared && npx vitest run`
 
@@ -80,32 +81,37 @@ Run the tests: `cd shared && npx vitest run`
 NavigationContainer (navRef)
 ├── Root Stack (native-stack; JS stack on web)
 │   ├── "Main" → Tab.Navigator (tab bar HIDDEN — kept so navigate('Main',{screen}) works)
-│   │   ├── Home · Discover (cases) · Donate · News · Profile
-│   └── 26 pushed screens (details, flows, settings…)
+│   │   ├── Home · Discover (خدماتنا) · Donate (wizard) · News (feed) · Profile
+│   └── 34 pushed screens (details, flows, auth, settings…)
 └── AppDrawer (sidebar) — global overlay, opened by the ☰ button in the AppBar
 ```
 
-- **Sidebar (v1.2)** replaced the bottom tab bar. `components/AppDrawer.tsx` slides from the **right** (RTL), 3 sections / 16 items, guest-vs-logged-in header, login/logout footer. Add an item = one line in its `SECTIONS` array.
-- **AppBar modes:** main screens → ☰ (right) + 🔔 (left) + title-or-logo (center); pushed screens → back arrow (right) + title + logo.
-- `navigation/ref.ts` exposes `navRef` so non-screen UI (the drawer) can navigate; `__DEV__` also exposes it as `globalThis.__nav` for tests.
+- **Sidebar** replaced the bottom tab bar. `components/AppDrawer.tsx` slides from the **right** (RTL), 3 sections / ~20 items (main nav · حسابك · الجمعية), guest-vs-logged-in header showing the login email, login/logout footer. Add an item = one line in its `SECTIONS` array.
+- **AppBar modes:** main screens → ☰ (right) + 🔔 with live unread badge (left) + title-or-logo (center); pushed screens → back arrow (right) + title + logo.
+- **LoginGate** (`components/LoginGate.tsx`) wraps account-only screens: guests see the page's placeholder plus a friendly bottom-sheet explaining the benefits of logging in (never a hard block). Uses `useIsFocused` so its Modal never covers pushed screens.
+- `navigation/ref.ts` exposes `navRef` so non-screen UI (the drawer) can navigate; `__DEV__` also exposes `globalThis.__nav` and `globalThis.__appState` for tests.
 
-### Screens (31)
+### Screens (39)
 
 | Area | Screens |
 |---|---|
-| Tabs (5) | `HomeScreen` (hero + impact + quick services + urgent case + featured project + news + consultations), `CasesScreen` (search + tag filters + كفالة شهرية), `DonateScreen` (cause/amount/method + pending-status rule), `NewsScreen`, `ProfileScreen` (guest state + settings rows) |
-| Donations | `DonationSuccessScreen` (status-aware receipt, share), `DonationHistoryScreen`, `ReceiptsScreen`, `ZakatCalculatorScreen` |
-| Cases & projects | `CaseDetailScreen`, `ProjectsScreen`, `ProjectDetailScreen` (updates timeline) |
-| Services booking | `ServicesBrowseScreen` (nested categories / providers toggle), `ProviderDetailScreen`, `ServiceDetailScreen`, `BookAppointmentScreen` (**5-step wizard**: التخصص → المختص → الموعد → بياناتك → التأكيد, booked slots struck through, per-step validation), `BookingConfirmationScreen`, `MyBookingsScreen`, `ConsultationsScreen`, `BookingScreen` |
-| Auth | `PhoneAuthScreen` → `OtpScreen` (mock OTP; updates `appState`) |
-| Content & info | `NewsFeedScreen`, `ArticleDetailScreen`, `FaqScreen`, `PrivacyPolicyScreen`, `OnboardingScreen` (tour) |
-| Engagement | `VolunteerScreen` (validated form), `ContactUsScreen` (reads `appConfig`), `NotificationsScreen`, `FavoritesScreen` |
+| Tabs (5) | `HomeScreen` (hero + impact + work-area chips + quick services + urgent case + اكفل أسرة + featured project + news + consultations), `OurServicesScreen` (خدماتنا — Discover tab), `DonateScreen` (**5-step donation wizard**), `NewsFeedScreen` (أخبارنا — News tab), `ProfileScreen` (guest state + email + settings rows) |
+| Donation flow | `DonationSuccessScreen` (status-aware demo receipt, share, dummy PDF), `DonationHistoryScreen`\*, `ReceiptsScreen`\*, `PaymentInfoScreen` (§13 server-confirmation explainer), `ZakatCalculatorScreen` |
+| Cases & sponsorship | `CasesScreen` (search + tag filters), `CaseDetailScreen`, `UrgentCasesScreen` (حالات عاجلة), `SponsorshipScreen` (اكفل أسرة — monthly) |
+| Projects | `ProjectsScreen` (category + timeline), `ProjectDetailScreen` (updates timeline) |
+| Services & consultations | `ServicesBrowseScreen`, `ProviderDetailScreen`, `ServiceDetailScreen`, `BookAppointmentScreen` (**5-step wizard**), `BookingConfirmationScreen`, `MyBookingsScreen`\*, `ConsultationsScreen` (type picker), `ConsultationRequestScreen` (per-type forms), `BookingScreen` |
+| Auth | `EmailAuthScreen` → `OtpScreen` (passwordless **email** login; mock code; updates `appState`) |
+| Content & info | `NewsScreen` (عن الجمعية — About route), `ArticleDetailScreen`, `FaqScreen`, `PrivacyPolicyScreen`, `OnboardingScreen` (tour) |
+| Engagement | `VolunteerScreen` (validated form), `ContactUsScreen` (reads `appConfig`), `NotificationsScreen` (notification center)\*, `FavoritesScreen`\* |
 | Settings | `AccountSettingsScreen`, `NotificationPreferencesScreen`, `LanguageScreen` |
 
-### State — `src/store/`
+\* = wrapped in `LoginGate` (account-only for guests).
 
-- `appState.ts` — session (guest by default, phone login) + donation receipts (`useSyncExternalStore`). Receipts are always created **pending**.
+### State — `src/store/` (all `useSyncExternalStore`, module-level)
+
+- `appState.ts` — session (guest by default, **email** login) + donation receipts (always **pending**) + saved consultation requests (demo, on-device only).
 - `drawer.ts` — sidebar open/close.
+- `notifications.ts` — notification-center read/unread; the AppBar bell badge reads its live unread count.
 
 ---
 
@@ -138,6 +144,7 @@ Shared UI in `components/ui.tsx` (Card, Kpi, Badge, Toggle, Modal, TableWrap, Mo
 - **Typography:** Cairo (Google Fonts) — expo-google-fonts on mobile, `<link>` on dashboard.
 - **RTL:** explicit `row-reverse` / `textAlign:'right'` everywhere (not `I18nManager`); Latin digits kept LTR via the `num` style/class.
 - **Radius language:** cards 16, inputs 12, buttons pill (24 / rounded-full) — identical in both apps.
+- **Demo watermarks:** every donation/receipt/consultation surface carries «نسخة عرض» / «إيصال تجريبي لغرض العرض فقط» so nothing reads as a real transaction.
 
 ---
 
@@ -162,10 +169,11 @@ cd dashboard && npm run build
 The exFAT SSD breaks Gradle, so release builds run inside an APFS disk image:
 
 1. Mount `ahlabuild.sparseimage` → `/Volumes/AhlaBuild/proj` (always `hdiutil detach` before unplugging the SSD).
-2. `rsync` `shared/` + `mobile/` sources & assets in (`--exclude='._*'`).
-3. Bump `versionCode`/`versionName` in `android/app/build.gradle`.
-4. `./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon` (Gradle 8.13). JS-only changes rebuild in ~1 min.
-5. Artifacts land at repo root, e.g. `ahla-shabab-v1.1.2-official.apk` (29 MB) — also published as a [GitHub Release](https://github.com/ahmedabdelhaleemnoby/Ahla-Shabab-Foundation/releases/tag/v1.1.2).
+2. `rsync` `shared/src` + `mobile/src` + `App.tsx`/`app.json` + assets in (`--exclude='._*'`).
+3. Bump `versionCode`/`versionName` in `android/app/build.gradle` **and** `app.json`.
+4. **Put Node ≥ 20 on PATH first** (`export PATH=~/.nvm/versions/node/v22.22.2/bin:$PATH`) — the default Node 18 fails the JS bundle step (`createBundleReleaseJsAndAssets` → `configs.toReversed is not a function`).
+5. `./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon` (Gradle 8.13). JS-only changes rebuild in ~1 min.
+6. Artifacts land at repo root, e.g. `ahla-shabab-v1.2.1-demo.apk` (29 MB). `.apk` is gitignored; publish via a [GitHub Release](https://github.com/ahmedabdelhaleemnoby/Ahla-Shabab-Foundation/releases) for phone testing.
 
 Android 12+ gotcha: the system splash shows the **adaptive icon cropped to a circle**, so icon marks are circle-safe; icon/splash res files are swapped directly in the build image to avoid `prebuild --clean`.
 
@@ -179,6 +187,6 @@ Android 12+ gotcha: the system splash shows the **adaptive icon cropped to a cir
 
 ## 9. What's intentionally not built yet
 
-- `backend/` — everything runs on `@ahla/shared` mock data; dashboard edits and app receipts live in session memory only.
-- Real payments/OTP/push — demo flows are clearly labeled «نسخة عرض تقديمي» in the app.
+- `backend/` — everything runs on `@ahla/shared` mock data; dashboard edits, app receipts, and consultation requests live in session/on-device memory only.
+- Real payments · email OTP delivery · push notifications — all demo-only, clearly labeled «نسخة عرض» in the app.
 - ESLint config (known gap; TypeScript strict + vitest cover the current QA).
