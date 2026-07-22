@@ -46,8 +46,8 @@ export function LoginGate({
             <Icon name={icon} size={28} color={colors.navy700} />
           </View>
           <Text style={[font('800'), { fontSize: 17, color: colors.navy700, textAlign: 'center', marginTop: 14 }]}>{title}</Text>
-          <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'center', marginTop: 6, lineHeight: 18 }]}>
-            سجّل دخولك برقم هاتفك في خطوة واحدة لتستفيد بكل المزايا:
+          <Text style={[font('600'), { fontSize: 13, color: colors.navy700, textAlign: 'center', marginTop: 6, lineHeight: 19 }]}>
+            سجل دخولك لمتابعة حجوزاتك وتبرعاتك وإيصالاتك.
           </Text>
 
           <View style={{ marginTop: 14, gap: 9 }}>
@@ -63,7 +63,7 @@ export function LoginGate({
 
           <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 20 }} onPress={() => nav.navigate('EmailAuth')} />
           <Pressable onPress={() => nav.goBack()} style={{ alignItems: 'center', marginTop: 14 }}>
-            <Text style={[font('700'), { fontSize: 12.5, color: colors.slate }]}>لاحقاً — متابعة التصفح</Text>
+            <Text style={[font('700'), { fontSize: 13, color: colors.slate }]}>متابعة كزائر</Text>
           </Pressable>
         </View>
       </View>

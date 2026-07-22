@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 export type RootStackParamList = {
   Main: { screen?: keyof TabParamList; params?: TabParamList[keyof TabParamList] } | undefined;
+  Home: undefined;
   ProjectDetail: { id: string };
   CaseDetail: { id: string };
   /** Browse all humanitarian cases (search + tag filters). */
@@ -63,15 +64,16 @@ export type RootStackParamList = {
     /** Preferred communication channel chosen in the wizard. */
     mode?: string;
   };
+  GovernorateActivity: { governorate: string };
+  ConsultantDashboard: undefined;
 };
 
 export type TabParamList = {
-  Home: undefined;
-  /** خدماتنا — the foundation's service sections (§8, was "Discover"). */
-  Discover: undefined;
+  Cases: { initialFilter?: string } | undefined;
+  UrgentCases: undefined;
   Donate: { caseId?: string; projectId?: string; sponsor?: boolean } | undefined;
-  News: undefined;
-  Profile: undefined;
+  Consultations: undefined;
+  About: undefined;
 };
 
 export type RootProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

@@ -64,6 +64,8 @@ import ProviderDetailScreen from './src/screens/ProviderDetailScreen';
 import ServiceDetailScreen from './src/screens/ServiceDetailScreen';
 import BookAppointmentScreen from './src/screens/BookAppointmentScreen';
 import BookingConfirmationScreen from './src/screens/BookingConfirmationScreen';
+import GovernorateActivityScreen from './src/screens/GovernorateActivityScreen';
+import ConsultantDashboardScreen from './src/screens/ConsultantDashboardScreen';
 
 // Native stack renders stacked routes incorrectly on react-native-web — use the JS stack there.
 // (Runtime-only switch; cast keeps a single callable type for TS.)
@@ -80,21 +82,19 @@ const navTheme = {
   colors: { ...DefaultTheme.colors, background: colors.paper, primary: colors.navy700 },
 };
 
+import { TabBar } from './src/components/TabBar';
+
 function Tabs() {
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
-      // Navigation moved to the sidebar (AppDrawer) — the bottom bar is gone,
-      // but the tab navigator stays so nav.navigate('Main', { screen }) keeps working.
-      tabBar={() => null}
+      tabBar={(props) => <TabBar {...props} />}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      {/* خدماتنا (§8) — the old "اكتشف" cases browser lives on as the Cases route. */}
-      <Tab.Screen name="Discover" component={OurServicesScreen} />
+      <Tab.Screen name="Cases" component={CasesScreen} />
+      <Tab.Screen name="UrgentCases" component={UrgentCasesScreen} />
       <Tab.Screen name="Donate" component={DonateScreen} />
-      {/* أخبارنا (§9) — the about content moved to the dedicated About route. */}
-      <Tab.Screen name="News" component={NewsFeedScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Consultations" component={ConsultationsScreen} />
+      <Tab.Screen name="About" component={NewsScreen} />
     </Tab.Navigator>
   );
 }
@@ -122,6 +122,7 @@ export default function App() {
       <NavigationContainer ref={navRef} theme={navTheme}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={Tabs} />
+          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
           <Stack.Screen name="CaseDetail" component={CaseDetailScreen} />
           <Stack.Screen name="Cases" component={CasesScreen} />
@@ -158,6 +159,8 @@ export default function App() {
           <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />
           <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
           <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
+          <Stack.Screen name="GovernorateActivity" component={GovernorateActivityScreen} />
+          <Stack.Screen name="ConsultantDashboard" component={ConsultantDashboardScreen} />
         </Stack.Navigator>
         <AppDrawer />
       </NavigationContainer>

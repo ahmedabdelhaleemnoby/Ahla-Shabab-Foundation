@@ -36,6 +36,7 @@ const SETTINGS: Row[] = [
 ];
 
 const TOOLS: Row[] = [
+  { label: 'لوحة مقدم الاستشارة', route: 'ConsultantDashboard' },
   { label: 'حاسبة الزكاة', route: 'ZakatCalculator' },
   { label: 'الأسئلة الشائعة', route: 'Faq' },
   { label: 'جولة تعريفية', route: 'Onboarding' },

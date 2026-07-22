@@ -27,7 +27,7 @@ export default function HomeScreen() {
 
   return (
     <Screen header={<AppBar />}>
-      {/* 1 — Hero: logo mark + explainer + dual CTAs */}
+      {/* 1 — SECTION 1: Donation Hero (Most Prominent) */}
       <LinearGradient
         colors={[colors.navy800, colors.navy900]}
         start={{ x: 1, y: 0 }}
@@ -36,73 +36,75 @@ export default function HomeScreen() {
       >
         <View style={[row, { gap: 10, justifyContent: 'flex-end' }]}>
           <View style={{ alignItems: 'flex-end', flex: 1 }}>
-            <Text style={[font('800'), { color: '#fff', fontSize: 20, textAlign: 'right' }]}>{appConfig.heroTitle}</Text>
+            <Text style={[font('800'), { color: '#fff', fontSize: 19.5, textAlign: 'right' }]}>
+              ساهم في دعم الأسر الكريمة
+            </Text>
             <Text style={[font('400'), { color: '#cfe', fontSize: 11.5, marginTop: 5, textAlign: 'right', lineHeight: 17 }]}>
-              {appConfig.heroSubtitle}
+              تبرعك يصل مباشرة للأسر الأشد احتياجاً ويصنع فارقاً حقيقياً في حياتهم اليومية.
             </Text>
           </View>
           <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
             <Image source={require('../../assets/logo.png')} style={{ width: 42, height: 42 }} resizeMode="contain" />
           </View>
         </View>
-        <View style={[row, { gap: 9, marginTop: 14 }]}>
+        <View style={[row, { gap: 9, marginTop: 16 }]}>
           <Pressable
             onPress={() => nav.navigate('Main', { screen: 'Donate' })}
-            style={[row, { flex: 1, backgroundColor: '#fff', borderRadius: 100, paddingVertical: 11, justifyContent: 'center', gap: 6 }]}
+            style={[row, { flex: 1, backgroundColor: '#fff', borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
           >
-            <Icon name="heart" size={15} color={colors.navy700} />
-            <Text style={[font('800'), { color: colors.navy700, fontSize: 13 }]}>تبرع الآن</Text>
+            <Icon name="heart" size={16} color={colors.navy700} />
+            <Text style={[font('800'), { color: colors.navy700, fontSize: 13.5 }]}>تبرع الآن</Text>
           </Pressable>
           <Pressable
-            onPress={() => nav.navigate('ServicesBrowse', { parentId: null })}
-            style={[row, { flex: 1, borderWidth: 1.5, borderColor: 'rgba(255,255,255,.65)', borderRadius: 100, paddingVertical: 11, justifyContent: 'center', gap: 6 }]}
+            onPress={() => nav.navigate('Main', { screen: 'Cases' })}
+            style={[row, { flex: 1, borderWidth: 1.5, borderColor: 'rgba(255,255,255,.65)', borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
           >
-            <Icon name="calendar" size={15} color="#fff" />
-            <Text style={[font('800'), { color: '#fff', fontSize: 13 }]}>اطلب خدمة</Text>
+            <Icon name="users" size={16} color="#fff" />
+            <Text style={[font('800'), { color: '#fff', fontSize: 13.5 }]}>حالات التبرع</Text>
           </Pressable>
         </View>
       </LinearGradient>
 
-      {/* 2 — Impact numbers */}
-      <View style={[row, { gap: 9, marginTop: 14 }]}>
-        <Stat icon="users" value={foundationStats.beneficiaries} label="مستفيد" />
-        <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنة عطاء" />
-      </View>
-
-      {/* مناطق عمل الجمعية (§2) — factual chips instead of a numeric claim */}
-      <SectionHeader title="مناطق عمل الجمعية" more="عن الجمعية ‹" onMore={() => nav.navigate('About')} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row-reverse', gap: 7, paddingHorizontal: 2 }}>
-        {workGovernorates.map((g) => (
-          <View key={g} style={[row, { gap: 5, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 100, paddingVertical: 6, paddingHorizontal: 13 }]}>
-            <Icon name="map-pin" size={11} color={colors.navy500} />
-            <Text style={[font('700'), { fontSize: 10.5, color: colors.navy700 }]}>{g}</Text>
+      {/* 2 — SECTION 2: Consultations Hero (Second Action) */}
+      <LinearGradient
+        colors={['#EAF0F8', '#D8E4F4']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={{ borderRadius: 20, padding: 18, marginTop: 14, borderWidth: 1, borderColor: colors.line }}
+      >
+        <View style={[row, { gap: 12 }]}>
+          <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors.navy700, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="message-circle" size={24} color="#fff" />
           </View>
-        ))}
-      </ScrollView>
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text style={[font('800'), { fontSize: 16, color: colors.navy700 }]}>خدمة الاستشارات المجانية</Text>
+            <Text style={[font('400'), { fontSize: 11, color: colors.slate, marginTop: 4, textAlign: 'right', lineHeight: 16 }]}>
+              جلسات أونلاين وميدانية سرية مع مستشارين متخصصين في المجالات النفسية، الأسرية، والتربوية.
+            </Text>
+          </View>
+        </View>
+        <View style={[row, { gap: 9, marginTop: 14 }]}>
+          <Pressable
+            onPress={() => nav.navigate('Main', { screen: 'Consultations' })}
+            style={[row, { flex: 1, backgroundColor: colors.navy700, borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
+          >
+            <Icon name="calendar" size={16} color="#fff" />
+            <Text style={[font('800'), { color: '#fff', fontSize: 13.5 }]}>احجز استشارة</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })}
+            style={[row, { flex: 1, borderWidth: 1.5, borderColor: colors.navy700, borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
+          >
+            <Icon name="info" size={16} color={colors.navy700} />
+            <Text style={[font('800'), { color: colors.navy700, fontSize: 13.5 }]}>تعرف على الاستشارات</Text>
+          </Pressable>
+        </View>
+      </LinearGradient>
 
-      {/* 3 — Quick services */}
-      <SectionHeader title="خدمات سريعة" />
-      <View style={[row, { gap: 7 }]}>
-        {quickServices.map((s) => (
-          <Tile
-            key={s.id}
-            label={s.label}
-            icon={serviceIcon[s.icon] ?? 'circle'}
-            onPress={() => {
-              if (s.id === 'consult') nav.navigate('Consultations');
-              else if (s.id === 'cases') nav.navigate('UrgentCases');
-              else if (s.id === 'donate') nav.navigate('Main', { screen: 'Donate' });
-              else if (s.id === 'projects') nav.navigate('Projects');
-              else if (s.id === 'water') nav.navigate('ProjectDetail', { id: 'p-water' });
-            }}
-          />
-        ))}
-      </View>
-
-      {/* 4 — Urgent cases */}
-      <View style={[rowBetween, { marginTop: 16, marginBottom: 10, marginHorizontal: 2 }]}>
-        <Pressable onPress={() => nav.navigate('UrgentCases')}>
-          <Text style={[font('700'), { color: colors.navy500, fontSize: 11.5 }]}>عرض المزيد ‹</Text>
+      {/* 3 — Urgent Cases Preview */}
+      <View style={[rowBetween, { marginTop: 18, marginBottom: 10, marginHorizontal: 2 }]}>
+        <Pressable onPress={() => nav.navigate('Main', { screen: 'UrgentCases' })}>
+          <Text style={[font('700'), { color: colors.navy500, fontSize: 11.5 }]}>عرض الكل ‹</Text>
         </Pressable>
         <View style={[row, { gap: 7 }]}>
           <Text style={[font('800'), { color: colors.navy700, fontSize: 15 }]}>حالة إنسانية عاجلة</Text>
@@ -111,22 +113,22 @@ export default function HomeScreen() {
       </View>
       <CaseRow item={urgent} onPress={() => nav.navigate('CaseDetail', { id: urgent.id })} />
 
-      {/* اكفل أسرة — monthly sponsorship entry (§5) */}
+      {/* 4 — Monthly Family Sponsorship Preview */}
       <Pressable
         onPress={() => nav.navigate('Sponsorship')}
-        style={[row, { gap: 11, marginTop: 12, backgroundColor: colors.greenSoft, borderRadius: 16, padding: 13 }]}
+        style={[row, { gap: 11, marginTop: 14, backgroundColor: colors.greenSoft, borderRadius: 16, padding: 14 }]}
       >
-        <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="users" size={20} color={colors.greenDark} />
+        <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="users" size={22} color={colors.greenDark} />
         </View>
         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <Text style={[font('800'), { fontSize: 13.5, color: colors.greenDark }]}>اكفل أسرة</Text>
-          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 2 }]}>كفالة شهرية ثابتة تغيّر حياة أسرة كاملة</Text>
+          <Text style={[font('800'), { fontSize: 14, color: colors.greenDark }]}>اكفل أسرة شهرياً</Text>
+          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 2 }]}>كفالة شهرية منتظمة لتأمين الاحتياجات الأساسية لأسرة مستحقة</Text>
         </View>
         <Icon name="chevron-left" size={18} color={colors.greenDark} />
       </Pressable>
 
-      {/* 5 — Featured projects */}
+      {/* 5 — Featured Project */}
       <SectionHeader title="مشروع مميز" more="عرض المزيد ‹" onMore={() => nav.navigate('Projects')} />
       <Card style={{ flexDirection: 'row-reverse', gap: 11, padding: 11 }}>
         <LinearGradient colors={featured.gradient} style={{ width: 70, height: 92, borderRadius: 12 }} />
@@ -154,50 +156,7 @@ export default function HomeScreen() {
         </View>
       </Card>
 
-      {/* 6 — Latest news */}
-      <SectionHeader title="أحدث الأخبار" more="عرض المزيد ‹" onMore={() => nav.navigate('NewsFeed')} />
-      {articles.slice(0, 2).map((a) => (
-        <Pressable key={a.id} onPress={() => nav.navigate('ArticleDetail', { id: a.id })}>
-          <Card style={[row, { gap: 11, marginBottom: 10, alignItems: 'flex-start' }]}>
-            <LinearGradient colors={a.gradient} style={{ width: 64, height: 64, borderRadius: 12 }} />
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={[font('700'), { fontSize: 9, color: colors.navy500 }]}>{a.category} · <Text style={num}>{a.date}</Text></Text>
-              <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700, textAlign: 'right', marginTop: 3 }]} numberOfLines={2}>
-                {a.title}
-              </Text>
-            </View>
-            <Icon name="chevron-left" size={16} color={colors.muted} />
-          </Card>
-        </Pressable>
-      ))}
-
-      {/* 7 — Online consultations (most important — emphasized) */}
-      <LinearGradient
-        colors={[colors.navy700, colors.navy900]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={{ borderRadius: 20, padding: 16, marginTop: 6 }}
-      >
-        <View style={[row, { gap: 12 }]}>
-          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.15)', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="message-circle" size={24} color="#fff" />
-          </View>
-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Text style={[font('800'), { fontSize: 15.5, color: '#fff' }]}>استشارات أونلاين مجانية</Text>
-            <Text style={[font('400'), { fontSize: 11, color: '#cfe', marginTop: 3, textAlign: 'right', lineHeight: 16 }]}>
-              نفسية · أسرية · تربوية · قانونية — جلسات سرية مع مختصين معتمدين
-            </Text>
-          </View>
-        </View>
-        <Pressable
-          onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })}
-          style={[row, { backgroundColor: '#fff', borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 7, marginTop: 12 }]}
-        >
-          <Icon name="calendar" size={16} color={colors.navy700} />
-          <Text style={[font('800'), { color: colors.navy700, fontSize: 14 }]}>احجز استشارة</Text>
-        </Pressable>
-      </LinearGradient>
-      <View style={{ height: 12 }} />
+      <View style={{ height: 16 }} />
     </Screen>
   );
 }

@@ -17,7 +17,8 @@ export default function EmailAuthScreen() {
 
   const submit = () => {
     setTouched(true);
-    if (valid) nav.navigate('Otp', { email: email.trim() });
+    // TODO(production): send and verify OTP through backend email service
+    if (valid) nav.navigate('Otp', { email: email.trim().toLowerCase() });
   };
 
   return (

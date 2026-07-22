@@ -94,6 +94,18 @@ export function AppDrawer() {
                 ))}
               </View>
             ))}
+
+            {/* Provider Portal Quick Link */}
+            <Pressable
+              onPress={() => go({ kind: 'route', route: 'ConsultantDashboard' })}
+              style={({ pressed }) => [styles.item, { marginTop: 10, backgroundColor: colors.goldSoft }, pressed && { opacity: 0.85 }]}
+            >
+              <View style={[styles.itemIcon, { backgroundColor: '#fff' }]}>
+                <Icon name="briefcase" size={17} color="#B9791A" />
+              </View>
+              <Text style={[font('800'), styles.itemLabel, { color: '#8A5B10' }]}>لوحة مقدم الاستشارة</Text>
+              <Icon name="chevron-left" size={15} color="#B9791A" />
+            </Pressable>
           </ScrollView>
 
           {/* Footer: login / logout */}

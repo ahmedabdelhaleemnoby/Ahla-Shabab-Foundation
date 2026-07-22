@@ -69,19 +69,35 @@ export default function NewsScreen() {
         <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنوات عطاء" />
       </View>
 
-      {/* Work areas — a factual list instead of a numeric claim */}
+      {/* Interactive Governorates Section */}
       <Card style={{ marginTop: 12 }}>
-        <View style={[row, { gap: 6, justifyContent: 'flex-end', marginBottom: 10 }]}>
-          <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700 }]}>مناطق عمل الجمعية</Text>
-          <Icon name="map-pin" size={15} color={colors.navy700} />
+        <View style={[row, { gap: 6, justifyContent: 'flex-end', marginBottom: 4 }]}>
+          <Text style={[font('800'), { fontSize: 13, color: colors.navy700 }]}>نطاق عملنا في المحافظات</Text>
+          <Icon name="map-pin" size={16} color={colors.navy700} />
         </View>
+        <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, textAlign: 'right', marginBottom: 10 }]}>
+          اضغط على المحافظة لمشاهدة المبادرات والخدمات المتاحة بها:
+        </Text>
         <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 7 }}>
           {workGovernorates.map((g) => (
-            <View key={g} style={{ backgroundColor: colors.paper2, borderRadius: 100, paddingVertical: 5, paddingHorizontal: 12 }}>
-              <Text style={[font('700'), { fontSize: 10.5, color: colors.navy700 }]}>{g}</Text>
-            </View>
+            <Pressable
+              key={g}
+              onPress={() => nav.navigate('GovernorateActivity', { governorate: g })}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: pressed ? colors.navy700 : colors.paper2,
+                  borderRadius: 100,
+                  paddingVertical: 7,
+                  paddingHorizontal: 13,
+                  borderWidth: 1,
+                  borderColor: colors.line,
+                },
+              ]}
+            >
+              <Text style={[font('700'), { fontSize: 11, color: colors.navy700 }]}>📍 {g}</Text>
+            </Pressable>
           ))}
-          <View style={{ backgroundColor: '#EAF0F8', borderRadius: 100, paddingVertical: 5, paddingHorizontal: 12 }}>
+          <View style={{ backgroundColor: '#EAF0F8', borderRadius: 100, paddingVertical: 7, paddingHorizontal: 13 }}>
             <Text style={[font('700'), { fontSize: 10.5, color: colors.navy500 }]}>وفي توسع مستمر…</Text>
           </View>
         </View>

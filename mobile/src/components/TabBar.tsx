@@ -6,11 +6,11 @@ import { colors, font } from '../theme';
 import { Icon, IconName } from './Icon';
 
 const META: Record<string, { label: string; icon: IconName; raised?: boolean }> = {
-  Home: { label: 'الرئيسية', icon: 'home' },
-  Discover: { label: 'اكتشف', icon: 'compass' },
+  Cases: { label: 'الأسر', icon: 'users' },
+  UrgentCases: { label: 'الحالات العاجلة', icon: 'alert-circle' },
   Donate: { label: 'تبرع', icon: 'heart', raised: true },
-  News: { label: 'أخبارنا', icon: 'file-text' },
-  Profile: { label: 'حسابي', icon: 'user' },
+  Consultations: { label: 'الاستشارات', icon: 'message-circle' },
+  About: { label: 'اعرف عنا', icon: 'info' },
 };
 
 export function TabBar({ state, navigation }: BottomTabBarProps) {

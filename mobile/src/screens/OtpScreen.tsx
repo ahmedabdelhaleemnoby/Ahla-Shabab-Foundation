@@ -6,7 +6,7 @@ import { AppBar } from '../components/AppBar';
 import { Button } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { colors, font, row } from '../theme';
-import { appState } from '../store/appState';
+import { loginDemoUserByEmail } from '../store/demoUsers';
 import type { RootProps } from '../navigation/types';
 
 const LEN = 6;
@@ -31,9 +31,9 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       setError(true);
       return;
     }
-    // Mock: any 6-digit code is accepted. TODO(backend): POST /auth/otp/verify.
-    appState.login(email);
-    nav.navigate('Main', { screen: 'Profile' });
+    // TODO(production): send and verify OTP through backend email service
+    loginDemoUserByEmail(email);
+    nav.navigate('Main', { screen: 'About' });
   };
 
   const resend = () => {
@@ -55,7 +55,7 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       <View style={{ alignItems: 'center', marginTop: 16 }}>
         <Text style={[font('800'), { fontSize: 20, color: colors.navy700 }]}>أدخل رمز التحقق</Text>
         <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
-          أرسلنا رمزاً مكوّناً من 6 أرقام إلى بريدك{'\n'}
+          تم إرسال رمز التحقق إلى بريدك الإلكتروني{'\n'}
           <Text style={[font('700'), { color: colors.navy700, writingDirection: 'ltr' }]}>{email}</Text>
         </Text>
       </View>

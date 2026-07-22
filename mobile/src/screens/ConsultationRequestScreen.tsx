@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, type ReactNode } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -19,12 +19,9 @@ import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, radius, row } from '../theme';
 import { appState } from '../store/appState';
+import { attachConsultationToDemoUser } from '../store/demoUsers';
 import { getConsultationType } from '../store/cms';
 import type { RootProps } from '../navigation/types';
-
-/* Per-type consultation forms (§7 / §12). The schema is authored in the
-   dashboard Form Builder and rendered here dynamically. Demo: the request is
-   saved locally on the device only — nothing is sent to any server. */
 
 const STATUSES: ConsultationStatus[] = ['جديد', 'قيد المراجعة', 'تم تحديد موعد', 'مكتمل', 'ملغي'];
 
@@ -42,7 +39,7 @@ const inputStyle = {
   backgroundColor: '#fff',
 };
 
-function Labeled({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: React.ReactNode }) {
+function Labeled({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: ReactNode }) {
   return (
     <View style={{ marginBottom: 13 }}>
       <Text style={[font('700'), { fontSize: 12, color: colors.navy700, textAlign: 'right', marginBottom: 6 }]}>
@@ -102,8 +99,11 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
     if (e) return;
     const reference = makeBookingRef(Math.floor(Date.now() / 1000));
     const name = String(values['name'] ?? '').trim() || 'مستخدم';
-    // Demo only — stored on this device, never sent to a server.
-    appState.addConsultation({ reference, type: `استشارة ${config.key}`, name, date: new Date().toISOString().slice(0, 10), status: 'جديد' });
+    const emailVal = String(values['email'] ?? appState.get().email ?? 'guest@ahlashabab.com');
+    
+    // Attach consultation to local demo user identity using normalized email
+    const reqData = { reference, type: `استشارة ${config.key}`, name, date: new Date().toISOString().slice(0, 10), status: 'جديد' as const };
+    attachConsultationToDemoUser(emailVal, reqData);
     setDoneRef(reference);
   };
 
@@ -115,10 +115,10 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
           <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="check" size={40} color={colors.green} />
           </View>
-          <Text style={[font('800'), { fontSize: 19, color: colors.navy700, marginTop: 16 }]}>تم استلام الطلب (نسخة عرض)</Text>
+          <Text style={[font('800'), { fontSize: 19, color: colors.navy700, marginTop: 16 }]}>تم استلام الطلب بنجاح</Text>
           <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
             رقم الطلب <Text style={[font('800'), num, { color: colors.navy700 }]}>{doneRef}</Text>{'\n'}
-            في النسخة التشغيلية سيتواصل معك فريق الاستشارات لتحديد الموعد.
+            تم حفظ طلبك في النسخة التجريبية، ويمكنك تسجيل الدخول بنفس البريد لمتابعته.
           </Text>
         </View>
 
