@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform, I18nManager } from 'react-native';
+
+// The app handles RTL explicitly (row-reverse / textAlign:right) for every component.
+// Letting Android auto-flip the layout system when the device is in Arabic mode causes
+// a double-flip that makes everything appear LTR. Lock the layout engine to LTR here,
+// at module load time (before any component renders).
+I18nManager.allowRTL(false);
+I18nManager.forceRTL(false);
 import { enableScreens } from 'react-native-screens';
 
 // react-native-screens renders stacked routes incorrectly on web — use the JS fallback there.
