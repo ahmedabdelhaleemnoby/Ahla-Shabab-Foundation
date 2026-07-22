@@ -1,12 +1,12 @@
-import React from 'react';
-import { View, Text, Pressable, Image, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { cases, egp, pct, projects } from '@ahla/shared';
 import { useNavigation } from '@react-navigation/native';
-import { cases, projects, articles, foundationStats, quickServices, appConfig, workGovernorates, pct, egp } from '@ahla/shared';
-import { Screen } from '../components/Screen';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Image, Pressable, Text, View } from 'react-native';
 import { AppBar } from '../components/AppBar';
-import { Card, Button, ProgressBar, Pill, Tile, Stat, SectionHeader } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
+import { Screen } from '../components/Screen';
+import { Button, Card, Pill, ProgressBar, SectionHeader } from '../components/ui';
 import { colors, font, num, row, rowBetween } from '../theme';
 
 const serviceIcon: Record<string, IconName> = {
@@ -89,14 +89,14 @@ export default function HomeScreen() {
             style={[row, { flex: 1, backgroundColor: colors.navy700, borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
           >
             <Icon name="calendar" size={16} color="#fff" />
-            <Text style={[font('800'), { color: '#fff', fontSize: 13.5 }]}>احجز استشارة</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.7} style={[font('800'), { color: '#fff', fontSize: 13.5, flexShrink: 1 }]}>احجز استشارة</Text>
           </Pressable>
           <Pressable
             onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })}
             style={[row, { flex: 1, borderWidth: 1.5, borderColor: colors.navy700, borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
           >
             <Icon name="info" size={16} color={colors.navy700} />
-            <Text style={[font('800'), { color: colors.navy700, fontSize: 13.5 }]}>تعرف على الاستشارات</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.7} style={[font('800'), { color: colors.navy700, fontSize: 13.5, flexShrink: 1 }]}>تعرف على الاستشارات</Text>
           </Pressable>
         </View>
       </LinearGradient>

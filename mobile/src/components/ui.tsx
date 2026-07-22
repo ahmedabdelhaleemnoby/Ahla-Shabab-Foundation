@@ -1,22 +1,20 @@
 import React from 'react';
 import {
-  View,
-  Text,
   Pressable,
-  StyleSheet,
-  ViewStyle,
   StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
 } from 'react-native';
 import {
-  colors,
-  radius,
-  spacing,
   cardShadow,
+  colors,
   font,
-  rtlText,
   num,
+  radius,
   row,
-  text,
+  spacing
 } from '../theme';
 import { Icon, IconName } from './Icon';
 
@@ -28,7 +26,7 @@ export function Card({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return <View style={[styles.card, cardShadow, style]}>{children}</View>;
+  return <View style={[styles.card, cardShadow, style]}>{children as any}</View>;
 }
 
 /* ---------------- Button ---------------- */

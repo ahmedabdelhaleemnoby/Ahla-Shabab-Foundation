@@ -20,7 +20,12 @@ export const font = (weight: '400' | '500' | '600' | '700' | '800'): TextStyle =
     '700': 'Cairo_700Bold',
     '800': 'Cairo_800ExtraBold',
   };
-  return { fontFamily: map[weight] };
+  return {
+    fontFamily: map[weight],
+    // Android adds extra internal padding around custom font glyphs by default.
+    // This causes visible gaps between icons and text in row layouts. Disable it.
+    includeFontPadding: false,
+  };
 };
 
 export const rtlText: TextStyle = {
