@@ -101,15 +101,43 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* 3 — Urgent Cases Preview */}
+      {/* 3 — Vision & Mission Section */}
+      <SectionHeader title="رسالتنا ورؤيتنا" />
+      <View style={[row, { gap: 9 }]}>
+        <Card style={{ flex: 1, padding: 13 }}>
+          <View style={[row, { gap: 8, marginBottom: 6 }]}>
+            <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: '#EAF0F8', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="send" size={14} color={colors.navy700} />
+            </View>
+            <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700 }]}>رسالتنا</Text>
+          </View>
+          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, lineHeight: 16, textAlign: 'right' }]}>
+            تمكين الشباب لخدمة الإنسان بمبادرات تنموية مبتكرة وشراكات فعّالة لتأمين رعاية الأسر الكريمة.
+          </Text>
+        </Card>
+
+        <Card style={{ flex: 1, padding: 13 }}>
+          <View style={[row, { gap: 8, marginBottom: 6 }]}>
+            <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: '#EAF0F8', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="eye" size={14} color={colors.navy700} />
+            </View>
+            <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700 }]}>رؤيتنا</Text>
+          </View>
+          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, lineHeight: 16, textAlign: 'right' }]}>
+            بناء مجتمع واعٍ متكاتف نصنع فيه أثراً مستداماً يرفع المعاناة ويكفل العيش الكريم للجميع.
+          </Text>
+        </Card>
+      </View>
+
+      {/* 4 — Urgent Cases Preview */}
       <View style={[rowBetween, { marginTop: 18, marginBottom: 10, marginHorizontal: 2 }]}>
-        <Pressable onPress={() => nav.navigate('Main', { screen: 'UrgentCases' })}>
-          <Text style={[font('700'), { color: colors.navy500, fontSize: 11.5 }]}>عرض الكل ‹</Text>
-        </Pressable>
         <View style={[row, { gap: 7 }]}>
           <Text style={[font('800'), { color: colors.navy700, fontSize: 15 }]}>حالة إنسانية عاجلة</Text>
           <Pill label="عاجل" tone="red" />
         </View>
+        <Pressable onPress={() => nav.navigate('Main', { screen: 'UrgentCases' })}>
+          <Text style={[font('700'), { color: colors.navy500, fontSize: 11.5 }]}>عرض الكل ‹</Text>
+        </Pressable>
       </View>
       <CaseRow item={urgent} onPress={() => nav.navigate('CaseDetail', { id: urgent.id })} />
 

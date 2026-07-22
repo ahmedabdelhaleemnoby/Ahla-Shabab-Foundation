@@ -31,7 +31,11 @@
       "bundler": "metro"
     },
     "extra": {
-      "supportsRTL": true
-    }
+      "supportsRTL": true,
+      "eas": {
+        "projectId": "65084a47-4157-495d-b2e1-2ff1c72426dc"
+      }
+    },
+    "owner": "abuzyadnobian20"
   }
 }
