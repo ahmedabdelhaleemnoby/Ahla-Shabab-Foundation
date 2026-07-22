@@ -8,13 +8,15 @@ import { useUnreadCount } from '../store/notifications';
 
 /** Official association logo. */
 export function Logo({ small }: { small?: boolean }) {
+  const nav = useNavigation<any>();
   return (
-    <Image
-      source={require('../../assets/logo.png')}
-      style={{ width: small ? 42 : 54, height: small ? 42 : 54 }}
-      resizeMode="contain"
-      accessibilityLabel="جمعية خواطر أحلى شباب"
-    />
+    <Pressable onPress={() => nav.navigate('Home')} accessibilityLabel="جمعية خواطر أحلى شباب — الرئيسية">
+      <Image
+        source={require('../../assets/logo.png')}
+        style={{ width: small ? 42 : 54, height: small ? 42 : 54 }}
+        resizeMode="contain"
+      />
+    </Pressable>
   );
 }
 

@@ -11,7 +11,6 @@ import { getMenu } from '../store/cms';
 
 const DRAWER_W = 296;
 
-/** Navigate a CMS menu target. Unknown/invalid targets are ignored safely. */
 function go(target: NavTarget) {
   closeDrawer();
   if (target.kind === 'external') {
@@ -20,9 +19,14 @@ function go(target: NavTarget) {
   }
   if (!navRef.isReady()) return;
   const nav = navRef.navigate as (name: string, params?: object) => void;
-  if (target.kind === 'tab') nav('Main', { screen: target.tab });
-  else if (target.kind === 'route') nav(target.route);
-  else if (target.kind === 'cmsPage') nav('CmsPage', { slug: target.slug });
+  if (target.kind === 'tab') {
+    nav('Main', { screen: target.tab });
+  } else if (target.kind === 'route') {
+    if (target.route === 'Home') nav('Main', { screen: 'Home' });
+    else nav(target.route);
+  } else if (target.kind === 'cmsPage') {
+    nav('CmsPage', { slug: target.slug });
+  }
 }
 
 /** Read visible CMS menu; fall back to the built-in default if it's empty/invalid. */

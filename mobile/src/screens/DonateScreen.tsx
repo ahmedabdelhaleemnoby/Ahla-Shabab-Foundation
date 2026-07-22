@@ -131,7 +131,7 @@ export default function DonateScreen() {
 
   return (
     <Screen
-      header={<AppBar title="التبرع" />}
+      header={<AppBar title="التبرع" onBack={() => nav.navigate('Home')} />}
       footer={
         <StickyFooter>
           {step > 0 && <Button label="السابق" variant="outline" style={{ width: 104 }} onPress={back} />}

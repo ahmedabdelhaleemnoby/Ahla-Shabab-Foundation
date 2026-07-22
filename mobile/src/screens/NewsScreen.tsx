@@ -45,7 +45,7 @@ export default function NewsScreen() {
   const nav = useNavigation<any>();
   return (
     <Screen
-      header={<AppBar title="عن الجمعية" onBack={nav.canGoBack() ? () => nav.goBack() : undefined} />}
+      header={<AppBar title="عن الجمعية" onBack={() => nav.navigate('Home')} />}
       footer={
         <StickyFooter>
           <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ width: 130 }} onPress={() => nav.navigate('ContactUs')} />

@@ -90,6 +90,7 @@ function Tabs() {
       screenOptions={{ headerShown: false }}
       tabBar={(props) => <TabBar {...props} />}
     >
+      <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Cases" component={CasesScreen} />
       <Tab.Screen name="UrgentCases" component={UrgentCasesScreen} />
       <Tab.Screen name="Donate" component={DonateScreen} />

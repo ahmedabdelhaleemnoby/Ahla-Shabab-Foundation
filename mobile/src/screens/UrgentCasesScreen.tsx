@@ -17,7 +17,7 @@ export default function UrgentCasesScreen() {
   const urgent = cases.filter((c) => c.tag === 'عاجل');
 
   return (
-    <Screen header={<AppBar title="حالات عاجلة" onBack={() => nav.goBack()} onBell={undefined} />}>
+    <Screen header={<AppBar title="حالات عاجلة" onBack={() => nav.navigate('Home')} onBell={undefined} />}>
       {/* Urgency banner */}
       <View style={[row, { gap: 11, backgroundColor: colors.redSoft, borderRadius: 16, padding: 13, marginTop: 4 }]}>
         <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>

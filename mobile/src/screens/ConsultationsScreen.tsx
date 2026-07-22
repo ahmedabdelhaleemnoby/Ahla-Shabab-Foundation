@@ -24,7 +24,7 @@ export default function ConsultationsScreen() {
   }));
 
   return (
-    <Screen header={<AppBar onBack={() => nav.goBack()} />}>
+    <Screen header={<AppBar title="الاستشارات" onBack={() => nav.navigate('Home')} />}>
       <View style={{ alignItems: 'center', marginVertical: 6 }}>
         <Text style={[font('800'), { fontSize: 23, color: colors.navy700 }]}>الاستشارات</Text>
         <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 3 }]}>

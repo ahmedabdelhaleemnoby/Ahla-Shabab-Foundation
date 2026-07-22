@@ -69,6 +69,7 @@ export type RootStackParamList = {
 };
 
 export type TabParamList = {
+  Home: undefined;
   Cases: { initialFilter?: string } | undefined;
   UrgentCases: undefined;
   Donate: { caseId?: string; projectId?: string; sponsor?: boolean } | undefined;
