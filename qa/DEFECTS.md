@@ -6,15 +6,15 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Four defects were fixed on request: D-01, D-02, D-06, D-03.** Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Six defects have been fixed on request: D-01, D-02, D-06, D-03 (first round), then D-04 and D-05.** Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
 | D-01 | High | Three dead buttons in the side menu (خدماتنا / حسابي / أخبارنا) | **FIXED** |
 | D-02 | High | Account Settings screen is not guest-gated | **FIXED** |
 | D-03 | Medium | No persistence anywhere — all demo state resets on reload, contradicting an on-screen claim | **FIXED (copy)** — see note |
-| D-04 | Medium | Provider working-hours start/end cannot be changed | Open |
-| D-05 | Medium | Provider "Reschedule" action does not exist | Open |
+| D-04 | Medium | Provider working-hours start/end cannot be changed | **FIXED** |
+| D-05 | Medium | Provider "Reschedule" action does not exist | **FIXED** |
 | D-06 | Medium | OTP screen asserts an email was sent; no email service exists and no demo hint is shown | **FIXED** |
 | D-07 | Medium | Unverified "1.2M+ beneficiaries" statistic still displayed (relocated, not removed) | Open — client decision |
 | D-08 | Medium | Dashboard "impact numbers" editor has no effect on the mobile app | Open |
@@ -175,8 +175,18 @@ label                  | declared target | resulting route | verdict
 - **Actual:** the range renders as static text only — `نطاق اليوم: 10:00 ص إلى 04:00 م`. There is no input, picker, or button next to it. Harness result: `START/END TIME editable control present: NO EDIT CONTROL`.
 - **Evidence:** `qa/screenshots/mobile/prov-availability.png`
 - **Likely cause:** `providerStore.ts` exposes `toggleAvailability`, `toggleDay`, `addSlot`, `removeSlot`, `addUnavailableDate`, `removeUnavailableDate` — but **no mutator for `startTime`/`endTime`** (nor for `slotDurationMinutes`). The screen renders `profile.startTime`/`profile.endTime` read-only at `ConsultantDashboardScreen.tsx:203`.
-- **Recommended fix:** add `setWorkingHours(start, end)` to `providerStore` and two time inputs (or the existing `SelectField`) in the availability card.
-- **Status:** Open
+- **Fix applied:** added `providerStore.setWorkingHours(startTime, endTime)` and an editable **تعديل نطاق اليوم** card in the availability tab — two inputs (من / إلى) prefilled from the current profile, plus a save button. Styling reuses the same input treatment as the existing slot and exception-date fields (extracted to a shared `timeInputStyle` rather than duplicating the inline object a third time). The mutator trims and rejects an empty start or end, so a blank field cannot wipe the stored range.
+- **Retest — PASS** (`qa/harness/availability.mjs`):
+  ```
+  PASS | edit control present
+    before: نطاق اليوم: 10:00 ص إلى 04:00 م
+    after : نطاق اليوم: 09:30 ص إلى 07:15 م
+  PASS | start + end both updated
+  PASS | empty input rejected — range not wiped
+  ```
+- **Evidence:** `qa/screenshots/mobile/FIXED-prov-workinghours.png`
+- **Scope note:** `slotDurationMinutes` is still read-only, displayed beside the range. The requirement asked only for start/end, so it was left alone rather than widened unasked — worth a follow-up if the client wants the full range editable.
+- **Status:** **FIXED**
 
 ---
 
@@ -189,8 +199,23 @@ label                  | declared target | resulting route | verdict
 - **Actual:** only three render: `تأكيد` (Confirm), `إكمال` (Complete), `إلغاء` (Cancel). Harness result: `actions: تأكيد إكمال إلغاء | Reschedule: ABSENT`.
 - **Evidence:** `qa/screenshots/mobile/prov-booking-detail.png`
 - **Likely cause:** `ConsultantDashboardScreen.tsx:436-458` renders exactly three `<Button>`s; `providerStore` has no mutator for `appointmentDate`/`appointmentTime`.
-- **Recommended fix:** add `reschedule(bookingId, date, time)` to `providerStore` and a fourth button opening a date/time picker sheet.
-- **Status:** Open
+- **Fix applied:** added `providerStore.reschedule(bookingId, date, time)` and an **إعادة جدولة** button below the three status actions. It toggles an inline editor prefilled with the booking's current date and time, with save/cancel. The mutator trims and rejects empty values.
+  **Status is deliberately left untouched** — rescheduling a pending request must not silently confirm it, so a `جديد` booking stays `جديد` after being moved.
+- **Retest — PASS** (`qa/harness/availability.mjs`):
+  ```
+  PASS | reschedule action present
+    before: الموعد: 11:00 ص (2026-07-26)
+  PASS | inline editor opens
+    after : الموعد: 09:00 ص (2027-01-15)
+  PASS | date + time updated
+  PASS | editor closes after save
+  PASS | status preserved (not auto-confirmed)
+  PASS | today count drops when a booking moves off today
+  ```
+  The last line checks integration rather than just the widget: moving a booking off today took the Overview "مواعيد اليوم" counter from 2 to 1, with upcoming/new/completed/cancelled unchanged.
+- **Evidence:** `qa/screenshots/mobile/FIXED-prov-reschedule-open.png`, `FIXED-prov-reschedule-saved.png`
+- **Note:** the reschedule still does not persist across a reload — see D-03. Within a session it behaves correctly.
+- **Status:** **FIXED**
 
 ---
 

@@ -12,6 +12,19 @@ import { useProviderStore, providerStore, type ProviderBooking } from '../store/
 const TABS = ['نظرة عامة', 'مواعيدي والأنصبة', 'الحجوزات والطلبات', 'الملف الشخصي'] as const;
 const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
+/** Matches the inline style used by the slot / exception-date inputs below. */
+const timeInputStyle = {
+  ...font('600'),
+  borderWidth: 1,
+  borderColor: colors.line,
+  borderRadius: radius.sm,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  fontSize: 12,
+  textAlign: 'right' as const,
+  backgroundColor: '#fff',
+};
+
 export default function ConsultantDashboardScreen() {
   const nav = useNavigation<any>();
   const { profile, bookings } = useProviderStore();
@@ -20,7 +33,11 @@ export default function ConsultantDashboardScreen() {
   const [search, setSearch] = useState('');
   const [newSlotInput, setNewSlotInput] = useState('');
   const [newUnavailInput, setNewUnavailInput] = useState('');
+  const [startInput, setStartInput] = useState(profile.startTime);
+  const [endInput, setEndInput] = useState(profile.endTime);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(bookings[0]?.id ?? null);
+  /** Booking currently open for rescheduling, with its in-progress date/time. */
+  const [rescheduling, setRescheduling] = useState<{ id: string; date: string; time: string } | null>(null);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayBookings = bookings.filter((b) => b.appointmentDate === todayStr);
@@ -202,6 +219,41 @@ export default function ConsultantDashboardScreen() {
             <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, textAlign: 'right', marginBottom: 10 }]}>
               مدة الجلسة: {profile.slotDurationMinutes} دقيقة · نطاق اليوم: {profile.startTime} إلى {profile.endTime}
             </Text>
+
+            {/* Editable working-day range */}
+            <View style={{ backgroundColor: colors.paper2, borderRadius: 10, padding: 10, marginBottom: 14 }}>
+              <Text style={[font('700'), { fontSize: 11.5, color: colors.navy700, textAlign: 'right', marginBottom: 8 }]}>
+                تعديل نطاق اليوم
+              </Text>
+              <View style={[row, { gap: 8 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[font('600'), { fontSize: 10, color: colors.slate, textAlign: 'right', marginBottom: 4 }]}>من</Text>
+                  <TextInput
+                    value={startInput}
+                    onChangeText={setStartInput}
+                    placeholder="10:00 ص"
+                    placeholderTextColor={colors.muted}
+                    style={timeInputStyle}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[font('600'), { fontSize: 10, color: colors.slate, textAlign: 'right', marginBottom: 4 }]}>إلى</Text>
+                  <TextInput
+                    value={endInput}
+                    onChangeText={setEndInput}
+                    placeholder="04:00 م"
+                    placeholderTextColor={colors.muted}
+                    style={timeInputStyle}
+                  />
+                </View>
+              </View>
+              <Button
+                label="حفظ نطاق اليوم"
+                small
+                style={{ marginTop: 10 }}
+                onPress={() => providerStore.setWorkingHours(startInput, endInput)}
+              />
+            </View>
 
             <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
               {profile.slots.map((slot) => (
@@ -432,6 +484,55 @@ export default function ConsultantDashboardScreen() {
                         </View>
                       )}
 
+                      {/* Reschedule editor — opens inline, leaves status untouched */}
+                      {rescheduling?.id === b.id && (
+                        <View style={{ backgroundColor: colors.paper2, borderRadius: 10, padding: 10, marginTop: 12 }}>
+                          <Text style={[font('700'), { fontSize: 11.5, color: colors.navy700, textAlign: 'right', marginBottom: 8 }]}>
+                            إعادة جدولة الموعد
+                          </Text>
+                          <View style={[row, { gap: 8 }]}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[font('600'), { fontSize: 10, color: colors.slate, textAlign: 'right', marginBottom: 4 }]}>التاريخ</Text>
+                              <TextInput
+                                value={rescheduling.date}
+                                onChangeText={(t) => setRescheduling({ ...rescheduling, date: t })}
+                                placeholder="YYYY-MM-DD"
+                                placeholderTextColor={colors.muted}
+                                style={timeInputStyle}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[font('600'), { fontSize: 10, color: colors.slate, textAlign: 'right', marginBottom: 4 }]}>الوقت</Text>
+                              <TextInput
+                                value={rescheduling.time}
+                                onChangeText={(t) => setRescheduling({ ...rescheduling, time: t })}
+                                placeholder="11:00 ص"
+                                placeholderTextColor={colors.muted}
+                                style={timeInputStyle}
+                              />
+                            </View>
+                          </View>
+                          <View style={[row, { gap: 6, marginTop: 10 }]}>
+                            <Button
+                              label="حفظ الموعد الجديد"
+                              small
+                              style={{ flex: 1 }}
+                              onPress={() => {
+                                providerStore.reschedule(b.id, rescheduling.date, rescheduling.time);
+                                setRescheduling(null);
+                              }}
+                            />
+                            <Button
+                              label="تراجع"
+                              variant="outline"
+                              small
+                              style={{ flex: 1 }}
+                              onPress={() => setRescheduling(null)}
+                            />
+                          </View>
+                        </View>
+                      )}
+
                       {/* Demo Action Buttons */}
                       <View style={[row, { gap: 6, marginTop: 14 }]}>
                         <Button
@@ -456,6 +557,20 @@ export default function ConsultantDashboardScreen() {
                           onPress={() => providerStore.updateStatus(b.id, 'ملغي')}
                         />
                       </View>
+                      <Button
+                        label="إعادة جدولة"
+                        variant="outline"
+                        small
+                        icon="calendar"
+                        style={{ marginTop: 6 }}
+                        onPress={() =>
+                          setRescheduling(
+                            rescheduling?.id === b.id
+                              ? null
+                              : { id: b.id, date: b.appointmentDate, time: b.appointmentTime }
+                          )
+                        }
+                      />
                     </View>
                   )}
                 </Card>

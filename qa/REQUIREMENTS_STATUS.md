@@ -3,7 +3,7 @@
 **Commit:** `ec46501` · **Date:** 2026-07-26
 **Evidence base:** code inspection + browser testing of the Expo Web build (320/390/430/768 px) + admin dashboard testing. **No emulator or device testing** — Android build blocked.
 
-> **Revision 2 — post-fix.** D-01, D-02, D-06 and D-03 were fixed on request and retested; requirements 3, 14, 21 and 23 moved up accordingly. All other rows are unchanged from the initial audit. Fix details and retest output: `DEFECTS.md`.
+> **Revision 3 — post-fix.** Six defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1), then D-04 and D-05 (round 2). Requirements 3, 10, 11, 14, 21 and 23 moved up accordingly. All other rows are unchanged from the initial audit. Fix details and retest output: `DEFECTS.md`.
 
 Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 
@@ -18,8 +18,8 @@ Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 | 7 | Governorates moved to About | **PASS** | Section titled exactly **"نطاق عملنا في المحافظات"** with helper text; no governorate chips remain on Home. `tab-About.png` | 12 governorates listed + "وفي توسع مستمر…". The unverified "22 محافظة" claim is **not** rendered anywhere (verified by grep) — good | — |
 | 8 | Governorate interaction | **PASS** | Chips are pressable; both أسوان and القاهرة open `GovernorateActivity`; page shows services, cases, initiative and consultations, all name-interpolated; back works; no overflow with long names. `governorate-detail.png` | Content is **templated** — identical for every governorate (`cases.slice(0,2)`, `serviceCategories.slice(0,3)`). Empty state is unreachable by construction | Don't present as real per-governorate data |
 | 9 | Provider dashboard exists | **PASS** | Reachable from drawer (**لوحة مقدم الاستشارة**) and `ProfileScreen`; 4 working tabs; demo banner present. Overview shows all 5 required counts: upcoming 2, today 2, new 1, completed 1, cancelled 0. `prov-overview.png` | Provider dashboard is a mobile screen, not a web portal | — |
-| 10 | Provider availability | **PARTIAL** | Availability toggle ✓; 7 weekday chips toggle ✓; add slot (`05:30 م`) ✓; remove slot ✓; add exception date (`2026-09-09`) ✓; remove exception ✓. `prov-availability*.png` | **D-04** start/end times are read-only text with no editor (no store mutator exists); persistence still absent — now accurately labelled "أثناء الجلسة الحالية فقط" (~~D-03~~ copy fixed) | Add `setWorkingHours`; add persistence or fix copy |
-| 11 | Provider bookings | **PARTIAL** | 5 filters (الكل/جديد/مؤكد/مكتمل/ملغي) ✓; search by name/email/phone/ref/governorate ✓; empty state "لا توجد حجوزات مطابقة للبحث" ✓; expand details ✓; Confirm/Complete/Cancel all update visibly ✓. `prov-bookings.png` | **D-05** no Reschedule action; no separate "Upcoming" filter (upcoming exists only as an Overview stat); status changes still reset on reload (~~D-03~~ copy fixed) | Add reschedule + persistence |
+| 10 | Provider availability | **PASS** ✅*fixed* | Availability toggle ✓; 7 weekday chips toggle ✓; add slot (`05:30 م`) ✓; remove slot ✓; add exception date (`2026-09-09`) ✓; remove exception ✓; **start/end range now editable via `تعديل نطاق اليوم`, empty input rejected** ✓. `prov-availability*.png`, `FIXED-prov-workinghours.png` | ~~D-04~~ **fixed**. `slotDurationMinutes` still read-only (not requested). Persistence still absent — now accurately labelled (~~D-03~~ copy fixed) | Persistence post-demo |
+| 11 | Provider bookings | **PASS** ✅*fixed* | 5 filters (الكل/جديد/مؤكد/مكتمل/ملغي) ✓; search by name/email/phone/ref/governorate ✓; empty state "لا توجد حجوزات مطابقة للبحث" ✓; expand details ✓; Confirm/Complete/Cancel ✓; **Reschedule now present — inline date/time editor, status deliberately preserved, and the Overview "today" counter follows the move (2→1)** ✓. `prov-bookings.png`, `FIXED-prov-reschedule-*.png` | ~~D-05~~ **fixed**. No separate "Upcoming" filter (exists as an Overview stat). Status changes still reset on reload (~~D-03~~ copy fixed) | Persistence post-demo |
 | 12 | Provider form answers | **PASS** | Expanded booking shows reference, email, phone, whatsapp, age, governorate, preferred contact, submission date, free-text description, specialised Q&A pairs, and attachment placeholder. Missing optional field (booking `pb-103` has no whatsapp) renders cleanly. Long text wraps. `prov-booking-detail.png` | Provider list is a fixed seed — consultations submitted in the app do **not** appear here (separate stores) | Note as a demo limitation |
 | 13 | Guest public browsing | **PASS** | 14 public screens all open for a guest with no block: UrgentCases, Sponsorship, About, Projects, NewsFeed, ServicesBrowse, Consultations, ConsultationRequest, CaseDetail, ZakatCalculator, Faq, ContactUs, Volunteer, PrivacyPolicy | None | — |
 | 14 | Guest personal-history restrictions | **PASS** ✅*fixed* | **6 of 6 gated**: DonationHistory, Receipts, MyBookings, Favorites, Notifications, AccountSettings — all verified `gated / loginBtn / continueAsGuest = true`, `formLeak = false`. Logged-in users still get the real form | ~~D-02~~ **fixed** — wrapped in `LoginGate` | — |
@@ -38,12 +38,12 @@ Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 
 | Status | Initial audit | **After fixes** |
 |---|---|---|
-| **PASS** | 14 | **20** |
-| **PARTIAL** | 8 | **4** (#10, #11, #20, #22) |
+| **PASS** | 14 | **22** |
+| **PARTIAL** | 8 | **2** (#20, #22) |
 | **FAIL** | 1 | **0** |
 | **BLOCKED** | 0 standalone | 0 standalone (Android build blockage recorded inside #22) |
 | **NOT APPLICABLE** | 0 | 0 (lint has no config — recorded in build results) |
 
-**Weighted completion: ~79% → ~92%** (PASS = 1.0, PARTIAL = 0.5, FAIL = 0 → 22/24 ÷ 24).
+**Weighted completion: ~79% → ~96%** (PASS = 1.0, PARTIAL = 0.5, FAIL = 0 → 23/24 ÷ 24).
 
-The four remaining PARTIALs are: provider working-hours editing (#10, D-04), provider reschedule (#11, D-05), two 320 px layout blemishes (#20, D-10/D-11), and the Android build (#22) — an environment failure, not app code.
+The two remaining PARTIALs are: two 320 px layout blemishes (#20, D-10/D-11), and the Android build (#22) — an environment failure, not app code.

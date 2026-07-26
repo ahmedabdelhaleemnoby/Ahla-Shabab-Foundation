@@ -35,7 +35,7 @@ console.log('  add unavailable 2026-09-09:',t.includes('2026-09-09')?'ADDED':'FA
 // toggle availability off
 await pressExact(page,'مفعّل (متاح للحجز)'); t=await body();
 console.log('  toggle availability off:',t.includes('معطّل (مغلق مؤقتاً)')?'OK':'FAILED');
-console.log('  START/END TIME editable control present:',/type="text"/.test('')||t.includes('تعديل نطاق اليوم')?'yes':'NO EDIT CONTROL');
+console.log('  start/end edit control present:',t.includes('تعديل نطاق اليوم')?'yes':'NO EDIT CONTROL (D-04)');
 await shot(page,'prov-availability-after');
 
 console.log('\n## BOOKINGS tab');

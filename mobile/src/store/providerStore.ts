@@ -151,10 +151,39 @@ export const providerStore = {
     emit();
   },
 
+  /**
+   * Move a booking to a new date/time. Status is intentionally left alone —
+   * rescheduling a pending request must not silently confirm it.
+   */
+  reschedule(bookingId: string, date: string, time: string) {
+    const d = date.trim();
+    const t = time.trim();
+    if (!d || !t) return;
+    state = {
+      ...state,
+      bookings: state.bookings.map((b) =>
+        b.id === bookingId ? { ...b, appointmentDate: d, appointmentTime: t } : b
+      ),
+    };
+    emit();
+  },
+
   toggleAvailability() {
     state = {
       ...state,
       profile: { ...state.profile, available: !state.profile.available },
+    };
+    emit();
+  },
+
+  /** Working-day range shown to beneficiaries. Both ends must be non-empty. */
+  setWorkingHours(startTime: string, endTime: string) {
+    const start = startTime.trim();
+    const end = endTime.trim();
+    if (!start || !end) return;
+    state = {
+      ...state,
+      profile: { ...state.profile, startTime: start, endTime: end },
     };
     emit();
   },
