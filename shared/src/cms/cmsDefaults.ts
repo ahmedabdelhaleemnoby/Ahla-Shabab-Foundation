@@ -11,7 +11,7 @@ import {
   type MainTab,
   type NavTarget,
 } from './cmsTypes';
-import { appConfig } from '../data';
+import { appConfig, foundationStats } from '../data';
 
 /** Fixed seed timestamp so defaults are deterministic across reloads. */
 const SEED_AT = '2026-07-13T09:00:00.000Z';
@@ -34,6 +34,11 @@ export const defaultSettings: CmsSettings = {
   donationReassurance:
     'لن يُعتمد تبرعك إلا بعد تأكيد العملية من بوابة الدفع أو مراجعة الإدارة. هذه نسخة عرض — لا يتم تنفيذ أي عملية دفع حقيقية.',
   demoLabel: 'نسخة عرض — يتم حفظ التعديلات على هذا الجهاز فقط',
+  stats: {
+    governorates: String(foundationStats.governorates),
+    beneficiaries: foundationStats.beneficiaries,
+    yearsOfService: String(foundationStats.yearsOfService),
+  },
 };
 
 /* ---------------- Sidebar menu (mirrors mobile AppDrawer) ---------------- */
@@ -230,7 +235,10 @@ function baseFields(): FormField[] {
     f({ key: 'name', type: 'text', label: 'الاسم بالكامل', required: true, placeholder: 'اكتب اسمك', validationMessage: 'اكتب اسمك بالكامل (3 أحرف على الأقل)', sortOrder: 0 }),
     f({ key: 'phone', type: 'phone', label: 'رقم الهاتف', required: true, placeholder: '01xxxxxxxxx', validationMessage: 'أدخل رقم هاتف مصري صحيح', sortOrder: 1 }),
     f({ key: 'whatsapp', type: 'whatsapp', label: 'واتساب', placeholder: 'إن وجد', sortOrder: 2 }),
-    f({ key: 'email', type: 'email', label: 'البريد الإلكتروني', placeholder: 'example@mail.com', sortOrder: 3 }),
+    // Required: the email is the identity key that links a returning guest's
+    // requests and lets them sign in later to follow up. Without it a request
+    // cannot be attached to anyone.
+    f({ key: 'email', type: 'email', label: 'البريد الإلكتروني', required: true, placeholder: 'example@mail.com', validationMessage: 'أدخل بريدك الإلكتروني لمتابعة طلبك لاحقاً', sortOrder: 3 }),
     f({ key: 'age', type: 'age', label: 'السن', placeholder: 'العمر', sortOrder: 4 }),
     f({ key: 'governorate', type: 'governorate', label: 'المحافظة', required: true, validationMessage: 'اختر المحافظة', sortOrder: 5 }),
     f({ key: 'comm', type: 'radio', label: 'وسيلة التواصل المفضلة', required: true, options: COMM_OPTIONS, validationMessage: 'اختر وسيلة التواصل', sortOrder: 6 }),
@@ -298,7 +306,11 @@ export const defaultConsultations: ConsultationTypeConfig[] = [
 export function makeDefaultCmsState(): CmsState {
   return {
     version: CMS_SCHEMA_VERSION,
-    settings: { ...defaultSettings, socials: { ...defaultSettings.socials } },
+    settings: {
+      ...defaultSettings,
+      socials: { ...defaultSettings.socials },
+      stats: { ...defaultSettings.stats },
+    },
     menu: defaultMenu.map((g) => ({ ...g, items: g.items.map((i) => ({ ...i })) })),
     home: defaultHome.map((s) => ({ ...s, config: { ...s.config } })),
     pages: defaultPages.map((p) => ({ ...p })),

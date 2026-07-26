@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { foundationStats, foundationValues, foundationInitiatives, articles, workGovernorates } from '@ahla/shared';
+import { foundationValues, foundationInitiatives, articles, workGovernorates } from '@ahla/shared';
 
 const MILESTONES = [
   { year: '2013', label: 'بداية الفكرة' },
@@ -23,6 +23,7 @@ import { Card, Button, Stat } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, row } from '../theme';
+import { getSettings } from '../store/cms';
 
 const valueIcons: Record<string, IconName> = {
   الشفافية: 'shield',
@@ -43,6 +44,7 @@ const initiativeIcons: Record<string, IconName> = {
 
 export default function NewsScreen() {
   const nav = useNavigation<any>();
+  const { stats } = getSettings();
   return (
     <Screen
       header={<AppBar title="عن الجمعية" onBack={() => nav.navigate('Home')} />}
@@ -63,10 +65,10 @@ export default function NewsScreen() {
         </View>
       </LinearGradient>
 
-      {/* Stats */}
+      {/* Stats — authored in the dashboard (Settings → أرقام الأثر) */}
       <View style={[row, { gap: 9, marginTop: 12 }]}>
-        <Stat icon="users" value={foundationStats.beneficiaries} label="مستفيد" />
-        <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنوات عطاء" />
+        <Stat icon="users" value={stats.beneficiaries} label="مستفيد" />
+        <Stat icon="calendar" value={stats.yearsOfService} label="سنوات عطاء" />
       </View>
 
       {/* Interactive Governorates Section */}

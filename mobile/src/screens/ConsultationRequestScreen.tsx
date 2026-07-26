@@ -99,7 +99,14 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
     if (e) return;
     const reference = makeBookingRef(Math.floor(Date.now() / 1000));
     const name = String(values['name'] ?? '').trim() || 'مستخدم';
-    const emailVal = String(values['email'] ?? appState.get().email ?? 'guest@ahlashabab.com');
+    // Email is required by default, but the CMS form builder can un-require or
+    // hide it. Fall back to the signed-in identity, then to a key unique to this
+    // submission — never a shared constant, which would collapse every anonymous
+    // request into one demo user. `||` (not `??`) so a blank field is caught too.
+    const emailVal =
+      String(values['email'] ?? '').trim() ||
+      appState.get().email ||
+      `anon-${reference.toLowerCase()}@demo.local`;
     
     // Attach consultation to local demo user identity using normalized email
     const reqData = { reference, type: `استشارة ${config.key}`, name, date: new Date().toISOString().slice(0, 10), status: 'جديد' as const };

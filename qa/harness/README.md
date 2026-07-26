@@ -49,6 +49,9 @@ Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 | `consult2.mjs` | consultation submit, same-email dedup, login linking | REQUIREMENTS §16–18 |
 | `forms.mjs` | per-type form fields, cross-contamination check | REQUIREMENTS §8 |
 | `provider.mjs` | provider dashboard: overview, availability, bookings, profile | REQUIREMENTS §9–12 |
+| `availability.mjs` | provider working-hours editing + booking reschedule | D-04, D-05 |
+| `settings.mjs` | CMS-driven About stats; consultation email required + dedup | D-08, D-09 |
+| `settings-dashboard.mjs` | dashboard impact editor commits to the CMS store (needs `:5173`) | D-08 |
 | `persist.mjs` | what survives a reload | PERSISTENCE_REPORT |
 | `responsive.mjs`, `overflow.mjs`, `crop.mjs` | 320/390/430/768 px layout, overflow, truncation | REQUIREMENTS §20, D-10/D-11 |
 | `shots.mjs` | evidence screenshots | — |

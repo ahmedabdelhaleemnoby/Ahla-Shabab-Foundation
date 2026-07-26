@@ -7,6 +7,7 @@ import {
   defaultPages,
   defaultMedia,
 } from '../cms';
+import { foundationStats } from '../data';
 
 describe('CMS defaults', () => {
   it('builds a valid default state at the current schema version', () => {
@@ -66,14 +67,36 @@ describe('CMS defaults', () => {
     }
   });
 
-  it('is at schema v3 and deep-copies media + consultations', () => {
-    expect(CMS_SCHEMA_VERSION).toBe(3);
+  it('is at schema v4 and deep-copies media + consultations', () => {
+    expect(CMS_SCHEMA_VERSION).toBe(4);
     const a = makeDefaultCmsState();
     const b = makeDefaultCmsState();
     a.media[0].title = 'x';
     a.consultations[0].fields[0].label = 'y';
     expect(b.media[0].title).not.toBe('x');
     expect(b.consultations[0].fields[0].label).not.toBe('y');
+  });
+
+  // v4 moved the About-screen impact figures into CMS settings so the dashboard
+  // editor actually reaches the app (D-08).
+  it('seeds editable impact stats in settings, copied per instance', () => {
+    const s = makeDefaultCmsState();
+    expect(s.settings.stats.beneficiaries).toBe(foundationStats.beneficiaries);
+    expect(s.settings.stats.yearsOfService).toBe(String(foundationStats.yearsOfService));
+    expect(s.settings.stats.governorates).toBe(String(foundationStats.governorates));
+
+    const other = makeDefaultCmsState();
+    s.settings.stats.beneficiaries = 'changed';
+    expect(other.settings.stats.beneficiaries).not.toBe('changed');
+  });
+
+  // The email is the identity key linking a returning guest's requests (D-09).
+  it('marks the consultation email field required on every type', () => {
+    for (const type of makeDefaultCmsState().consultations) {
+      const email = type.fields.find((f) => f.key === 'email');
+      expect(email, `${type.key} has no email field`).toBeDefined();
+      expect(email!.required, `${type.key} email is optional`).toBe(true);
+    }
   });
 
   it('seeds a generic content page with well-formed rich blocks', () => {
