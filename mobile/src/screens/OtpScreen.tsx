@@ -3,7 +3,8 @@ import { View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
-import { Button } from '../components/ui';
+import { Card, Button } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { StickyFooter } from './DonateScreen';
 import { colors, font, row } from '../theme';
 import { loginDemoUserByEmail } from '../store/demoUsers';
@@ -55,10 +56,17 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       <View style={{ alignItems: 'center', marginTop: 16 }}>
         <Text style={[font('800'), { fontSize: 20, color: colors.navy700 }]}>أدخل رمز التحقق</Text>
         <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
-          تم إرسال رمز التحقق إلى بريدك الإلكتروني{'\n'}
+          تسجيل الدخول بالبريد{'\n'}
           <Text style={[font('700'), { color: colors.navy700, writingDirection: 'ltr' }]}>{email}</Text>
         </Text>
       </View>
+
+      <Card style={[row, { gap: 10, marginTop: 16, backgroundColor: colors.goldSoft }]}>
+        <Icon name="alert-triangle" size={15} color="#B9791A" />
+        <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
+          نسخة عرض — لم يُرسل أي بريد إلكتروني. أدخل أي رمز مكوّن من 6 أرقام للمتابعة.
+        </Text>
+      </Card>
 
       {/* OTP boxes (tap anywhere focuses the hidden input) */}
       <Pressable onPress={() => inputRef.current?.focus()} style={{ marginTop: 26 }}>

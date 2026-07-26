@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Modal, Animated, ScrollView, Image, StyleSheet, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { appConfig, makeDefaultCmsState, type NavTarget, type MenuGroup } from '@ahla/shared';
+import { appConfig, makeDefaultCmsState, LEGACY_TAB_ROUTES, type NavTarget, type MenuGroup } from '@ahla/shared';
 import { colors, font } from '../theme';
 import { Icon, IconName } from './Icon';
 import { navRef } from '../navigation/ref';
@@ -20,7 +20,12 @@ function go(target: NavTarget) {
   if (!navRef.isReady()) return;
   const nav = navRef.navigate as (name: string, params?: object) => void;
   if (target.kind === 'tab') {
-    nav('Main', { screen: target.tab });
+    // A CMS menu saved before the five-tab redesign can still name a tab that no
+    // longer exists; React Navigation ignores those silently, which reads as a
+    // dead button. Redirect the retired names to their replacement screens.
+    const legacy = LEGACY_TAB_ROUTES[target.tab];
+    if (legacy) nav(legacy);
+    else nav('Main', { screen: target.tab });
   } else if (target.kind === 'route') {
     if (target.route === 'Home') nav('Main', { screen: 'Home' });
     else nav(target.route);

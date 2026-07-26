@@ -23,7 +23,21 @@ export const CMS_MEDIA_KEY = 'ahla_cms_media_v1';
 /* Navigation targets (serializable — shared by dashboard + mobile)   */
 /* ------------------------------------------------------------------ */
 
-export type MainTab = 'Home' | 'Discover' | 'Donate' | 'News' | 'Profile';
+/**
+ * Root tab routes, mirroring mobile's `TabParamList`. Keep these two in sync —
+ * a `tab` target naming anything absent from the tab navigator is a silent
+ * no-op at runtime (React Navigation ignores unknown child routes), which is
+ * exactly how the old `Discover`/`News`/`Profile` entries became dead buttons.
+ * `Home` is a real tab route even though `TabBar` renders no item for it.
+ */
+export type MainTab = 'Home' | 'Cases' | 'UrgentCases' | 'Donate' | 'Consultations' | 'About';
+
+/** Tabs that existed before the five-item redesign, mapped to their replacements. */
+export const LEGACY_TAB_ROUTES: Record<string, string> = {
+  Discover: 'ServicesBrowse',
+  News: 'NewsFeed',
+  Profile: 'AccountSettings',
+};
 
 export type NavTarget =
   | { kind: 'tab'; tab: MainTab }

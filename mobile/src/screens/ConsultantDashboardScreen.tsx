@@ -48,7 +48,7 @@ export default function ConsultantDashboardScreen() {
       <View style={[row, { backgroundColor: colors.goldSoft, borderRadius: 12, padding: 10, marginBottom: 12, gap: 8 }]}>
         <Icon name="alert-triangle" size={16} color="#B9791A" />
         <Text style={[font('700'), { flex: 1, fontSize: 11, color: '#8A5B10', textAlign: 'right' }]}>
-          نسخة عرض تجريبية — لوحة تحكم مقدم الخدمة (مُحفوظة محلياً)
+          نسخة عرض تجريبية — لوحة تحكم مقدم الخدمة (التعديلات تُحفظ أثناء الجلسة الحالية فقط)
         </Text>
       </View>
 

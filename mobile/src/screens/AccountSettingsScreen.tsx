@@ -6,6 +6,7 @@ import { donorProfile, governorates } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
+import { LoginGate } from '../components/LoginGate';
 import { SelectField } from '../components/SelectField';
 import { StickyFooter } from './DonateScreen';
 import { Icon } from '../components/Icon';
@@ -44,6 +45,11 @@ export default function AccountSettingsScreen() {
   const [saved, setSaved] = useState(false);
 
   return (
+    <LoginGate
+      icon="user"
+      title="إعدادات حسابك"
+      benefits={['بياناتك محفوظة ولا تعيد إدخالها كل مرة', 'تعبئة تلقائية لنماذج التبرع والاستشارة', 'تحكم في وسائل التواصل والتذكيرات']}
+    >
     <Screen
       header={<AppBar title="إعدادات الحساب" onBack={() => nav.goBack()} onBell={undefined} />}
       footer={
@@ -85,5 +91,6 @@ export default function AccountSettingsScreen() {
       </Labeled>
       <View style={{ height: 12 }} />
     </Screen>
+    </LoginGate>
   );
 }

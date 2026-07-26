@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Trash2, Pencil, Plus, RotateCcw, Lock } from 'lucide-react';
-import type { MenuGroup, MenuItem, NavTarget } from '@ahla/shared';
+import type { MainTab, MenuGroup, MenuItem, NavTarget } from '@ahla/shared';
 import { Card, Badge, Toggle, Modal } from '../components/ui';
 import { useCms, cms, mutate } from '../store/cmsStore';
 
@@ -9,7 +9,8 @@ const sorted = <T extends { sortOrder: number }>(a: T[]) => [...a].sort((x, y) =
 /** The one item that must always stay reachable + visible. */
 const HOME_ITEM = 'm-home';
 
-const TABS = ['Home', 'Discover', 'Donate', 'News', 'Profile'];
+/** Must match `MainTab` in shared/cms/cmsTypes — offering a removed tab creates a dead link. */
+const TABS: MainTab[] = ['Home', 'Cases', 'UrgentCases', 'Donate', 'Consultations', 'About'];
 const ROUTES = ['UrgentCases', 'Sponsorship', 'Projects', 'Consultations', 'DonationHistory', 'Receipts', 'MyBookings', 'Favorites', 'Notifications', 'ZakatCalculator', 'About', 'Volunteer', 'ContactUs', 'Faq', 'PrivacyPolicy'];
 
 function targetLabel(t: NavTarget): string {

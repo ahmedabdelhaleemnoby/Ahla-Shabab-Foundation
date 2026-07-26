@@ -36,7 +36,7 @@ export default function EmailAuthScreen() {
         </View>
         <Text style={[font('800'), { fontSize: 20, color: colors.navy700 }]}>أدخل بريدك الإلكتروني</Text>
         <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
-          سنرسل لك رمز تحقق مكوّن من 6 أرقام إلى بريدك الإلكتروني لتأكيد هويتك.
+          يُستخدم بريدك لتأكيد هويتك وربط طلبات الاستشارة السابقة بحسابك.
         </Text>
       </View>
 
@@ -77,7 +77,14 @@ export default function EmailAuthScreen() {
         </Text>
       ) : null}
 
-      <Card style={[row, { gap: 11, marginTop: 16, backgroundColor: '#EAF0F8' }]}>
+      <Card style={[row, { gap: 10, marginTop: 16, backgroundColor: colors.goldSoft }]}>
+        <Icon name="alert-triangle" size={15} color="#B9791A" />
+        <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
+          نسخة عرض — لا يُرسل أي بريد إلكتروني فعلياً، ويُقبل أي رمز مكوّن من 6 أرقام في الشاشة التالية.
+        </Text>
+      </Card>
+
+      <Card style={[row, { gap: 11, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
         <Icon name="shield" size={18} color={colors.navy700} />
         <Text style={[font('400'), { flex: 1, fontSize: 10.5, color: colors.slate, textAlign: 'right', lineHeight: 16 }]}>
           يمكنك أيضاً الحجز كزائر دون تسجيل. تسجيل الدخول يتيح لك متابعة حجوزاتك وتلقّي التذكيرات.
