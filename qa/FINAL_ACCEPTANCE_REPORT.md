@@ -3,8 +3,8 @@
 
 **Date:** 2026-07-26
 **Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 2 — post-fix. D-01, D-02, D-06 and D-03 were fixed on request and retested; this report reflects the fixed build.
-**Working tree at audit start:** clean. **Now:** 11 source files modified by the fix round (listed in §8), verified against `git status`.
+**Revision:** 3 — post-fix. Six defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1), then D-04 and D-05 (round 2). This report reflects the fixed build.
+**Working tree at audit start:** clean. **Now:** 12 source files modified across two fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
 **App version:** `app.json` 1.4.0, Android versionCode 8
 
 **Companion documents:** `REQUIREMENTS_STATUS.md` · `DEFECTS.md` · `NAVIGATION_MATRIX.md` · `PERSISTENCE_REPORT.md` · `BUILD_AND_TEST_RESULTS.md` · `DEMO_LIMITATIONS.md`
@@ -39,15 +39,15 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 | Metric | Initial audit | **After fixes** |
 |---|---|---|
 | Requirements assessed | 24 | 24 |
-| **PASS** | 14 | **20** |
-| **PARTIAL** | 8 | **4** |
+| **PASS** | 14 | **22** |
+| **PARTIAL** | 8 | **2** |
 | **FAIL** | 1 | **0** |
 | **BLOCKED** | Android build/device testing | unchanged (inside #22) |
-| **Weighted completion** | ~79% | **~92%** |
-| Defects logged | 16 | 16 (**4 fixed**, 12 open) |
+| **Weighted completion** | ~79% | **~96%** |
+| Defects logged | 16 | 16 (**6 fixed**, 10 open) |
 | — Critical | 0 | **0** |
 | — High | 2 | **0** (both fixed) |
-| — Medium | 7 | **5** (D-03, D-06 fixed) |
+| — Medium | 7 | **3** (D-03, D-04, D-05, D-06 fixed) |
 | — Low | 7 | 7 |
 | Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
 | Unit tests | 28/28 pass | **28/28 pass** |
@@ -60,8 +60,12 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 - ~~**D-01** three dead drawer buttons~~ → **FIXED.** 17/17 drawer items navigate; recurrence now blocked by the type system.
 - ~~**D-02** Account Settings not guest-gated~~ → **FIXED.** 6/6 personal screens gate consistently.
 
+### Also fixed (round 2)
+- ~~**D-04** provider working-hours not editable~~ → **FIXED.** `تعديل نطاق اليوم` card with من/إلى inputs; empty input rejected so a blank field cannot wipe the range.
+- ~~**D-05** no reschedule action~~ → **FIXED.** Inline date/time editor prefilled from the booking. Status is deliberately **not** changed — rescheduling a pending request must not silently confirm it — and the Overview "today" counter follows the move (2→1).
+
 ### Remaining open (none blocking)
-5 Medium — D-04 (provider start/end times not editable), D-05 (no reschedule), D-07 (unverified 1.2M stat, **client decision**), D-08 (dashboard impact-number editor inert), D-09 (blank-email guests share one identity).
+3 Medium — D-07 (unverified 1.2M stat, **client decision**), D-08 (dashboard impact-number editor inert), D-09 (blank-email guests share one identity).
 7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
 
 ---
@@ -132,7 +136,7 @@ The persistence fix deserves one plain sentence: **it changed the words, not the
 5. **D-12** — supply real social-media URLs or hide the social row.
 
 **Shortly after**
-6. **D-04 / D-05** — add provider working-hours editing and the Reschedule action to complete requirement §5.
+6. ~~**D-04 / D-05** — provider working-hours editing and the Reschedule action~~ — **done, retested, verified.**
 7. **D-08** — wire `getSettings()` into the mobile app so the dashboard's impact-number editor actually works.
 8. **D-09** — make the consultation email field required; it is the identity key for the whole returning-guest feature.
 9. **D-10 / D-11** — fix the two 320 px layout issues.
@@ -156,6 +160,15 @@ All four conditions attached to the initial verdict have been closed and indepen
 | **D-06** OTP "email sent" wording corrected + demo notice added | ✅ **Closed** — both screens reworded, demo card added, resend retained per §2 |
 | **D-03** "saved locally" wording corrected | ✅ **Closed (copy)** — three strings now say session-only. **Behaviour unchanged: nothing persists.** |
 
+Two further defects were fixed in a second round, completing requirement §5 (provider dashboard):
+
+| Defect | Status |
+|---|---|
+| **D-04** provider working-hours start/end not editable | ✅ **Closed** — editable من/إلى range; empty input rejected |
+| **D-05** no reschedule action | ✅ **Closed** — inline date/time editor; status preserved; Overview counters follow the move |
+
+Requirements #10 and #11 (provider availability, provider bookings) therefore move PARTIAL → PASS.
+
 Post-fix regression: typecheck clean across 3 workspaces, 28/28 unit tests pass, dashboard builds, 69/69 navigation actions pass, all 5 consultation forms correct with no cross-contamination, same-email deduplication and login-linking still working, and 0 non-localhost network requests across a full session.
 
 # APPROVED FOR CLIENT DEMO
@@ -171,7 +184,7 @@ Scope of this approval, stated plainly: the app is approved as a *presentation d
 
 ## 8. Files changed in the fix round
 
-Eleven source files, no dependencies added, no behaviour changed beyond the four defects:
+Twelve source files across two fix rounds (`ConsultantDashboardScreen.tsx` was touched in both), no dependencies added, no behaviour changed beyond the six defects:
 
 | File | Change | Defect |
 |---|---|---|
@@ -185,6 +198,7 @@ Eleven source files, no dependencies added, no behaviour changed beyond the four
 | `mobile/src/screens/EmailAuthScreen.tsx` | reworded + demo card | D-06 |
 | `mobile/src/screens/OtpScreen.tsx` | reworded + demo card | D-06 |
 | `mobile/src/screens/ConsultationRequestScreen.tsx` | 2 persistence strings corrected | D-03 |
-| `mobile/src/screens/ConsultantDashboardScreen.tsx` | banner string corrected | D-03 |
+| `mobile/src/screens/ConsultantDashboardScreen.tsx` | banner string corrected; editable working-hours card; reschedule button + inline editor | D-03, D-04, D-05 |
+| `mobile/src/store/providerStore.ts` | added `setWorkingHours()` and `reschedule()` mutators | D-04, D-05 |
 
 Post-fix evidence: `FIXED-*.png` in `qa/screenshots/mobile/`.
