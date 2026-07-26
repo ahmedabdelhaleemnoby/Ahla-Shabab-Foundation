@@ -3,7 +3,7 @@ import {
   ChevronUp, ChevronDown, Trash2, Plus, Heading, Pilcrow, List, ListOrdered,
   Quote, Lightbulb, Image as ImageIcon, MousePointerClick, Phone, Minus,
 } from 'lucide-react';
-import type { ContentBlock, ContentBlockType, NavTarget, ContactActionKind } from '@ahla/shared';
+import type { ContentBlock, ContentBlockType, MainTab, NavTarget, ContactActionKind } from '@ahla/shared';
 import { Badge } from './ui';
 import { ImagePicker } from './ImagePicker';
 
@@ -31,7 +31,8 @@ let seq = 0;
 const uid = () => `cb-${Date.now().toString(36)}-${(seq++).toString(36)}`;
 
 const NAV_ROUTES = ['UrgentCases', 'Sponsorship', 'Projects', 'Consultations', 'Volunteer', 'ContactUs', 'Faq'];
-const TABS = ['Home', 'Discover', 'Donate', 'News', 'Profile'];
+/** Must match `MainTab` in shared/cms/cmsTypes — offering a removed tab creates a dead link. */
+const TABS: MainTab[] = ['Home', 'Cases', 'UrgentCases', 'Donate', 'Consultations', 'About'];
 const CONTACT_KINDS: ContactActionKind[] = ['phone', 'email', 'whatsapp', 'facebook', 'instagram', 'youtube', 'twitter', 'website'];
 
 export function RichContentEditor({ blocks, onChange }: { blocks: ContentBlock[]; onChange: (b: ContentBlock[]) => void }) {

@@ -8,6 +8,7 @@ import {
   type MediaItem,
   type ConsultationTypeConfig,
   type FormField,
+  type MainTab,
   type NavTarget,
 } from './cmsTypes';
 import { appConfig } from '../data';
@@ -36,7 +37,7 @@ export const defaultSettings: CmsSettings = {
 };
 
 /* ---------------- Sidebar menu (mirrors mobile AppDrawer) ---------------- */
-const tab = (t: 'Home' | 'Discover' | 'Donate' | 'News' | 'Profile'): NavTarget => ({ kind: 'tab', tab: t });
+const tab = (t: MainTab): NavTarget => ({ kind: 'tab', tab: t });
 const route = (r: string): NavTarget => ({ kind: 'route', route: r });
 
 export const defaultMenu: MenuGroup[] = [
@@ -49,7 +50,7 @@ export const defaultMenu: MenuGroup[] = [
       { id: 'm-urgent', label: 'حالات عاجلة', icon: 'zap', target: route('UrgentCases'), visible: true, loginRequired: false, sortOrder: 1 },
       { id: 'm-sponsor', label: 'اكفل أسرة', icon: 'users', target: route('Sponsorship'), visible: true, loginRequired: false, sortOrder: 2 },
       { id: 'm-projects', label: 'المشروعات', icon: 'briefcase', target: route('Projects'), visible: true, loginRequired: false, sortOrder: 3 },
-      { id: 'm-services', label: 'خدماتنا', icon: 'grid', target: tab('Discover'), visible: true, loginRequired: false, sortOrder: 4 },
+      { id: 'm-services', label: 'خدماتنا', icon: 'grid', target: route('ServicesBrowse'), visible: true, loginRequired: false, sortOrder: 4 },
       { id: 'm-consult', label: 'الاستشارات', icon: 'message-circle', target: route('Consultations'), visible: true, loginRequired: false, sortOrder: 5 },
       { id: 'm-donate', label: 'طرق التبرع', icon: 'heart', target: tab('Donate'), visible: true, loginRequired: false, sortOrder: 6 },
     ],
@@ -60,7 +61,7 @@ export const defaultMenu: MenuGroup[] = [
     visible: true,
     sortOrder: 1,
     items: [
-      { id: 'm-profile', label: 'حسابي', icon: 'user', target: tab('Profile'), visible: true, loginRequired: false, sortOrder: 0 },
+      { id: 'm-profile', label: 'حسابي', icon: 'user', target: route('AccountSettings'), visible: true, loginRequired: false, sortOrder: 0 },
       { id: 'm-donations', label: 'تبرعاتي', icon: 'credit-card', target: route('DonationHistory'), visible: true, loginRequired: true, sortOrder: 1 },
       { id: 'm-receipts', label: 'الإيصالات', icon: 'file-text', target: route('Receipts'), visible: true, loginRequired: true, sortOrder: 2 },
       { id: 'm-bookings', label: 'حجوزاتي', icon: 'calendar', target: route('MyBookings'), visible: true, loginRequired: true, sortOrder: 3 },
@@ -76,7 +77,7 @@ export const defaultMenu: MenuGroup[] = [
     sortOrder: 2,
     items: [
       { id: 'm-about', label: 'عن الجمعية', icon: 'info', target: route('About'), visible: true, loginRequired: false, sortOrder: 0 },
-      { id: 'm-news', label: 'أخبارنا', icon: 'rss', target: tab('News'), visible: true, loginRequired: false, sortOrder: 1 },
+      { id: 'm-news', label: 'أخبارنا', icon: 'rss', target: route('NewsFeed'), visible: true, loginRequired: false, sortOrder: 1 },
       { id: 'm-volunteer', label: 'انضم متطوعاً', icon: 'user-plus', target: route('Volunteer'), visible: true, loginRequired: false, sortOrder: 2 },
       { id: 'm-contact', label: 'تواصل معنا', icon: 'phone', target: route('ContactUs'), visible: true, loginRequired: false, sortOrder: 3 },
       { id: 'm-faq', label: 'الأسئلة الشائعة', icon: 'help-circle', target: route('Faq'), visible: true, loginRequired: false, sortOrder: 4 },

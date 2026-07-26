@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, Pressable, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { appConfig, type PageSection, type ContentBlock, type NavTarget } from '@ahla/shared';
+import { appConfig, LEGACY_TAB_ROUTES, type PageSection, type ContentBlock, type NavTarget } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, EmptyState } from '../components/ui';
@@ -51,8 +51,12 @@ export default function CmsPageScreen({ route }: RootProps<'CmsPage'>) {
 
 function handleCta(nav: any, target?: NavTarget) {
   if (!target) return;
-  if (target.kind === 'tab') nav.navigate('Main', { screen: target.tab });
-  else if (target.kind === 'route') nav.navigate(target.route);
+  // Retired tab names from a pre-redesign CMS state would navigate nowhere — see AppDrawer.
+  if (target.kind === 'tab') {
+    const legacy = LEGACY_TAB_ROUTES[target.tab];
+    if (legacy) nav.navigate(legacy);
+    else nav.navigate('Main', { screen: target.tab });
+  } else if (target.kind === 'route') nav.navigate(target.route);
   else if (target.kind === 'cmsPage') nav.navigate('CmsPage', { slug: target.slug });
   else if (target.kind === 'external') Linking.openURL(target.url).catch(() => {});
 }
