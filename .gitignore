@@ -13,10 +13,16 @@ ahla-shabab-v1.0.0.apk
 # Build/deliverable binaries (kept on disk, not in git)
 *.apk
 *.zip
-# QA: track the written acceptance reports (qa/*.md), ignore the regenerable
-# proof artifacts — screenshots, videos, patches, harness logs (~52 MB).
+# QA: track the written acceptance reports (qa/*.md) and the harness that
+# produced them; ignore the regenerable proof artifacts — screenshots, videos,
+# patches, run logs (~52 MB).
 qa/*
 !qa/*.md
+!qa/harness/
+qa/harness/*
+!qa/harness/*.mjs
+!qa/harness/README.md
+!qa/harness/package.json
 # macOS exFAT AppleDouble sidecars
 ._*
 **/._*

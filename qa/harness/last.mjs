@@ -1,0 +1,30 @@
+import { launch, boot, nav, shot } from './lib.mjs';
+import { sleep, state, tapExact, scrollToText } from './lib2.mjs';
+import { fillByPlaceholder, pressExact, pickNextSelect } from './formlib.mjs';
+const {browser,page}=await launch();
+await boot(page);
+const reset=async(t='Home')=>{await page.evaluate((x)=>globalThis.__nav.reset({index:0,routes:[{name:'Main',params:{screen:x}}]}),t);await sleep(800);};
+console.log('### "see all" links (correct labels incl. chevron)');
+for(const [needle,expect] of [['عرض الكل ‹','Main/UrgentCases'],['عرض المزيد ‹','Projects']]){
+  await reset(); await scrollToText(page,needle);
+  const ok=await tapExact(page,needle); const s=await state(page);
+  console.log(`${ok&&s.route===expect?'PASS':'FAIL'} | ${needle.padEnd(14)} exp ${expect.padEnd(18)} got ${ok?s.route:'NOT-FOUND'}`);
+}
+console.log('\n### D-03 — consultation confirmation wording');
+await reset(); await nav(page,'ConsultationRequest',{type:'دينية'});
+await fillByPlaceholder(page,'اكتب اسمك','سالم تجريبي');
+await fillByPlaceholder(page,'01xxxxxxxxx','01098765432');
+await fillByPlaceholder(page,'example@mail.com','wording@test.com');
+await fillByPlaceholder(page,'العمر','41');
+for(const o of ['الجيزة','مكالمة هاتفية','صباحاً (9-12)','عبادات']) await pickNextSelect(page,o);
+await fillByPlaceholder(page,'اشرح باختصار ما تريد الاستشارة بشأنه...','أحتاج توضيحاً في مسألة تخص العبادات.');
+await pressExact(page,'أوافق على أن تُعالَج بياناتي بسرية لغرض الاستشارة فقط *');
+await pressExact(page,'إرسال الطلب');
+const t=await page.evaluate(()=>document.body.innerText);
+console.log(`${t.includes('تم استلام الطلب بنجاح')?'PASS':'FAIL'} | submission still works`);
+console.log(`${t.includes('محفوظ أثناء الجلسة الحالية فقط')&&!t.includes('حُفظ الطلب على جهازك')?'PASS':'FAIL'} | disclaimer states session-only`);
+console.log(`${t.includes('ولم يُرسل لأي جهة')?'PASS':'FAIL'} | still states not sent anywhere`);
+await shot(page,'FIXED-consult-confirm');
+console.log('\n--- confirmation text ---');
+console.log(t.split('\n').filter(Boolean).slice(0,10).join('\n'));
+await browser.close();
