@@ -1,0 +1,10 @@
+{
+  "name": "qa-harness",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-automation harness that produced the results in qa/*.md. Not part of the app build — install here on demand to re-run the audit.",
+  "dependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}
