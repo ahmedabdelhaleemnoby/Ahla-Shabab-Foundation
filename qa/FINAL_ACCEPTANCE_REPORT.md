@@ -3,8 +3,8 @@
 
 **Date:** 2026-07-26
 **Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 3 — post-fix. Six defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1), then D-04 and D-05 (round 2). This report reflects the fixed build.
-**Working tree at audit start:** clean. **Now:** 12 source files modified across two fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
+**Revision:** 4 — post-fix. Eight defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3). One new defect (**D-17**) was found while fixing D-08 and is logged open. This report reflects the fixed build.
+**Working tree at audit start:** clean. **Now:** 17 source files modified across three fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
 **App version:** `app.json` 1.4.0, Android versionCode 8
 
 **Companion documents:** `REQUIREMENTS_STATUS.md` · `DEFECTS.md` · `NAVIGATION_MATRIX.md` · `PERSISTENCE_REPORT.md` · `BUILD_AND_TEST_RESULTS.md` · `DEMO_LIMITATIONS.md`
@@ -44,13 +44,13 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 | **FAIL** | 1 | **0** |
 | **BLOCKED** | Android build/device testing | unchanged (inside #22) |
 | **Weighted completion** | ~79% | **~96%** |
-| Defects logged | 16 | 16 (**6 fixed**, 10 open) |
+| Defects logged | 16 | **17** (**8 fixed**, 9 open — D-17 newly found) |
 | — Critical | 0 | **0** |
 | — High | 2 | **0** (both fixed) |
-| — Medium | 7 | **3** (D-03, D-04, D-05, D-06 fixed) |
+| — Medium | 7 | **2 + D-17** (D-03/04/05/06/08/09 fixed) |
 | — Low | 7 | 7 |
 | Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
-| Unit tests | 28/28 pass | **28/28 pass** |
+| Unit tests | 28/28 pass | **30/30 pass** (2 added) |
 | Typecheck | clean (3 workspaces) | **clean (3 workspaces)** |
 
 ### Critical issues
@@ -64,8 +64,15 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 - ~~**D-04** provider working-hours not editable~~ → **FIXED.** `تعديل نطاق اليوم` card with من/إلى inputs; empty input rejected so a blank field cannot wipe the range.
 - ~~**D-05** no reschedule action~~ → **FIXED.** Inline date/time editor prefilled from the booking. Status is deliberately **not** changed — rescheduling a pending request must not silently confirm it — and the Overview "today" counter follows the move (2→1).
 
+### Also fixed (round 3)
+- ~~**D-08** dashboard impact-number editor inert~~ → **FIXED.** Worse than first diagnosed: `CmsSettings` had no `stats` field *and* the Settings page never imported the CMS store, so edits didn't survive a dashboard reload either. Schema bumped 3→4 with a migration; editor commits via `mutate()`; mobile reads via a new `getSettings()` with per-field fallback.
+- ~~**D-09** blank-email guests shared one identity~~ → **FIXED.** Email is now required, and the defensive fallback is per-submission rather than a shared constant. A second, worse variant surfaced while fixing: `??` meant a *cleared* field produced `''`, collapsing those submissions into an empty-string identity — now handled.
+
+### Newly found while fixing (open)
+- **D-17 (Medium)** — the remaining dashboard Settings sections (hero texts, contact, socials, payment methods, zakat) are draft-only: the save badge turns green but nothing persists. Only the impact-numbers card is wired. Demo the impact card; treat the rest as visual placeholders.
+
 ### Remaining open (none blocking)
-3 Medium — D-07 (unverified 1.2M stat, **client decision**), D-08 (dashboard impact-number editor inert), D-09 (blank-email guests share one identity).
+2 Medium — D-07 (unverified 1.2M stat, **client decision** — now editable from the dashboard), D-17 (above).
 7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
 
 ---
@@ -137,8 +144,9 @@ The persistence fix deserves one plain sentence: **it changed the words, not the
 
 **Shortly after**
 6. ~~**D-04 / D-05** — provider working-hours editing and the Reschedule action~~ — **done, retested, verified.**
-7. **D-08** — wire `getSettings()` into the mobile app so the dashboard's impact-number editor actually works.
-8. **D-09** — make the consultation email field required; it is the identity key for the whole returning-guest feature.
+7. ~~**D-08** — wire the dashboard's impact-number editor through to the app~~ — **done, retested, verified.**
+8. ~~**D-09** — make the consultation email field required~~ — **done, retested, verified.**
+8b. **D-17** — wire the remaining Settings sections, or label them as placeholders.
 9. **D-10 / D-11** — fix the two 320 px layout issues.
 10. **D-14** — clear the dead conditional and the stale Home comment.
 
@@ -184,7 +192,7 @@ Scope of this approval, stated plainly: the app is approved as a *presentation d
 
 ## 8. Files changed in the fix round
 
-Twelve source files across two fix rounds (`ConsultantDashboardScreen.tsx` was touched in both), no dependencies added, no behaviour changed beyond the six defects:
+Seventeen source files across three fix rounds (some touched more than once), no dependencies added, no behaviour changed beyond the eight defects:
 
 | File | Change | Defect |
 |---|---|---|
@@ -200,5 +208,13 @@ Twelve source files across two fix rounds (`ConsultantDashboardScreen.tsx` was t
 | `mobile/src/screens/ConsultationRequestScreen.tsx` | 2 persistence strings corrected | D-03 |
 | `mobile/src/screens/ConsultantDashboardScreen.tsx` | banner string corrected; editable working-hours card; reschedule button + inline editor | D-03, D-04, D-05 |
 | `mobile/src/store/providerStore.ts` | added `setWorkingHours()` and `reschedule()` mutators | D-04, D-05 |
+| `shared/src/cms/cmsTypes.ts` | added `stats` to `CmsSettings`; schema 3 → 4 | D-08 |
+| `shared/src/cms/cmsDefaults.ts` | seeded `settings.stats`; deep-copy fix; email now required | D-08, D-09 |
+| `shared/src/__tests__/cms.test.ts` | schema-version update + 2 new tests (stats seeding, email required) | D-08, D-09 |
+| `dashboard/src/store/cmsPersistence.ts` | v3 → v4 migration backfilling `settings.stats` | D-08 |
+| `dashboard/src/pages/Settings.tsx` | impact card wired to the CMS store via `mutate()` | D-08 |
+| `mobile/src/store/cms.ts` | added `getSettings()` with per-field fallback | D-08 |
+| `mobile/src/screens/NewsScreen.tsx` | About stats read from CMS settings | D-08 |
+| `mobile/src/screens/ConsultationRequestScreen.tsx` | per-submission anonymous identity fallback | D-09 |
 
 Post-fix evidence: `FIXED-*.png` in `qa/screenshots/mobile/`.

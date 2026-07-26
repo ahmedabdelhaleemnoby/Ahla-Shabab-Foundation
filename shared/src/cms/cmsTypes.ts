@@ -14,7 +14,7 @@
  */
 
 /** Bump when the shape changes; `cmsMigrations` upgrades older stored blobs. */
-export const CMS_SCHEMA_VERSION = 3;
+export const CMS_SCHEMA_VERSION = 4;
 export const CMS_STORAGE_KEY = 'ahla_cms_v1';
 /** Media blobs live in their own key so a quota problem can't corrupt the core CMS. */
 export const CMS_MEDIA_KEY = 'ahla_cms_media_v1';
@@ -318,6 +318,14 @@ export interface CmsSettings {
   zakatNisabEgp: number;
   donationReassurance: string;
   demoLabel: string;
+  /** Impact figures shown on the app's About screen; editable from the dashboard. */
+  stats: FoundationStatsSettings;
+}
+
+export interface FoundationStatsSettings {
+  governorates: string;
+  beneficiaries: string;
+  yearsOfService: string;
 }
 
 /* ------------------------------------------------------------------ */

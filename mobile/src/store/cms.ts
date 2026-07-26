@@ -3,6 +3,7 @@ import {
   makeDefaultCmsState,
   CMS_STORAGE_KEY,
   type CmsState,
+  type CmsSettings,
   type MenuGroup,
   type HomeSection,
   type ConsultationTypeConfig,
@@ -37,6 +38,20 @@ function readCms(): CmsState {
 
 /** Snapshot read at call time (cheap; no subscription needed for the drawer). */
 export const getCmsState = (): CmsState => readCms();
+
+/**
+ * App settings authored in the dashboard. Falls back to the compiled defaults
+ * when a stored blob predates a field, so a partial CMS state can't blank the UI.
+ */
+export function getSettings(): CmsSettings {
+  const stored = readCms().settings;
+  const fallback = makeDefaultCmsState().settings;
+  return {
+    ...fallback,
+    ...stored,
+    stats: { ...fallback.stats, ...(stored?.stats ?? {}) },
+  };
+}
 
 const sorted = <T extends { sortOrder: number }>(a: T[]): T[] => [...a].sort((x, y) => x.sortOrder - y.sortOrder);
 

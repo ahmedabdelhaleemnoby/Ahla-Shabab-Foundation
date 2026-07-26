@@ -6,7 +6,7 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Six defects have been fixed on request: D-01, D-02, D-06, D-03 (first round), then D-04 and D-05.** Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Eight defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3). Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
@@ -17,8 +17,8 @@
 | D-05 | Medium | Provider "Reschedule" action does not exist | **FIXED** |
 | D-06 | Medium | OTP screen asserts an email was sent; no email service exists and no demo hint is shown | **FIXED** |
 | D-07 | Medium | Unverified "1.2M+ beneficiaries" statistic still displayed (relocated, not removed) | Open — client decision |
-| D-08 | Medium | Dashboard "impact numbers" editor has no effect on the mobile app | Open |
-| D-09 | Medium | Guest consultations with no email all collapse into one shared identity | Open |
+| D-08 | Medium | Dashboard "impact numbers" editor has no effect on the mobile app | **FIXED** |
+| D-09 | Medium | Guest consultations with no email all collapse into one shared identity | **FIXED** |
 | D-10 | Low | 320 px: "تعرف على الاستشارات" button label truncated | Open |
 | D-11 | Low | 320 px: "الحالات العاجلة" tab label wraps, misaligning the tab row | Open |
 | D-12 | Low | All four social links are the same placeholder URL | Open |
@@ -26,6 +26,7 @@
 | D-14 | Low | Dead conditional + stale section comment (technical debt) | Open |
 | D-15 | Low | About footer buttons render at uneven heights when a label wraps | Open |
 | D-16 | Low | Admin dashboard loads fonts from an external CDN | Open — informational |
+| **D-17** | **Medium** | **Remaining dashboard Settings sections are draft-only — save does nothing** | **Open — found during the D-08 fix** |
 
 ---
 
@@ -276,8 +277,30 @@ label                  | declared target | resulting route | verdict
 - **Actual:** the mobile app never reads these values. `mobile/src/store/cms.ts` exports only `getMenu`, `getHomeSections`, `getCmsPageBySlug`, `getMediaSrc`, `getConsultationTypes`, `getConsultationType` — there is **no `getSettings`**. `NewsScreen.tsx:5` imports the static `foundationStats` from `@ahla/shared` instead. The editor is therefore inert with respect to the app.
 - **Evidence:** dashboard `/settings` text dump; `grep -rn "getSettings" mobile/src` → no matches.
 - **Likely cause:** the CMS settings slice was built on the dashboard side without a corresponding mobile reader.
-- **Recommended fix:** add `getSettings()` to `mobile/src/store/cms.ts` and have `NewsScreen` prefer CMS values with `foundationStats` as fallback. This also gives the client a clean way to resolve D-07 themselves.
-- **Status:** Open
+- **Correction to the original diagnosis.** The report first said the mobile side simply didn't read the setting. On implementing the fix it turned out to be worse in both directions: **`CmsSettings` had no `stats` field at all**, and **`dashboard/src/pages/Settings.tsx` never imported the CMS store** — its `save()` only flipped a badge to green (`setSaved(...)`), so edits didn't even survive a dashboard reload, let alone reach the app. Three layers were missing, not one.
+- **Fix applied:**
+  1. **Schema** — added `stats: FoundationStatsSettings` to `CmsSettings`, seeded in `defaultSettings` from `foundationStats`. Schema version bumped **3 → 4**, with a migration in `cmsPersistence.migrate()` that backfills `settings.stats` so CMS state saved before this change still resolves.
+  2. **Dashboard** — the impact card now reads from `useCms()` and commits via `mutate()` on save, with an activity-log entry (`عدّل أرقام الأثر`).
+  3. **Mobile** — added `getSettings()` to `mobile/src/store/cms.ts`, merging stored settings over the compiled defaults **per field**, so a partial CMS blob can't blank the UI. `NewsScreen` now renders `stats.beneficiaries` / `stats.yearsOfService` instead of the static import.
+- **A latent bug the new test caught:** `makeDefaultCmsState()` deep-copies `socials` but the added `stats` object was still shared by reference across every call — the exact bug class the `socials` handling already guards against. Fixed, and covered by an assertion.
+- **Retest — PASS** (`qa/harness/settings.mjs` + `settings-dashboard.mjs`):
+  ```
+  app side:
+  PASS | compiled defaults render with no CMS override
+  PASS | dashboard-authored stats reach the About screen
+  PASS | previous hardcoded value no longer shown
+  PASS | partial stats fall back per field (777K+ + default 12)
+
+  dashboard side:
+  before: ['22','1.2M+','12'] → after save: ['22','3.5M+','12']
+  PASS | save commits to the CMS store
+  PASS | change recorded in the CMS activity log
+  PASS | survives a dashboard reload
+  ```
+- **Evidence:** `qa/screenshots/mobile/FIXED-about-cms-stats.png`
+- **Knock-on for D-07:** the client can now change or blank the "1.2M+" figure from the dashboard themselves, without a code change.
+- **Scope boundary:** only the impact-numbers card was wired. The other Settings sections are still draft-only — logged as **D-17** rather than silently left.
+- **Status:** **FIXED**
 
 ---
 
@@ -292,8 +315,20 @@ label                  | declared target | resulting route | verdict
 - **Actual:** `ConsultationRequestScreen.tsx:102` falls back to the literal `'guest@ahlashabab.com'`. Every emailless guest submission is therefore attached to a **single shared demo user record**. Anyone who later logs in as `guest@ahlashabab.com` would see all of them.
 - **Evidence:** code inspection of `ConsultationRequestScreen.tsx:102` + `demoUsers.ts:60-87`. Not exercised end-to-end at runtime because the deduplication test used the email path.
 - **Likely cause:** placeholder fallback introduced so `attachConsultationToDemoUser` always receives a string.
-- **Recommended fix:** make `email` required on consultation forms (it is the identity key for the whole returning-guest feature), or generate a per-submission anonymous key instead of a shared constant.
-- **Status:** Open
+- **Fix applied — both remedies, because either alone leaves a hole:**
+  1. **`email` is now `required: true`** on every consultation form (`baseFields()` in `cmsDefaults.ts`), with the message *"أدخل بريدك الإلكتروني لمتابعة طلبك لاحقاً"*. It is the identity key for the entire returning-guest feature, so it should never have been optional.
+  2. **The fallback no longer collapses identities.** The CMS form builder can still un-require or hide the field, so the defensive path matters: `'guest@ahlashabab.com'` is replaced by a per-submission key, `anon-<reference>@demo.local`.
+- **A second, worse bug found while fixing this:** the original line used `??`, which only catches `undefined`. A user who typed an email and then cleared it left `values['email'] === ''`, and `normalizeEmail('')` is `''` — so **every such submission attached to a single empty-string identity**, a shared bucket that wasn't even the documented `guest@` one. Changed to `||` with a `.trim()`, so blank input falls through to the anonymous key.
+- **Retest — PASS** (`qa/harness/settings.mjs`):
+  ```
+  PASS | email no longer labelled (اختياري)
+  PASS | submission blocked without an email
+  PASS | required-email validation message shown
+  PASS | submits once an email is supplied
+  PASS | case/whitespace variants share one identity   ← dedup regression
+  ```
+- **Evidence:** `qa/screenshots/mobile/FIXED-consult-email-required.png`
+- **Status:** **FIXED**
 
 ---
 
@@ -380,3 +415,20 @@ label                  | declared target | resulting route | verdict
 - **Assessment:** **safe** — no user or application data is transmitted; this is a static font fetch. Recording it because the requirement asked for an exhaustive network inventory, and because the dashboard will render with fallback fonts if demoed offline.
 - **Recommended fix:** self-host the Cairo woff2 files if the demo may run without internet.
 - **Status:** Open — informational
+
+
+---
+
+## D-17 — Remaining dashboard Settings sections are draft-only
+
+- **Requirement:** implied by §5/§9 — the demo must not imply capability it does not have.
+- **Severity:** Medium · **Priority:** P2
+- **Found:** while fixing D-08 (not in the original audit — the sections render and validate, so nothing looks wrong until you reload).
+- **Environment:** Admin dashboard `/settings`, 1440×900
+- **Steps to reproduce:** edit any field under *نصوص الشاشة الرئيسية*, *بيانات التواصل*, *مواقع التواصل*, *وسائل الدفع*, or *نصاب الزكاة*; press حفظ; reload the page.
+- **Expected:** the edit persists, as it now does for *أرقام الأثر*.
+- **Actual:** the badge turns green ("تم الحفظ") but nothing is written. All of these sections are local `useState` seeded from `appConfig` / `seedMethods`, and `save()` only flips the badge. The edit is gone on reload and never reaches the app.
+- **Likely cause:** `dashboard/src/pages/Settings.tsx` was built as a visual mock. Only the impact-numbers card has been wired to the CMS store (D-08).
+- **Recommended fix:** extend the same pattern — move `heroTitle`/`heroSubtitle`, contact fields, socials and `zakatNisabEgp` into `mutate()` calls (they already exist on `CmsSettings`), then add a mobile reader for each. `paymentMethods` would need a new CMS slice.
+- **Demo guidance until then:** demo the impact-numbers card, which genuinely works end to end. Avoid presenting the other Settings sections as functional, or state that they are visual placeholders.
+- **Status:** Open

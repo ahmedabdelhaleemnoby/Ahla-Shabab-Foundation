@@ -36,6 +36,11 @@ export function migrate(state: CmsState): CmsState {
   if (!Array.isArray(s.consultations)) {
     s = { ...s, consultations: defaultConsultations.map((c) => ({ ...c, fields: c.fields.map((f) => ({ ...f })) })) };
   }
+  // v3 → v4: impact numbers moved into CMS settings. Seed from the defaults so
+  // state saved before the move still resolves (the app reads these directly).
+  if (!s.settings?.stats) {
+    s = { ...s, settings: { ...s.settings, stats: { ...makeDefaultCmsState().settings.stats } } };
+  }
   if (s.version !== CMS_SCHEMA_VERSION) {
     s = { ...s, version: CMS_SCHEMA_VERSION };
   }

@@ -2,15 +2,19 @@ import { useState, type ReactNode } from 'react';
 import { Save, Phone, Share2, Wallet, Home, Calculator, BarChart3 } from 'lucide-react';
 import {
   appConfig,
-  foundationStats,
   paymentMethods as seedMethods,
   type PaymentMethodInfo,
   type PaymentAvailability,
 } from '@ahla/shared';
 import { Card, Badge, SectionHead } from '../components/ui';
+import { useCms, mutate } from '../store/cmsStore';
 
 /* App settings — everything the mobile app displays that isn't content:
    impact numbers, home hero texts, contact info, socials, payment methods, zakat.
+
+   Impact numbers are backed by the CMS store, so saving them reaches the app's
+   About screen. The remaining sections below are still local-only draft state —
+   they render and validate but do not persist yet (see qa/DEFECTS.md D-17).
    TODO(backend): GET/PUT /admin/config + PATCH /admin/payment-methods/:id. */
 
 const AVAILABILITIES: PaymentAvailability[] = ['متاحة', 'قيد التفعيل', 'غير متاحة حالياً'];
@@ -18,13 +22,22 @@ type Tone = 'green' | 'danger' | 'gold' | 'navy' | 'muted';
 const availTone = (a: PaymentAvailability): Tone => (a === 'متاحة' ? 'green' : a === 'قيد التفعيل' ? 'gold' : 'muted');
 
 export default function Settings() {
-  const [impact, setImpact] = useState({ ...foundationStats });
+  const cmsState = useCms();
+  // Draft copy; committed to the CMS store (and therefore to the app) on save.
+  const [impact, setImpact] = useState({ ...cmsState.settings.stats });
   const [cfg, setCfg] = useState({ ...appConfig, socials: { ...appConfig.socials } });
   const [methods, setMethods] = useState<PaymentMethodInfo[]>(seedMethods.map((m) => ({ ...m })));
   const [saved, setSaved] = useState<Record<string, boolean>>({ impact: true, hero: true, contact: true, socials: true, methods: true, zakat: true });
 
   const touch = (key: string) => setSaved((s) => ({ ...s, [key]: false }));
-  const save = (key: string) => setSaved((s) => ({ ...s, [key]: true }));
+  const save = (key: string) => {
+    if (key === 'impact') {
+      mutate({ action: 'عدّل أرقام الأثر', entityType: 'إعدادات', entityName: 'أرقام الأثر' }, (d) => {
+        d.settings.stats = { ...impact };
+      });
+    }
+    setSaved((s) => ({ ...s, [key]: true }));
+  };
 
   const SaveAction = ({ k }: { k: string }) =>
     saved[k] ? <Badge tone="green">تم الحفظ</Badge> : <button className="btn btn-sm" onClick={() => save(k)}><Save size={14} /> حفظ</button>;
@@ -37,7 +50,7 @@ export default function Settings() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {([['governorates', 'عدد المحافظات'], ['beneficiaries', 'عدد المستفيدين'], ['yearsOfService', 'سنوات العطاء']] as const).map(([k, label]) => (
             <Labeled key={k} label={label}>
-              <input className="field num" value={String(impact[k])} onChange={(e) => { setImpact({ ...impact, [k]: e.target.value }); touch('impact'); }} />
+              <input className="field num" value={impact[k]} onChange={(e) => { setImpact({ ...impact, [k]: e.target.value }); touch('impact'); }} />
             </Labeled>
           ))}
         </div>
