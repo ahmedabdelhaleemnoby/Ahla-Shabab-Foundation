@@ -3,7 +3,7 @@
 
 **Date:** 2026-07-26
 **Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 5 — post-fix. Nine defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4). Round 4 surfaced **D-18**, a pre-existing delivery-path limitation now logged open, and required a correction to the D-08 claim. This report reflects the fixed build.
+**Revision:** 6 — post-fix. Ten defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5). Round 4 surfaced D-18 and required a correction to the D-08 claim; round 5 closed it. This report reflects the fixed build.
 **Working tree at audit start:** clean. **Now:** 20 source files modified across four fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
 **App version:** `app.json` 1.4.0, Android versionCode 8
 
@@ -44,10 +44,10 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 | **FAIL** | 1 | **0** |
 | **BLOCKED** | Android build/device testing | unchanged (inside #22) |
 | **Weighted completion** | ~79% | **~96%** |
-| Defects logged | 16 | **18** (**9 fixed**, 9 open — D-17 fixed, D-18 newly found) |
+| Defects logged | 16 | **18** (**10 fixed**, 8 open) |
 | — Critical | 0 | **0** |
 | — High | 2 | **0** (both fixed) |
-| — Medium | 7 | **2 + D-18** (D-03/04/05/06/08/09/17 fixed) |
+| — Medium | 7 | **1** — D-07 only (D-03/04/05/06/08/09/17/18 fixed) |
 | — Low | 7 | 7 |
 | Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
 | Unit tests | 28/28 pass | **32/32 pass** (4 added) |
@@ -71,14 +71,18 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 ### Also fixed (round 4)
 - ~~**D-17** remaining Settings sections draft-only~~ → **FIXED.** All six cards now commit through `mutate()`; `paymentMethods` became a CMS slice (schema 4→5 + migration); five mobile screens now read CMS values instead of compiled constants. A side-effect worth noting: each social button now opens **its own** URL — previously all four opened the website.
 
-### Newly found while fixing (open)
-- **D-18 (Medium)** — the dashboard (`:5173`) and Expo web (`:8087`) are **different origins**, so their `localStorage` is partitioned and a dashboard edit never reaches the web preview live. Pre-existing and affecting every CMS slice, not just this branch's work. A comment in `mobile/src/store/cms.ts` asserted the opposite; it has been corrected. The supported sync path — dashboard → أدوات النظام → export/import JSON — already exists.
+### Also fixed (round 5)
+- ~~**D-18** dashboard and app on different origins~~ → **FIXED.** `scripts/demo-origin.mjs` serves the mobile web export at `/` and the dashboard build at `/admin/` from one port, so they share one `localStorage`. `npm run demo:build && npm run demo`. Normal dev mode is unchanged (`DEMO_BASE` unset ⇒ identical behaviour), verified.
+
+  This closes the loop opened in round 3: a value **typed into the dashboard UI now appears in the app UI**, verified with no state hand-written by the test. It is the assertion that was impossible before.
+
+  Worth recording: the obvious approach — a path-based reverse proxy in front of both dev servers — does not work, because Vite's dev server injects root-absolute URLs (`/@vite/client`) that a `/admin`-prefixed proxy misroutes to the app. Serving built output avoids this and matches a real deployment.
 
 ### Correction to the round-3 D-08 claim
-The D-08 retest line *"dashboard-authored stats reach the About screen"* was verified by writing CMS state to the **app's own origin**. That proves the app-side reader, which is real. It does **not** prove live dashboard→preview delivery, which D-18 shows is impossible across origins. `DEFECTS.md` carries the corrected wording.
+The D-08 retest line *"dashboard-authored stats reach the About screen"* was originally verified by writing CMS state to the **app's own origin** — proving the app-side reader, not live delivery. Round 5 makes the stronger claim true and proves it directly; `DEFECTS.md` records both the correction and the new evidence.
 
 ### Remaining open (none blocking)
-2 Medium — D-07 (unverified 1.2M stat, **client decision**), D-18 (above).
+1 Medium — **D-07** (unverified 1.2M stat) — **needs a client decision, not a code fix**; it is now editable from the dashboard and that edit reaches the app.
 7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
 
 ---
@@ -153,7 +157,7 @@ The persistence fix deserves one plain sentence: **it changed the words, not the
 7. ~~**D-08** — wire the dashboard's impact-number editor through to the app~~ — **done, retested, verified.**
 8. ~~**D-09** — make the consultation email field required~~ — **done, retested, verified.**
 8b. ~~**D-17** — wire the remaining Settings sections~~ — **done, retested, verified.**
-8c. **D-18** — decide: serve both apps from one origin for live sync, or accept the existing export/import JSON flow and brief the client accordingly.
+8c. ~~**D-18** — serve both apps from one origin~~ — **done, retested, verified** (`npm run demo`).
 9. **D-10 / D-11** — fix the two 320 px layout issues.
 10. **D-14** — clear the dead conditional and the stale Home comment.
 

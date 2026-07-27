@@ -23,6 +23,14 @@ For the dashboard suites (`dash.mjs`, `dash2.mjs`, `settings-dashboard.mjs`, `se
 npm run dev --workspace dashboard
 ```
 
+`shared-origin.mjs` is different — it needs both apps behind the single-origin
+server, not the dev servers:
+```bash
+npm run demo:build && npm run demo
+```
+That build is a **production** bundle, so `globalThis.__nav` is stripped; the
+script navigates by real taps instead. Don't reach for `__nav` in that suite.
+
 ## Running
 
 From the repo root:
@@ -54,6 +62,7 @@ Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 | `settings-dashboard.mjs` | dashboard impact editor commits to the CMS store (needs `:5173`) | D-08 |
 | `settings-all.mjs` | all six Settings cards commit; app renders them; proves the origin split (needs both servers) | D-17, D-18 |
 | `payment-methods.mjs` | CMS payment methods reach the Donate wizard's step 4 | D-17 |
+| `shared-origin.mjs` | dashboard edit → app, on one origin (needs `npm run demo`) | D-18 |
 | `persist.mjs` | what survives a reload | PERSISTENCE_REPORT |
 | `responsive.mjs`, `overflow.mjs`, `crop.mjs` | 320/390/430/768 px layout, overflow, truncation | REQUIREMENTS §20, D-10/D-11 |
 | `shots.mjs` | evidence screenshots | — |
