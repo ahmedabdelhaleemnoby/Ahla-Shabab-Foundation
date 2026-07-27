@@ -14,7 +14,9 @@ Object.entries(colors).forEach(([key, value]) => {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    {/* BASE_URL is '/' normally, '/admin/' when served behind the shared-origin
+        proxy — routes must resolve under either. */}
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <App />
     </BrowserRouter>
   </React.StrictMode>

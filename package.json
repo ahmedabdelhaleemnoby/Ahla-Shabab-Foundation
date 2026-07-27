@@ -11,7 +11,11 @@
   "scripts": {
     "mobile": "npm run start --workspace mobile",
     "dashboard": "npm run dev --workspace dashboard",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "demo:build": "npm run demo:build:app && npm run demo:build:admin",
+    "demo:build:app": "cd mobile && npx expo export --platform web --output-dir dist",
+    "demo:build:admin": "cd dashboard && DEMO_BASE=/admin/ npx vite build",
+    "demo": "node scripts/demo-origin.mjs"
   },
   "engines": {
     "node": ">=18"

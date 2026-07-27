@@ -45,7 +45,12 @@ console.log('stored stats:', JSON.stringify(stored));
 check(stored?.beneficiaries === '3.5M+', 'save commits to the CMS store');
 
 const log = await page.evaluate(() => JSON.parse(localStorage.getItem('ahla_cms_v1')).activity[0]);
-check(log?.action === 'عدّل أرقام الأثر', 'change recorded in the CMS activity log');
+// Round 4 unified the action label across all six cards and moved the specific
+// section into entityName; assert both so a future rename can't pass silently.
+check(
+  log?.action === 'عدّل الإعدادات' && log?.entityName === 'أرقام الأثر',
+  'change recorded in the CMS activity log'
+);
 
 await page.reload({ waitUntil: 'networkidle2' });
 await sleep(2000);

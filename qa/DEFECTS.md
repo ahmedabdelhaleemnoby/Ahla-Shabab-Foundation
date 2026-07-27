@@ -6,7 +6,7 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Nine defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4). Round 4 also surfaced **D-18**, a pre-existing delivery-path limitation logged open, and required a correction to the D-08 wording (see below). Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Ten defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
@@ -27,7 +27,7 @@
 | D-15 | Low | About footer buttons render at uneven heights when a label wraps | Open |
 | D-16 | Low | Admin dashboard loads fonts from an external CDN | Open — informational |
 | **D-17** | Medium | Remaining dashboard Settings sections are draft-only — save does nothing | **FIXED** |
-| **D-18** | **Medium** | **Dashboard and Expo web are different origins, so CMS edits never reach the web preview live** | **Open — pre-existing, found during the D-17 fix** |
+| **D-18** | Medium | Dashboard and Expo web are different origins, so CMS edits never reach the web preview | **FIXED** |
 
 ---
 
@@ -468,7 +468,24 @@ label                  | declared target | resulting route | verdict
   PASS | app cannot see the dashboard-written CMS state — live sync is impossible cross-origin
   ```
 - **Likely cause:** the comment assumed same-origin serving; the two dev servers have always run on separate ports.
-- **Fix applied (documentation only):** the inaccurate comment in `mobile/src/store/cms.ts` has been replaced with an accurate one stating the partitioning and pointing at the supported path. **No behaviour was changed** — making live sync work needs both apps served from one origin, which is a deployment decision, not a code fix.
-- **The supported sync path already exists** and was not built for this: dashboard → **أدوات النظام** → *تصدير الإعدادات JSON*, then import. It is also the only way to reach a real device.
-- **Demo guidance:** do not promise live dashboard→app sync. Either demo the two independently, or pre-load the app's CMS state via import before the session.
-- **Status:** Open — needs a deployment decision (single origin) or acceptance of the export/import flow
+- **Fix applied — the two apps now share one origin.**
+  - `scripts/demo-origin.mjs` (dependency-free, `node:http`) serves the mobile web export at `/` and the dashboard build at `/admin/` from a single port, so there is one `localStorage`.
+  - `dashboard/vite.config.ts` takes `base` from `DEMO_BASE`, and `main.tsx` passes `import.meta.env.BASE_URL` to `BrowserRouter` so routes resolve under either mount point. With `DEMO_BASE` unset nothing changes — normal dev is byte-identical.
+  - npm scripts: `npm run demo:build` (export app + build dashboard with the base) then `npm run demo`.
+- **Why static builds rather than proxying the dev servers:** the first attempt was a path-based reverse proxy in front of both dev servers. It fails because Vite's dev server injects **root-absolute** URLs (`/@vite/client`, `/@react-refresh`) that a `/admin`-prefixed proxy routes to the app instead of the dashboard, leaving a blank page. Serving built output has no such leakage and is also what a real single-origin deployment looks like. Recorded because the proxy approach looks obviously correct until you try it.
+- **Retest — PASS** (`qa/harness/shared-origin.mjs`). This is the assertion that was impossible before: the test types into the real dashboard UI and then reads the real app, with **no state hand-written by the test**.
+  ```
+  PASS | dashboard renders under /admin/
+  PASS | edit committed to the CMS store
+  PASS | app and dashboard now share one origin
+  PASS | app can see the dashboard-written CMS state
+  PASS | production bundle strips the __DEV__ nav hook (expected)
+  PASS | tapped the About tab
+  PASS | About screen shows the value typed in the dashboard      ← 4.8M+
+  PASS | tapped تواصل معنا
+  PASS | ContactUs shows the hotline typed in the dashboard        ← 16123
+  ```
+- **Incidental confirmation:** `expo export` strips the `__DEV__`-only `globalThis.__nav` hook, so the harness had to navigate by real taps. That is correct behaviour for a shipped bundle and is now asserted rather than assumed.
+- **Unchanged:** the separate dev servers are still separate origins — that is inherent, not a bug. Use `npm run demo` when you need dashboard→app sync, and the dev servers for hot-reload work. Native still needs the export/import JSON flow under **أدوات النظام**.
+- **Regression:** normal dev mode verified unaffected (assets still at `/@vite/client`, routes `/`, `/settings`, `/cms/menu` all 200).
+- **Status:** **FIXED**
