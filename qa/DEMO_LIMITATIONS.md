@@ -21,9 +21,9 @@ The only `http://` in the whole codebase is the SVG XML namespace inside a place
 | Claim the app could wrongly make | Actual behaviour |
 |---|---|
 | Payment completed | **Never asserted.** Donation receipt statuses are typed `'قيد التأكيد' \| 'قيد المراجعة' \| 'مكتمل' \| 'فشل'` and the app only ever writes pending states. `appState.ts:6-9` documents that `'مكتمل'` can only come from a server or admin — the UI cannot produce it. |
-| Consultation persisted on a server | **Correctly denied.** Confirmation screen states "نسخة عرض — حُفظ الطلب على جهازك فقط **ولم يُرسل لأي جهة**" — the "not sent anywhere" half is verified true. |
-| A real verification email was sent | **Wrongly asserted — see D-06.** The OTP screen says "تم إرسال رمز التحقق إلى بريدك الإلكتروني" although no email service exists and no request is made. This is the one demo-honesty gap in the app. |
-| Data saved locally | **Overstated — see D-03.** Two screens claim local saving; state is RAM-only and resets on restart. |
+| Consultation persisted on a server | **Correctly denied.** Confirmation reads "نسخة عرض — الطلب محفوظ **أثناء الجلسة الحالية فقط** ولم يُرسل لأي جهة" — "not sent anywhere" independently verified. |
+| A real verification email was sent | ~~Wrongly asserted~~ — **fixed (D-06).** Both auth screens now carry the gold demo card: "نسخة عرض — لم يُرسل أي بريد إلكتروني. أدخل أي رمز مكوّن من 6 أرقام للمتابعة." |
+| Data saved locally | ~~Overstated~~ — **copy fixed (D-03).** Strings now say "أثناء الجلسة الحالية فقط". **Behaviour unchanged: nothing persists.** |
 
 ### Developer artefacts not leaking to users
 
@@ -47,22 +47,24 @@ No screen renders any TODO/FIXME/Mock/Test-Data/developer label. Verified both b
 - File-attachment field — "إرفاق ملف (**غير مفعّل في نسخة العرض**)" ✓
 - Provider attachment preview — "(معاينة تجريبية)" ✓
 - Consultation forms — advisory disclaimer "هذه استشارة استرشادية ولا تُغني عن التشخيص أو العلاج المتخصص" ✓
-- **Email login / OTP — missing ✗ (D-06)**
+- Email login / OTP — gold demo card on both screens ✓ *(added; was the one gap)*
 
-### One external dependency, on the dashboard only
+### External dependencies — now none
 
-The admin dashboard fetches the Cairo webfont from `fonts.googleapis.com` / `fonts.gstatic.com`. No data is transmitted; it is a static asset fetch. Classified **safe**, but noted because (a) the requirement asked for a complete network inventory and (b) the dashboard will fall back to system fonts if demoed offline. The **mobile app has no such dependency** — it bundles Cairo locally.
+The admin dashboard previously fetched the Cairo webfont from `fonts.googleapis.com` / `fonts.gstatic.com` (D-16). It is now self-hosted: `scripts/sync-fonts.mjs` copies the five weights out of `@expo-google-fonts/cairo` — already a mobile dependency — into `dashboard/public/fonts` before `dev` and `build`.
+
+**The whole project now makes zero external requests**, mobile app and dashboard alike, verified at runtime. Both render correctly with no internet.
 
 ## Functional limitations to state plainly to the client
 
 1. **No data survives an app restart.** Login, consultation history, returning-guest identity, provider availability and booking statuses all reset. Demo each story in a single sitting.
 2. **Any six-digit OTP works.** There is no code generation, delivery or verification.
-3. **No email is ever sent**, despite what the OTP screen currently says.
+3. **No email is ever sent** — and both auth screens now say so plainly.
 4. **No payment is ever taken.** The donation flow ends in a pending reference number.
 5. **Governorate pages are templated.** Every governorate shows the same three service categories, the same two cases and the same water-connections initiative, with only the name interpolated (`GovernorateActivityScreen.tsx:18,51` use `cases.slice(0,2)` and `serviceCategories.slice(0,3)`). Fine as a visual demo; do not present it as real per-governorate data.
-6. **Impact figures are unverified.** "1.2M+ مستفيد", "+650 مبادرة", "+10,000 متطوع" and the 2013–2025 milestone timeline are hardcoded (D-07). The "22 محافظة" claim is *not* shown — the app honestly lists 12 governorates plus "وفي توسع مستمر…".
-7. **The dashboard's impact-number editor does not reach the app** (D-08).
-8. **Social links are placeholders** — all four point at the same URL (D-12).
+6. **Impact figures are unverified (D-07 — open, needs a client decision).** "1.2M+ مستفيد", "+650 مبادرة", "+10,000 متطوع" and the 2013–2025 timeline. The headline beneficiaries/years figures are **now editable from the dashboard** and the edit reaches the app, so they can be corrected or blanked without code. The "22 محافظة" claim is *not* shown — the app honestly lists 12 governorates plus "وفي توسع مستمر…".
+7. **Dashboard→app CMS sync needs the shared-origin server** (D-18). The separate dev servers are separate origins and do not share storage; run `npm run demo:build && npm run demo` (app at `:4000/`, dashboard at `:4000/admin/`). Native devices sync via export/import JSON under **أدوات النظام**.
+8. **Social links are unset.** All four seed to the foundation's website, so the *تابعنا على* row is hidden until real profile URLs are entered in **إعدادات التطبيق** (D-12). Supply them and the row appears, each button opening its own link.
 9. **The provider dashboard is a mobile screen**, reachable from the drawer and profile — not a separate web portal. The separate web app at `dashboard/` is the **admin/CMS** console, a different thing.
 10. **Consultation data does not flow between the two.** Requests submitted in the app land in `demoUsers`/`appState`; the provider dashboard reads a fixed three-booking seed in `providerStore`. They are unconnected stores, so a consultation submitted live will not appear in the provider's list.
 
@@ -76,4 +78,4 @@ The admin dashboard fetches the Cairo webfont from `fonts.googleapis.com` / `fon
 | Emulator testing | **Not performed** — Android build fails in this environment |
 | Physical-device testing | **Not performed** |
 
-Behaviours that could differ on a real device and were therefore *not* confirmed: Android hardware back button, gesture-navigation bar insets, keyboard show/hide and field obstruction, OS font scaling, `adjustsFontSizeToFit` (a no-op on web — see D-10), and native `Linking.openURL` behaviour.
+Behaviours that could differ on a real device and were therefore *not* confirmed: Android hardware back button, gesture-navigation bar insets, keyboard show/hide and field obstruction, OS font scaling, and native `Linking.openURL` behaviour. (`adjustsFontSizeToFit` is no longer relied on anywhere — it was removed as part of the D-10 fix precisely because it is a web no-op.)

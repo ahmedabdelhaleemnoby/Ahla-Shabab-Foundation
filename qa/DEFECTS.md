@@ -6,7 +6,7 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Ten defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Fifteen defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — the low-severity sweep). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
@@ -19,13 +19,13 @@
 | D-07 | Medium | Unverified "1.2M+ beneficiaries" statistic still displayed (relocated, not removed) | Open — client decision |
 | D-08 | Medium | Dashboard "impact numbers" editor has no effect on the mobile app | **FIXED** |
 | D-09 | Medium | Guest consultations with no email all collapse into one shared identity | **FIXED** |
-| D-10 | Low | 320 px: "تعرف على الاستشارات" button label truncated | Open |
-| D-11 | Low | 320 px: "الحالات العاجلة" tab label wraps, misaligning the tab row | Open |
-| D-12 | Low | All four social links are the same placeholder URL | Open |
+| D-10 | Low | 320 px: "تعرف على الاستشارات" button label truncated | **FIXED** |
+| D-11 | Low | 320 px: "الحالات العاجلة" tab label wraps, misaligning the tab row | **FIXED** |
+| D-12 | Low | All four social links are the same placeholder URL | **FIXED** |
 | D-13 | Low | Shipped demo APK predates the final commit | Open |
-| D-14 | Low | Dead conditional + stale section comment (technical debt) | Open |
-| D-15 | Low | About footer buttons render at uneven heights when a label wraps | Open |
-| D-16 | Low | Admin dashboard loads fonts from an external CDN | Open — informational |
+| D-14 | Low | Dead conditional + stale section comment (technical debt) | **FIXED** |
+| D-15 | Low | About footer buttons render at uneven heights when a label wraps | **FIXED** |
+| D-16 | Low | Admin dashboard loads fonts from an external CDN | **FIXED** |
 | **D-17** | Medium | Remaining dashboard Settings sections are draft-only — save does nothing | **FIXED** |
 | **D-18** | Medium | Dashboard and Expo web are different origins, so CMS edits never reach the web preview | **FIXED** |
 
@@ -343,8 +343,10 @@ label                  | declared target | resulting route | verdict
 - **Actual:** renders as "تعرف على الا…". Measured: `scrollWidth 130 > clientWidth 98`, `clip: true`. At 390 px it fits exactly (`130/130`, `clip: false`), so 320 px is the only affected width.
 - **Evidence:** `qa/screenshots/mobile/w320-Home.png`, `crop320-home-cta.png`
 - **Likely cause:** `HomeScreen.tsx:99` uses `adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.7}`. `adjustsFontSizeToFit` is a **no-op on react-native-web**, so the text truncates instead of shrinking. On real Android/iOS it would likely shrink as intended — **this specific defect may be web-only and should be re-checked on a device once the Android build is fixed.**
-- **Recommended fix:** shorten the label (e.g. "عن الاستشارات") or allow two lines at narrow widths.
-- **Status:** Open — needs device re-verification
+- **Fix applied:** dropped `adjustsFontSizeToFit`/`minimumFontScale` (both no-ops on react-native-web, which is *why* it clipped) and let the label wrap to two lines at 12.5 px with a centred `lineHeight`. The full label now renders at every width instead of being shortened, so the client's wording is preserved.
+- **Retest — PASS** at 320/360/390/430 px (`qa/harness/low-severity.mjs`): `D-10 consultations CTA not truncated (تعرف على الاستشارات)` — full string, `scrollWidth === clientWidth`.
+- **Note:** the original defect may have been web-only; the fix is width-independent either way, so no device re-verification is needed to close it.
+- **Status:** **FIXED**
 
 ---
 
@@ -362,8 +364,10 @@ label                  | declared target | resulting route | verdict
   No label is *clipped* (`clippedTabs: []` at every width) and the bar stays flush to the bottom — it is an alignment blemish, not a functional failure.
 - **Evidence:** `qa/screenshots/mobile/w320-Home.png`
 - **Likely cause:** `TabBar.tsx:68` `fontSize: 9.5` with no `numberOfLines`; at 320 px each of five flex items gets ~59 px.
-- **Recommended fix:** add `numberOfLines={1}` plus a slightly smaller font at narrow widths, or shorten the label to "عاجلة".
-- **Status:** Open
+- **Fix applied:** `TabBar` is now width-aware — under 360 px the label drops to 8.3 px and the bar gutter narrows from 12 to 4, and every label carries `numberOfLines={1}`. The client-specified label "الحالات العاجلة" is kept in full rather than shortened.
+- **Retest — PASS** at 320/360/390/430 px: the four plain items are all exactly one line tall (`[45,45,45,45]` at 320 px, `[46,46,46,46]` above), with no label clipped.
+- **Harness note:** the first assertion compared all five items and failed — the raised donate button is legitimately taller (70 px) by design. The committed check compares only the four plain items.
+- **Status:** **FIXED**
 
 ---
 
@@ -373,8 +377,17 @@ label                  | declared target | resulting route | verdict
 - **Severity:** Low · **Priority:** P3
 - **Actual:** `shared/src/data.ts:35-38` sets facebook, instagram, youtube and twitter all to `https://ahlashabab.com` — the website URL, not social profiles. `ContactUsScreen.tsx:57` opens `appConfig.website` for **every** social button regardless of which is tapped.
 - **Evidence:** grep output of `shared/src/data.ts:33-38`.
-- **Recommended fix:** supply the real profile URLs, or hide the social row for the demo.
-- **Status:** Open
+- **Fix applied, in two parts:**
+  1. **Wiring (round 4)** — each button now opens *its own* configured URL. Previously `ContactUsScreen` opened `appConfig.website` for all four regardless of which was tapped, so the socials editor could never have had a visible effect.
+  2. **Presentation (round 6)** — a button that merely reopens the foundation's website is a dead button wearing a Facebook icon. The row now renders only networks whose CMS URL is non-empty *and* different from the website; with the shipped placeholders (all four = the website) the whole section is hidden. Fill any of them in **إعدادات التطبيق** and that network appears.
+- **Retest — PASS** at all four widths (`low-severity.mjs`), both directions:
+  ```
+  PASS | D-12 social row hidden while URLs are placeholders
+  PASS | D-12 configured network appears          ← facebook set → فيسبوك shows
+  PASS | D-12 unconfigured networks stay hidden   ← إنستجرام absent
+  ```
+- **Still the client's to supply:** the real profile URLs. The app now surfaces exactly what is configured and nothing more.
+- **Status:** **FIXED**
 
 ---
 
@@ -393,8 +406,8 @@ label                  | declared target | resulting route | verdict
 - **Actual:**
   1. `ConsultantDashboardScreen.tsx:310` — `{(activeTab === 'الحجوزات والطلبات' || activeTab === 'نظرة عامة') && activeTab === 'الحجوزات والطلبات' && (…)}` reduces to the single right-hand test; the left disjunction is dead.
   2. `HomeScreen.tsx:20-22` — the header comment still describes the *old* section order ("hero → impact numbers → quick services → urgent cases → featured projects → latest news → online consultations") which no longer matches the implemented order (donation hero → consultations hero → vision/mission → urgent → sponsorship → featured project). Misleading for whoever maintains this next.
-- **Recommended fix:** simplify the condition; rewrite the comment.
-- **Status:** Open
+- **Fix applied:** the condition reduces to `activeTab === 'الحجوزات والطلبات'`; the Home comment now describes the implemented order (donation hero → consultations hero → vision & mission → urgent case → sponsorship → featured project) and records that impact numbers and the governorate strip moved to About.
+- **Status:** **FIXED**
 
 ---
 
@@ -403,9 +416,10 @@ label                  | declared target | resulting route | verdict
 - **Severity:** Low (cosmetic) · **Priority:** P3
 - **Actual:** at 390 px the outline button "تواصل معنا" wraps to two lines inside its fixed `width: 130` while "انضم متطوعاً" stays on one, so the two footer buttons have visibly different heights. Measured text heights 60 px vs 30 px.
 - **Explicitly NOT a clipping defect:** tight crops at both 320 px and 390 px confirm the text stays **inside** the button bounds — the button grows to fit. `qa/screenshots/mobile/crop390-about-footer.png`, `crop320-about-footer.png`.
-- **Likely cause:** `NewsScreen.tsx:51` hardcodes `style={{ width: 130 }}`.
-- **Recommended fix:** let both buttons flex, or widen to ~150 px.
-- **Status:** Open
+- **Likely cause:** `NewsScreen.tsx:51` hardcoded `style={{ width: 130 }}`.
+- **Fix applied:** both footer buttons now `flex: 1`, so they share the row evenly and wrap together.
+- **Retest — PASS** at 320/360/390/430 px: label heights equal at every width (`[60,60]` at 320 px where both wrap, `[30,30]` above where neither does). Visual confirmation: `qa/screenshots/mobile/FIXED-w320-about-footer.png`.
+- **Status:** **FIXED**
 
 ---
 
@@ -414,9 +428,17 @@ label                  | declared target | resulting route | verdict
 - **Requirement:** §9 — "No real API requests."
 - **Severity:** Low · **Priority:** P3
 - **Actual:** the dashboard requests `fonts.googleapis.com` and `fonts.gstatic.com` (Cairo webfont) on every page load. The **mobile app makes zero external requests** — it bundles Cairo via `@expo-google-fonts/cairo`.
-- **Assessment:** **safe** — no user or application data is transmitted; this is a static font fetch. Recording it because the requirement asked for an exhaustive network inventory, and because the dashboard will render with fallback fonts if demoed offline.
-- **Recommended fix:** self-host the Cairo woff2 files if the demo may run without internet.
-- **Status:** Open — informational
+- **Assessment:** safe in itself — no user data transmitted — but it meant the dashboard rendered with fallback fonts offline, and it was the only external request left in the project.
+- **Fix applied:** Cairo is now self-hosted. `scripts/sync-fonts.mjs` copies the five weights out of `@expo-google-fonts/cairo` (already a mobile dependency — no new dependency, no download) into `dashboard/public/fonts` before `dev` and `build`, and `theme.css` declares them via `@font-face`. The Google Fonts `<link>` tags are gone.
+- **Kept out of git:** the ~640 KB of TTFs are copied at build time, not committed; `dashboard/public/fonts/` is gitignored.
+- **Retest — PASS:**
+  ```
+  external requests: NONE ✓
+  body font-family: Cairo, Tajawal, system-ui, sans-serif
+  Cairo available: true
+  ```
+  The whole project — mobile app **and** dashboard — now makes zero external requests.
+- **Status:** **FIXED**
 
 
 ---

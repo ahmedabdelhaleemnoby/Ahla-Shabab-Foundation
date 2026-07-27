@@ -17,9 +17,12 @@ const serviceIcon: Record<string, IconName> = {
   'map-pin': 'map-pin',
 };
 
-/* Home v2 — section order per UX spec:
-   hero → impact numbers → quick services → urgent cases → featured projects
-   → latest news → online consultations (most important, emphasized last). */
+/* Home — section order per the client brief: donation first, consultations
+   second, then supporting content:
+   donation hero → consultations hero → vision & mission → urgent case
+   → monthly sponsorship → featured project.
+   Impact numbers and the governorate strip used to sit here; they now live on
+   the About screen (اعرف عنا). */
 export default function HomeScreen() {
   const nav = useNavigation<any>();
   const urgent = cases.find((c) => c.tag === 'عاجل')!;
@@ -89,14 +92,17 @@ export default function HomeScreen() {
             style={[row, { flex: 1, backgroundColor: colors.navy700, borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
           >
             <Icon name="calendar" size={16} color="#fff" />
-            <Text adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.7} style={[font('800'), { color: '#fff', fontSize: 13.5, flexShrink: 1 }]}>احجز استشارة</Text>
+            <Text numberOfLines={1} style={[font('800'), { color: '#fff', fontSize: 13.5, flexShrink: 1 }]}>احجز استشارة</Text>
           </Pressable>
           <Pressable
             onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })}
             style={[row, { flex: 1, borderWidth: 1.5, borderColor: colors.navy700, borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 6 }]}
           >
             <Icon name="info" size={16} color={colors.navy700} />
-            <Text adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.7} style={[font('800'), { color: colors.navy700, fontSize: 13.5, flexShrink: 1 }]}>تعرف على الاستشارات</Text>
+            {/* Two lines rather than one: adjustsFontSizeToFit is a no-op on
+                react-native-web, so a single line truncated to "تعرف على الا…"
+                at 320 px. Wrapping keeps the full label readable everywhere. */}
+            <Text numberOfLines={2} style={[font('800'), { color: colors.navy700, fontSize: 12.5, flexShrink: 1, textAlign: 'center', lineHeight: 16 }]}>تعرف على الاستشارات</Text>
           </Pressable>
         </View>
       </LinearGradient>

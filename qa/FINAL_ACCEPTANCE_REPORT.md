@@ -3,7 +3,7 @@
 
 **Date:** 2026-07-26
 **Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 6 — post-fix. Ten defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5). Round 4 surfaced D-18 and required a correction to the D-08 claim; round 5 closed it. This report reflects the fixed build.
+**Revision:** 7 — post-fix. Fifteen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — low-severity sweep). Round 4 surfaced D-18 and required a correction to the D-08 claim; round 5 closed it. This report reflects the fixed build.
 **Working tree at audit start:** clean. **Now:** 20 source files modified across four fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
 **App version:** `app.json` 1.4.0, Android versionCode 8
 
@@ -39,16 +39,16 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 | Metric | Initial audit | **After fixes** |
 |---|---|---|
 | Requirements assessed | 24 | 24 |
-| **PASS** | 14 | **22** |
-| **PARTIAL** | 8 | **2** |
+| **PASS** | 14 | **23** |
+| **PARTIAL** | 8 | **1** (#22, the Android build) |
 | **FAIL** | 1 | **0** |
 | **BLOCKED** | Android build/device testing | unchanged (inside #22) |
-| **Weighted completion** | ~79% | **~96%** |
-| Defects logged | 16 | **18** (**10 fixed**, 8 open) |
+| **Weighted completion** | ~79% | **~98%** |
+| Defects logged | 16 | **18** (**15 fixed**, 3 open) |
 | — Critical | 0 | **0** |
 | — High | 2 | **0** (both fixed) |
 | — Medium | 7 | **1** — D-07 only (D-03/04/05/06/08/09/17/18 fixed) |
-| — Low | 7 | 7 |
+| — Low | 7 | **2** — D-13, D-14 handled separately (5 fixed) |
 | Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
 | Unit tests | 28/28 pass | **32/32 pass** (4 added) |
 | Typecheck | clean (3 workspaces) | **clean (3 workspaces)** |
@@ -81,8 +81,19 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 ### Correction to the round-3 D-08 claim
 The D-08 retest line *"dashboard-authored stats reach the About screen"* was originally verified by writing CMS state to the **app's own origin** — proving the app-side reader, not live delivery. Round 5 makes the stronger claim true and proves it directly; `DEFECTS.md` records both the correction and the new evidence.
 
-### Remaining open (none blocking)
-1 Medium — **D-07** (unverified 1.2M stat) — **needs a client decision, not a code fix**; it is now editable from the dashboard and that edit reaches the app.
+### Also fixed (round 6 — low-severity sweep)
+- ~~**D-10**~~ CTA truncated at 320 px → **FIXED.** `adjustsFontSizeToFit` is a no-op on react-native-web — that was the cause, not the symptom. Now a two-line label; full text at every width, client wording preserved.
+- ~~**D-11**~~ tab label wrapped at 320 px → **FIXED.** `TabBar` is width-aware below 360 px; all four plain items exactly one line tall.
+- ~~**D-12**~~ social links → **FIXED.** Each opens its own URL (round 4), and the row now hides networks without a distinct configured URL — a button that just reopens the website is a dead button. Real URLs remain the client's to supply.
+- ~~**D-14**~~ dead conditional + stale comment → **FIXED.**
+- ~~**D-15**~~ uneven About footer buttons → **FIXED.** Both flex; equal height at every width.
+- ~~**D-16**~~ dashboard used the Google Fonts CDN → **FIXED.** Cairo self-hosted from the existing `@expo-google-fonts/cairo` dependency, copied at build time (not committed). **The whole project now makes zero external requests** — mobile *and* dashboard.
+
+Requirement #20 (responsive behaviour) moves PARTIAL → PASS.
+
+### Remaining open
+- **D-07 (Medium)** — the unverified "1.2M+" figure. **Needs a client decision, not a code fix**; it is now editable from the dashboard and that edit reaches the app.
+- **D-13 (Low)** — the shipped demo APK predates `ec46501`. See §4 for the current Android build status.
 7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
 
 ---
