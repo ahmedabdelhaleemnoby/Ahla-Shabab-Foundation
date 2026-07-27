@@ -50,7 +50,9 @@ export default function NewsScreen() {
       header={<AppBar title="عن الجمعية" onBack={() => nav.navigate('Home')} />}
       footer={
         <StickyFooter>
-          <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ width: 130 }} onPress={() => nav.navigate('ContactUs')} />
+          {/* Both flex: a fixed 130 px forced "تواصل معنا" onto two lines while
+              its neighbour stayed on one, so the pair rendered at different heights. */}
+          <Button label="تواصل معنا" variant="outline" icon="message-square" style={{ flex: 1 }} onPress={() => nav.navigate('ContactUs')} />
           <Button label="انضم متطوعاً" icon="user-plus" style={{ flex: 1 }} onPress={() => nav.navigate('Volunteer')} />
         </StickyFooter>
       }

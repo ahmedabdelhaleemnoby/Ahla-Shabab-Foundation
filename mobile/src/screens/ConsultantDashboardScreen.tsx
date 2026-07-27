@@ -359,7 +359,7 @@ export default function ConsultantDashboardScreen() {
       )}
 
       {/* TAB C & D: BOOKINGS & SUBMITTED FORMS (الحجوزات والطلبات ونماذج المتقدمين) */}
-      {(activeTab === 'الحجوزات والطلبات' || activeTab === 'نظرة عامة') && activeTab === 'الحجوزات والطلبات' && (
+      {activeTab === 'الحجوزات والطلبات' && (
         <View style={{ gap: 12 }}>
           {/* Status Filter Chips */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row-reverse', gap: 6 }}>

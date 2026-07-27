@@ -26,3 +26,6 @@ qa/harness/*
 # macOS exFAT AppleDouble sidecars
 ._*
 **/._*
+
+# Fonts copied from node_modules at build time (scripts/sync-fonts.mjs)
+dashboard/public/fonts/

@@ -23,6 +23,9 @@ const SOCIAL: { icon: IconName; label: string; key: SocialKey }[] = [
 export default function ContactUsScreen() {
   const nav = useNavigation<any>();
   const settings = getSettings();
+  const socials = SOCIAL.map((s) => ({ ...s, url: (settings.socials[s.key] ?? '').trim() })).filter(
+    (s) => s.url && s.url !== settings.website
+  );
   const CONTACTS: { icon: IconName; label: string; value: string; ltr?: boolean }[] = [
     { icon: 'phone', label: 'الخط الساخن', value: settings.hotline, ltr: true },
     { icon: 'mail', label: 'البريد الإلكتروني', value: settings.email, ltr: true },
@@ -51,18 +54,25 @@ export default function ContactUsScreen() {
         </Card>
       ))}
 
-      {/* Social */}
-      <Text style={[font('800'), { fontSize: 13, color: colors.navy700, textAlign: 'right', marginTop: 6, marginBottom: 10, marginHorizontal: 2 }]}>
-        تابعنا على
-      </Text>
-      <View style={[row, { gap: 10 }]}>
-        {SOCIAL.map((s) => (
-          <Pressable key={s.label} onPress={() => Linking.openURL(settings.socials[s.key] || settings.website).catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
-            <Icon name={s.icon} size={20} color={colors.navy700} />
-            <Text style={[font('700'), { fontSize: 9.5, color: colors.slate, marginTop: 6 }]}>{s.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* Social — only networks with a real, distinct URL configured in the
+          dashboard. Every entry seeds to the foundation's website, and a button
+          that just reopens the website is a dead button wearing a Facebook icon;
+          fill the links in إعدادات التطبيق and they appear here. */}
+      {socials.length > 0 && (
+        <>
+          <Text style={[font('800'), { fontSize: 13, color: colors.navy700, textAlign: 'right', marginTop: 6, marginBottom: 10, marginHorizontal: 2 }]}>
+            تابعنا على
+          </Text>
+          <View style={[row, { gap: 10 }]}>
+            {socials.map((s) => (
+              <Pressable key={s.label} onPress={() => Linking.openURL(s.url).catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
+                <Icon name={s.icon} size={20} color={colors.navy700} />
+                <Text style={[font('700'), { fontSize: 9.5, color: colors.slate, marginTop: 6 }]}>{s.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Message form */}
       <Text style={[font('800'), { fontSize: 13, color: colors.navy700, textAlign: 'right', marginTop: 20, marginBottom: 10, marginHorizontal: 2 }]}>

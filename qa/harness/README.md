@@ -63,6 +63,7 @@ Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 | `settings-all.mjs` | all six Settings cards commit; app renders them; proves the origin split (needs both servers) | D-17, D-18 |
 | `payment-methods.mjs` | CMS payment methods reach the Donate wizard's step 4 | D-17 |
 | `shared-origin.mjs` | dashboard edit → app, on one origin (needs `npm run demo`) | D-18 |
+| `low-severity.mjs` | 320–430 px tab/CTA/footer layout + social-link visibility | D-10, D-11, D-12, D-15 |
 | `persist.mjs` | what survives a reload | PERSISTENCE_REPORT |
 | `responsive.mjs`, `overflow.mjs`, `crop.mjs` | 320/390/430/768 px layout, overflow, truncation | REQUIREMENTS §20, D-10/D-11 |
 | `shots.mjs` | evidence screenshots | — |
