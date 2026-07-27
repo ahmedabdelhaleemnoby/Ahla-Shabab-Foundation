@@ -6,7 +6,7 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Seventeen defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — the low-severity sweep); D-13 (round 7, together with a newly found D-19). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Eighteen defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — the low-severity sweep); D-13 (round 7, with a newly found D-19); D-20 (round 8 — the launcher icon). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
@@ -23,7 +23,8 @@
 | D-11 | Low | 320 px: "الحالات العاجلة" tab label wraps, misaligning the tab row | **FIXED** |
 | D-12 | Low | All four social links are the same placeholder URL | **FIXED** |
 | D-13 | Low | Shipped demo APK predates the final commit | **FIXED** |
-| **D-19** | **Medium** | **Native `build.gradle` version was 1/1.0.0, ignoring app.json's 8/1.4.0** | **FIXED — found while building** |
+| **D-19** | Medium | Native `build.gradle` version was 1/1.0.0, ignoring app.json's 8/1.4.0 | **FIXED** |
+| **D-20** | **Medium** | **APK shipped the default Android robot icon, not the foundation logo** | **FIXED** |
 | D-14 | Low | Dead conditional + stale section comment (technical debt) | **FIXED** |
 | D-15 | Low | About footer buttons render at uneven heights when a label wraps | **FIXED** |
 | D-16 | Low | Admin dashboard loads fonts from an external CDN | **FIXED** |
@@ -532,4 +533,27 @@ label                  | declared target | resulting route | verdict
 - **Fix applied:** `build.gradle` set to `versionCode 8` / `versionName "1.4.0"`, with a comment recording that this file — not `app.json` — is the source of truth for native builds and that the two must be kept in step.
 - **Retest — PASS:** `aapt dump badging` on the rebuilt APK reports `versionCode='8' versionName='1.4.0'`.
 - **Follow-up worth considering:** the duplication is the real hazard. Either drop to a managed/prebuild workflow, or have `build.gradle` read the values out of `app.json` at configure time so they cannot drift again.
+- **Status:** **FIXED**
+
+
+---
+
+## D-20 — The APK's launcher icon was the default Android robot
+
+- **Requirement:** implied by §22 and by any client-facing build — the app must be identifiable on a home screen.
+- **Severity:** Medium · **Priority:** P1 for anything the client installs
+- **Found:** round 8, on inspecting the native resources after the first successful APK build.
+- **Environment:** `mobile/android/app/src/main/res/mipmap-*`
+- **Steps to reproduce:** install any APK built from the committed `android/` project and look at the launcher.
+- **Expected:** the foundation logo — `mobile/assets/icon.png` already contains it, and `app.json` correctly points `icon` and `android.adaptiveIcon.foregroundImage` at the brand assets.
+- **Actual:** the stock green Android robot (`ic_launcher.webp`, the React Native template default). The brand assets were never reaching the build.
+- **Root cause — the same one as D-19.** This is a **bare workflow**: `android/` is committed, so `expo prebuild` never runs and nothing in `app.json` is applied to native builds. `icon`, `adaptiveIcon` and the version fields are all inert; only the files under `res/` matter. Two symptoms, one cause.
+- **Aggravating detail:** there was no `mipmap-anydpi-v26/` at all, so even once legacy icons were correct, Android 8+ would have had no **adaptive** icon and would have fallen back to the legacy bitmap inside a system-drawn shape.
+- **Fix applied:** `scripts/sync-android-icons.mjs` generates the full set from `mobile/assets/icon.png`:
+  - `ic_launcher.png` and `ic_launcher_round.png` at all five densities (48→192 px), flattened onto the brand white so they never render transparent;
+  - `ic_launcher_foreground.png` at adaptive sizes (108→432 px) with the logo scaled to **60 %** and centred — adaptive icons guarantee only the centre 66 of 108 dp, so a full-bleed logo would be clipped by circular/squircle masks;
+  - `mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_round.xml`, and `ic_launcher_background` colour (`#FFFFFF`, matching `app.json`).
+  The stale `.webp` files are deleted by the script — leaving them alongside the new `.png` would collide on the same resource name and fail the build with a duplicate-resource error.
+- **Retest:** see below (APK rebuilt and verified on the emulator launcher).
+- **Follow-up, same as D-19:** the real hazard is that `app.json` looks authoritative but is not. Either move to a managed/prebuild workflow, or keep running these sync scripts as part of the build so the native project cannot drift from the declared config.
 - **Status:** **FIXED**
