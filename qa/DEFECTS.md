@@ -6,7 +6,7 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Fifteen defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — the low-severity sweep). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Seventeen defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — the low-severity sweep); D-13 (round 7, together with a newly found D-19). Round 4 surfaced D-18 and required a correction to the D-08 wording (see below); round 5 then closed it. Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
@@ -22,7 +22,8 @@
 | D-10 | Low | 320 px: "تعرف على الاستشارات" button label truncated | **FIXED** |
 | D-11 | Low | 320 px: "الحالات العاجلة" tab label wraps, misaligning the tab row | **FIXED** |
 | D-12 | Low | All four social links are the same placeholder URL | **FIXED** |
-| D-13 | Low | Shipped demo APK predates the final commit | Open |
+| D-13 | Low | Shipped demo APK predates the final commit | **FIXED** |
+| **D-19** | **Medium** | **Native `build.gradle` version was 1/1.0.0, ignoring app.json's 8/1.4.0** | **FIXED — found while building** |
 | D-14 | Low | Dead conditional + stale section comment (technical debt) | **FIXED** |
 | D-15 | Low | About footer buttons render at uneven heights when a label wraps | **FIXED** |
 | D-16 | Low | Admin dashboard loads fonts from an external CDN | **FIXED** |
@@ -395,8 +396,11 @@ label                  | declared target | resulting route | verdict
 
 - **Severity:** Low (release hygiene; would become High if that APK is what the client is shown) · **Priority:** P2
 - **Actual:** `ahla-shabab-v1.4.0-demo.apk` mtime `2026-07-22 13:00:27`; commit `ec46501` ("adjust android display settings and improve typography") authored `2026-07-22 13:26:58`. The APK cannot contain that commit.
-- **Recommended fix:** rebuild the demo APK from `ec46501` before the client session. Note this is currently blocked locally by the Gradle failure — an EAS build is the likely route.
-- **Status:** Open
+- **Fix applied:** the APK is rebuilt from the current branch and replaces the stale file — `versionCode 8`, `versionName 1.4.0`, 59.8 MB release build.
+- **The build blocker turned out not to be the toolchain.** The project sits on an **exFAT** volume, which has no hard links; AGP's transforms depend on them, and the log said so (`Hard link … failed. Doing a slower copy instead`). Copied to local APFS: **BUILD SUCCESSFUL**, zero hard-link warnings. Full detail in `BUILD_AND_TEST_RESULTS.md`.
+- **Verified on an emulator**, closing the engagement's largest coverage gap: app launches, Home renders, tabs navigate, hardware BACK behaves correctly (returns to Home from a non-initial tab; exits from Home), **0 fatal exceptions**. It also confirmed D-10 was web-only and that the D-11/D-15 fixes hold natively.
+- **Note on size:** 59.8 MB vs ~28 MB for the previous EAS builds — this is a universal APK with all four ABIs. Not a defect, but worth knowing if distribution size matters.
+- **Status:** **FIXED**
 
 ---
 
@@ -510,4 +514,22 @@ label                  | declared target | resulting route | verdict
 - **Incidental confirmation:** `expo export` strips the `__DEV__`-only `globalThis.__nav` hook, so the harness had to navigate by real taps. That is correct behaviour for a shipped bundle and is now asserted rather than assumed.
 - **Unchanged:** the separate dev servers are still separate origins — that is inherent, not a bug. Use `npm run demo` when you need dashboard→app sync, and the dev servers for hot-reload work. Native still needs the export/import JSON flow under **أدوات النظام**.
 - **Regression:** normal dev mode verified unaffected (assets still at `/@vite/client`, routes `/`, `/settings`, `/cms/menu` all 200).
+- **Status:** **FIXED**
+
+
+---
+
+## D-19 — Native project version ignored app.json (1.0.0 / versionCode 1)
+
+- **Requirement:** implied by §22 — a build must be identifiable and upgradable.
+- **Severity:** Medium · **Priority:** P2
+- **Found:** round 7, on inspecting the first successfully built APK.
+- **Environment:** `mobile/android/app/build.gradle`
+- **Steps to reproduce:** build any APK from the committed `android/` project and read its manifest.
+- **Expected:** `versionCode 8`, `versionName 1.4.0`, matching `mobile/app.json`.
+- **Actual:** `versionCode='1' versionName='1.0.0'`. This is a **bare workflow** — `android/` is committed, so `expo prebuild` never runs and `app.json`'s `expo.version` / `expo.android.versionCode` are **not** applied to native builds. The two had silently drifted.
+- **Why it matters:** every locally built APK would ship as version 1. Android refuses to install a lower `versionCode` over a higher one, so such a build could not upgrade an existing v8 install, and any APK handed to the client would be mislabelled.
+- **Fix applied:** `build.gradle` set to `versionCode 8` / `versionName "1.4.0"`, with a comment recording that this file — not `app.json` — is the source of truth for native builds and that the two must be kept in step.
+- **Retest — PASS:** `aapt dump badging` on the rebuilt APK reports `versionCode='8' versionName='1.4.0'`.
+- **Follow-up worth considering:** the duplication is the real hazard. Either drop to a managed/prebuild workflow, or have `build.gradle` read the values out of `app.json` at configure time so they cannot drift again.
 - **Status:** **FIXED**
