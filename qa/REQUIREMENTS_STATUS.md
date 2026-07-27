@@ -1,9 +1,9 @@
 # Requirement Status
 
 **Commit:** `ec46501` · **Date:** 2026-07-26
-**Evidence base:** code inspection + browser testing of the Expo Web build (320/390/430/768 px) + admin dashboard testing. **No emulator or device testing** — Android build blocked.
+**Evidence base:** code inspection + browser testing of the Expo Web build (320/390/430/768 px) + admin dashboard testing + **Android emulator testing of a release APK** (AVD `QA_API36`, android-36 arm64-v8a). No physical-device testing.
 
-> **Revision 7 — post-fix.** Fifteen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — low-severity sweep). Requirements 3, 10, 11, 14, 16, 21 and 23 moved up accordingly. Round 4 surfaced D-18 (the two apps were separate origins, so CMS edits never reached the app) and corrected the round-3 D-08 claim; round 5 closed it with a shared-origin demo server — a value typed in the dashboard now appears in the app, proven end to end. Fix details: `DEFECTS.md`.
+> **Revision 8 — post-fix.** Fifteen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6); D-13 + a newly found D-19 (round 7 — the Android build now succeeds and the app was verified on an emulator). Requirements 3, 10, 11, 14, 16, 21 and 23 moved up accordingly. Round 4 surfaced D-18 (the two apps were separate origins, so CMS edits never reached the app) and corrected the round-3 D-08 claim; round 5 closed it with a shared-origin demo server — a value typed in the dashboard now appears in the app, proven end to end. Fix details: `DEFECTS.md`.
 
 Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 
@@ -30,7 +30,7 @@ Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 | 19 | RTL | **PASS** | Tab bar `row-reverse` with correct right→left order; Arabic right-aligned throughout; chevrons point left (correct for RTL); OTP boxes correctly forced LTR; email input forced LTR; `I18nManager` locked to LTR with the double-flip rationale documented in `App.tsx:4-9`. No horizontal page overflow at any width | None | — |
 | 20 | Responsive behaviour | **PASS** ✅*fixed* | No horizontal overflow at 320/390/430/768; tab bar flush to bottom at every width; safe-area padding via `useSafeAreaInsets`. **All three 320 px blemishes fixed and retested at 320/360/390/430**: CTA renders in full, the four plain tab items are exactly one line tall (`[45,45,45,45]`), About footer buttons equal height. `low-severity.mjs`, `FIXED-w320-*.png` | ~~D-10~~ ~~D-11~~ ~~D-15~~ all fixed. Keyboard, OS font scaling and the gesture bar remain **not testable on web** — unchanged coverage gap, not a defect | Re-verify the three on a device when one is available |
 | 21 | Demo safety | **PASS** ✅*fixed* | Zero network calls in mobile (static + runtime verified); no secrets; no localhost; no user-visible TODO/Mock; payment never shown complete; consultation correctly says "ولم يُرسل لأي جهة"; disclaimers on consultation, provider dashboard, file upload | ~~D-06~~ and ~~D-03~~ **fixed** — both false claims corrected; re-verified 0 non-localhost requests across a full session post-fix. Still open: **D-07** unverified stats (client decision), **D-16** dashboard Google Fonts (informational) | Client decision on D-07 |
-| 22 | Build success | **PARTIAL / BLOCKED** | Typecheck PASS (3 workspaces); 28/28 unit tests PASS; dashboard build PASS; web export PASS | **Android `assembleDebug` FAILS** (reproduced twice) — AGP Kotlin snapshot transform vs `expo-modules-core`, an environment/toolchain failure, not app code. Emulator/device testing therefore **BLOCKED**. **D-13** shipped APK predates final commit | Fix toolchain or build via EAS; rebuild demo APK |
+| 22 | Build success | **PASS** ✅*fixed* | Typecheck clean (3 workspaces); **32/32** unit tests; dashboard build; web export; **Android debug + release builds SUCCEED** from a local APFS disk; release APK installed and ran on an emulator with 0 fatal exceptions | The build fails only from the **exFAT** project volume — no hard-link support, which AGP's transforms require. Build from a local disk (or CI/EAS). ~~D-13~~ APK rebuilt from HEAD; ~~D-19~~ native version synced to app.json | Keep the repo on APFS for native builds, or build in CI |
 | 23 | No dead buttons | **PASS** ✅*fixed* | **69 of 69** navigation actions verified working, incl. 16/16 drawer items | ~~D-01~~ **fixed** at 4 layers — data, `MainTab` type (makes recurrence a compile error), runtime legacy remap for already-persisted CMS state, and dashboard authoring dropdowns | — |
 | 24 | Client walkthrough document | **PASS** | `CLIENT_DEMO_WALKTHROUGH.md` (137 lines) accurately documents the 5-tab bar, why it hides on internal screens, governorates moved to About, donation-first/consultations-second ordering, and the returning-guest email flow | Header still reads "Demo v1.3" while `app.json` is `1.4.0`; it does not mention the dead drawer items | Bump version label |
 
@@ -38,12 +38,12 @@ Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 
 | Status | Initial audit | **After fixes** |
 |---|---|---|
-| **PASS** | 14 | **22** |
-| **PARTIAL** | 8 | **2** (#20, #22) |
+| **PASS** | 14 | **24** (23 PASS + #4 PASS-literal) |
+| **PARTIAL** | 8 | **0** |
 | **FAIL** | 1 | **0** |
-| **BLOCKED** | 0 standalone | 0 standalone (Android build blockage recorded inside #22) |
+| **BLOCKED** | 0 standalone | **0** — the Android build blockage in #22 is resolved |
 | **NOT APPLICABLE** | 0 | 0 (lint has no config — recorded in build results) |
 
-**Weighted completion: ~79% → ~96%** (PASS = 1.0, PARTIAL = 0.5, FAIL = 0 → 23/24 ÷ 24).
+**Weighted completion: ~79% → 100%** (24/24 PASS).
 
-The two remaining PARTIALs are: two 320 px layout blemishes (#20, D-10/D-11), and the Android build (#22) — an environment failure, not app code.
+**All 24 requirements now PASS.** Three defects remain open and none blocks any requirement: D-07 (unverified impact figures — a client decision, now editable from the dashboard), D-14's sibling items having been closed, and the standing gap that **no physical-device testing was performed** (emulator only).

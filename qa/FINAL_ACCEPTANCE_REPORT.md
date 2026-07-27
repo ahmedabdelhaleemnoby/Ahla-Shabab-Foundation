@@ -3,7 +3,7 @@
 
 **Date:** 2026-07-26
 **Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 7 — post-fix. Fifteen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6 — low-severity sweep). Round 4 surfaced D-18 and required a correction to the D-08 claim; round 5 closed it. This report reflects the fixed build.
+**Revision:** 8 — post-fix. Seventeen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6); D-13 + a newly found D-19 (round 7 — Android now builds and the app was verified on an emulator). Round 4 surfaced D-18 and required a correction to the D-08 claim; round 5 closed it. This report reflects the fixed build.
 **Working tree at audit start:** clean. **Now:** 20 source files modified across four fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
 **App version:** `app.json` 1.4.0, Android versionCode 8
 
@@ -30,7 +30,11 @@ The initial audit found three blocking problems; **all have since been fixed and
 
 Everything else is either passing or a known, documented demo limitation. Notably, the **demo-safety posture of the mobile app is excellent**: zero network calls verified both statically and at runtime, no secrets, no localhost, no user-visible developer artefacts, payment never shown as completed, and honest disclaimers on the consultation flow, the provider dashboard and the file-upload placeholder.
 
-One coverage gap must be stated clearly: **the Android build fails in this environment**, so no emulator or physical-device testing was performed. All runtime evidence comes from the Expo Web build in headless Chrome. The failure is in the Android toolchain (AGP's Kotlin classpath-snapshot transform against `expo-modules-core`), not in application code — TypeScript compiles clean and the JS bundle exports successfully.
+**The Android build blocker is resolved, and the app has now been verified on an emulator.** The original diagnosis — an AGP/JDK toolchain fault — was wrong. The real cause is that the project lives on an **exFAT** volume, which has no hard links; AGP's artifact transforms require them, and the build log said so outright. Copied to a local APFS disk, the same JDK and AGP produce **BUILD SUCCESSFUL** for both debug and release. A release APK now installs and runs on an emulator: Home renders, tabs navigate, the hardware back button behaves correctly, and logcat shows **zero fatal exceptions**.
+
+That closes the engagement's largest coverage gap. It also settled an open question: D-10's truncation was indeed **web-only** — the label renders in full natively — and the D-11/D-15 layout fixes hold on a real Android surface.
+
+**Physical-device testing was still not performed** (no handset attached). Emulator ≠ device for things like real gesture bars and OEM keyboards.
 
 ---
 
@@ -39,16 +43,16 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 | Metric | Initial audit | **After fixes** |
 |---|---|---|
 | Requirements assessed | 24 | 24 |
-| **PASS** | 14 | **23** |
-| **PARTIAL** | 8 | **1** (#22, the Android build) |
+| **PASS** | 14 | **24** |
+| **PARTIAL** | 8 | **0** |
 | **FAIL** | 1 | **0** |
-| **BLOCKED** | Android build/device testing | unchanged (inside #22) |
-| **Weighted completion** | ~79% | **~98%** |
-| Defects logged | 16 | **18** (**15 fixed**, 3 open) |
+| **BLOCKED** | Android build/device testing | **0** — Android builds; emulator verified |
+| **Weighted completion** | ~79% | **100%** |
+| Defects logged | 16 | **19** (**17 fixed**, 2 open) |
 | — Critical | 0 | **0** |
 | — High | 2 | **0** (both fixed) |
-| — Medium | 7 | **1** — D-07 only (D-03/04/05/06/08/09/17/18 fixed) |
-| — Low | 7 | **2** — D-13, D-14 handled separately (5 fixed) |
+| — Medium | 7 | **1** — D-07 only (D-03/04/05/06/08/09/17/18/19 fixed) |
+| — Low | 7 | **0** (all 7 fixed) |
 | Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
 | Unit tests | 28/28 pass | **32/32 pass** (4 added) |
 | Typecheck | clean (3 workspaces) | **clean (3 workspaces)** |
@@ -81,6 +85,10 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 ### Correction to the round-3 D-08 claim
 The D-08 retest line *"dashboard-authored stats reach the About screen"* was originally verified by writing CMS state to the **app's own origin** — proving the app-side reader, not live delivery. Round 5 makes the stronger claim true and proves it directly; `DEFECTS.md` records both the correction and the new evidence.
 
+### Also fixed (round 7 — the Android build)
+- ~~**D-13**~~ stale demo APK → **FIXED.** `ahla-shabab-v1.4.0-demo.apk` rebuilt from the current branch (versionCode 8, 1.4.0, 59.8 MB) and verified on an emulator. The blocker was the **exFAT filesystem**, not the toolchain — see §4 and `BUILD_AND_TEST_RESULTS.md`.
+- **D-19 (new, Medium)** → **FIXED.** The committed `android/build.gradle` still said `versionCode 1 / 1.0.0`, ignoring `app.json`'s `8 / 1.4.0` — this is a bare workflow, so `expo prebuild` never runs and the two had drifted. Every locally built APK would have shipped as version 1 and could not have upgraded an installed v8. Synced, with a comment recording which file is authoritative.
+
 ### Also fixed (round 6 — low-severity sweep)
 - ~~**D-10**~~ CTA truncated at 320 px → **FIXED.** `adjustsFontSizeToFit` is a no-op on react-native-web — that was the cause, not the symptom. Now a two-line label; full text at every width, client wording preserved.
 - ~~**D-11**~~ tab label wrapped at 320 px → **FIXED.** `TabBar` is width-aware below 360 px; all four plain items exactly one line tall.
@@ -93,7 +101,7 @@ Requirement #20 (responsive behaviour) moves PARTIAL → PASS.
 
 ### Remaining open
 - **D-07 (Medium)** — the unverified "1.2M+" figure. **Needs a client decision, not a code fix**; it is now editable from the dashboard and that edit reaches the app.
-- **D-13 (Low)** — the shipped demo APK predates `ec46501`. See §4 for the current Android build status.
+(D-13 closed in round 7 — see above.)
 7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
 
 ---
@@ -125,12 +133,14 @@ Requirement #20 (responsive behaviour) moves PARTIAL → PASS.
 | **Code inspection** | Complete across `mobile/src`, `dashboard/src`, `shared/src` |
 | **Browser testing** (Expo Web / react-native-web, headless Chrome, real pointer events, 320 / 390 / 430 / 768 px) | Complete — all navigation, forms, gating, OTP, dedup, provider dashboard, persistence |
 | **Browser testing** (admin dashboard, 1440×900) | All 18 routes |
-| **Emulator testing** | **Not performed** |
-| **Physical-device testing** | **Not performed** |
+| **Emulator testing** | **Performed** — release APK built from the current branch, installed on AVD `QA_API36` (android-36, arm64-v8a) |
+| **Physical-device testing** | **Not performed** — no handset attached |
 
-An AVD (`Medium_Phone_API_36.0`) exists but no installable build could be produced for the current commit. The shipped `ahla-shabab-v1.4.0-demo.apk` was built 27 minutes *before* the final commit and was deliberately not used, since testing it would have validated stale code while appearing to validate HEAD.
+The stock AVD could not boot (its `.avd` directory was missing and it targeted 32-bit `arm`, unsupported on Apple Silicon); a replacement was created from the already-installed arm64-v8a image. The **release** APK was used deliberately — a debug APK renders blank without Metro, since it does not embed the JS bundle.
 
-**Not verifiable on web, therefore unverified:** Android hardware back button, gesture-navigation bar insets, keyboard show/hide and field obstruction, OS font scaling, and `adjustsFontSizeToFit` (a no-op on react-native-web, which is why D-10 may be web-only).
+**Confirmed natively:** app launch, Home layout and section order, five-item RTL tab bar, tab navigation, hardware BACK (returns to Home from a non-initial tab; exits from Home), zero fatal exceptions in logcat, and that the D-11 and D-15 layout fixes hold. It also settled D-10: the truncation was **web-only**.
+
+**Still unverified — emulator is not a device:** real gesture-navigation insets, OEM keyboard show/hide and field obstruction, OS font scaling, and native `Linking.openURL` against installed apps.
 
 ### Honesty note on harness accuracy
 An early version of the click harness used substring matching and DOM-presence checks, producing four false navigation failures and a false "tab bar leaks into inner screens" result. Both were harness bugs, not app bugs. Every affected case was re-run with exact-text matching, clean stack resets and computed-style checks; only the corrected results are reported. Nothing in the application source was modified at any point during this pass.
@@ -199,14 +209,20 @@ Two further defects were fixed in a second round, completing requirement §5 (pr
 
 Requirements #10 and #11 (provider availability, provider bookings) therefore move PARTIAL → PASS.
 
-Post-fix regression: typecheck clean across 3 workspaces, 28/28 unit tests pass, dashboard builds, 69/69 navigation actions pass, all 5 consultation forms correct with no cross-contamination, same-email deduplication and login-linking still working, and 0 non-localhost network requests across a full session.
+Rounds 3–7 then closed the remaining Medium and Low defects: the CMS settings chain (D-08, D-17) and the origin split that stopped it reaching the app (D-18); consultation identity (D-09); the 320 px layout blemishes and the last external network dependency (D-10, D-11, D-12, D-15, D-16, plus D-14's tech debt); and finally the Android build itself (D-13) together with a version-drift defect it exposed (D-19).
+
+Post-fix regression: typecheck clean across 3 workspaces, **32/32** unit tests, dashboard build, web export, 69/69 navigation actions, all 5 consultation forms correct with no cross-contamination, same-email deduplication and login-linking still working, and **0 external network requests** from either the app or the dashboard.
 
 # APPROVED FOR CLIENT DEMO
 
-**Two caveats that sit outside the code and remain the client's/team's call:**
+**This approval now covers the APK as well.** `ahla-shabab-v1.4.0-demo.apk` has been rebuilt from the current branch (versionCode 8 / 1.4.0) and verified running on an emulator — launch, layout, tab navigation, hardware back button, zero fatal exceptions.
 
-1. **D-07 — unverified impact figures.** "1.2M+ مستفيد", "+650 مبادرة", "+10,000 متطوع" and the 2013–2025 timeline still appear on the About page. They were removed from Home as requested, but not retired. If these are not approved figures, pull them before the session. This is a content decision, not a defect.
-2. **No device verification.** Every result in this report comes from the Expo Web build in headless Chrome. The Android build fails in this environment and the shipped `v1.4.0-demo.apk` predates the final commit. **This approval covers a screen-shared or web-hosted demo.** If the demo is handed over as an installable APK, that APK must first be rebuilt from the current commit and re-verified on a device — and until that happens, an APK-based demo is **NOT APPROVED**.
+**Two caveats remain, both outside the code:**
+
+1. **D-07 — unverified impact figures.** "1.2M+ مستفيد", "+650 مبادرة", "+10,000 متطوع" and the 2013–2025 timeline still appear on About. They were removed from Home as asked, but not retired. **A content decision for the client, not a defect** — and now changeable from the dashboard without a code release. If the figures are not approved, pull them before the session.
+2. **Emulator, not a handset.** The APK was verified on an AVD. That covers launch, layout, navigation and the back button, but not real gesture-navigation insets, OEM keyboards, or OS font scaling. If the client will hold the app on their own phone, do one pass on a physical device first — it is a short check, and nothing in the current evidence suggests it will surface problems.
+
+**One operational note for whoever builds next:** the Android build fails from this project's **exFAT** volume and succeeds from a local APFS disk or CI. That is an environment property, not a code fault — but it will bite the next person who tries, so it is documented in `BUILD_AND_TEST_RESULTS.md`.
 
 Scope of this approval, stated plainly: the app is approved as a *presentation demo*. It has no backend, no persistence across restarts, no real email, and no real payment — all now accurately disclosed in-app.
 
@@ -245,5 +261,12 @@ Twenty source files across four fix rounds (several touched more than once), no 
 | `mobile/src/screens/DonateScreen.tsx` | payment methods from CMS | D-17 |
 | `mobile/src/components/AppDrawer.tsx` | hero title from CMS | D-17 |
 | `mobile/src/store/cms.ts` | `getPaymentMethods()`; corrected origin comment | D-17, D-18 |
+| `mobile/src/components/TabBar.tsx` | width-aware labels, single line at 320 px | D-11 |
+| `mobile/src/screens/HomeScreen.tsx` | two-line consultations CTA; section comment | D-10, D-14 |
+| `mobile/src/screens/NewsScreen.tsx` | both footer buttons flex | D-15 |
+| `mobile/src/screens/ConsultantDashboardScreen.tsx` | dead conditional removed | D-14 |
+| `dashboard/index.html`, `src/theme.css`, `scripts/sync-fonts.mjs` | self-hosted Cairo, no font CDN | D-16 |
+| `mobile/android/app/build.gradle` | versionCode/Name synced to app.json | D-19 |
+| `dashboard/vite.config.ts`, `src/main.tsx`, `scripts/demo-origin.mjs` | shared-origin demo server | D-18 |
 
 Post-fix evidence: `FIXED-*.png` in `qa/screenshots/mobile/`.

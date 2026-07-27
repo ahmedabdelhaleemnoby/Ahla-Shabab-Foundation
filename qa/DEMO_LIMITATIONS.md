@@ -75,7 +75,7 @@ The admin dashboard previously fetched the Cairo webfont from `fonts.googleapis.
 | Code inspection | Complete |
 | Browser testing (Expo Web, headless Chrome, 320/390/430/768 px) | Complete |
 | Admin dashboard browser testing (1440×900) | Complete |
-| Emulator testing | **Not performed** — Android build fails in this environment |
-| Physical-device testing | **Not performed** |
+| Emulator testing | **Performed** — release APK on AVD `QA_API36` (android-36, arm64-v8a) |
+| Physical-device testing | **Not performed** — no handset attached |
 
-Behaviours that could differ on a real device and were therefore *not* confirmed: Android hardware back button, gesture-navigation bar insets, keyboard show/hide and field obstruction, OS font scaling, and native `Linking.openURL` behaviour. (`adjustsFontSizeToFit` is no longer relied on anywhere — it was removed as part of the D-10 fix precisely because it is a web no-op.)
+Confirmed on the emulator: launch, Home layout, five-item RTL tab bar, tab navigation, hardware back button, 0 fatal exceptions. Still unconfirmed because an emulator is not a handset: real gesture-navigation insets, OEM keyboard show/hide and field obstruction, OS font scaling, and native `Linking.openURL` against installed apps.\n\n**Build note for whoever ships this:** the Android build fails from the exFAT project volume (no hard links, which AGP requires) and succeeds from a local APFS disk or CI. See `BUILD_AND_TEST_RESULTS.md`.
