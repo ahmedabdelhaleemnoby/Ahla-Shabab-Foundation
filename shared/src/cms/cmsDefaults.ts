@@ -11,7 +11,7 @@ import {
   type MainTab,
   type NavTarget,
 } from './cmsTypes';
-import { appConfig, foundationStats } from '../data';
+import { appConfig, foundationStats, paymentMethods } from '../data';
 
 /** Fixed seed timestamp so defaults are deterministic across reloads. */
 const SEED_AT = '2026-07-13T09:00:00.000Z';
@@ -311,6 +311,7 @@ export function makeDefaultCmsState(): CmsState {
       socials: { ...defaultSettings.socials },
       stats: { ...defaultSettings.stats },
     },
+    paymentMethods: paymentMethods.map((m) => ({ ...m })),
     menu: defaultMenu.map((g) => ({ ...g, items: g.items.map((i) => ({ ...i })) })),
     home: defaultHome.map((s) => ({ ...s, config: { ...s.config } })),
     pages: defaultPages.map((p) => ({ ...p })),

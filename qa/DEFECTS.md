@@ -6,7 +6,7 @@
 
 ## Fix round — 2026-07-26 (after initial audit)
 
-**Eight defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3). Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
+**Nine defects have been fixed on request:** D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4). Round 4 also surfaced **D-18**, a pre-existing delivery-path limitation logged open, and required a correction to the D-08 wording (see below). Each carries a *Fix applied* and *Retest* section below. All other defects remain open and untouched. Post-fix verification: typecheck clean (3 workspaces), 28/28 unit tests pass, dashboard builds, and the full navigation + consultation + gating regression suite re-run green.
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
@@ -26,7 +26,8 @@
 | D-14 | Low | Dead conditional + stale section comment (technical debt) | Open |
 | D-15 | Low | About footer buttons render at uneven heights when a label wraps | Open |
 | D-16 | Low | Admin dashboard loads fonts from an external CDN | Open — informational |
-| **D-17** | **Medium** | **Remaining dashboard Settings sections are draft-only — save does nothing** | **Open — found during the D-08 fix** |
+| **D-17** | Medium | Remaining dashboard Settings sections are draft-only — save does nothing | **FIXED** |
+| **D-18** | **Medium** | **Dashboard and Expo web are different origins, so CMS edits never reach the web preview live** | **Open — pre-existing, found during the D-17 fix** |
 
 ---
 
@@ -298,7 +299,8 @@ label                  | declared target | resulting route | verdict
   PASS | survives a dashboard reload
   ```
 - **Evidence:** `qa/screenshots/mobile/FIXED-about-cms-stats.png`
-- **Knock-on for D-07:** the client can now change or blank the "1.2M+" figure from the dashboard themselves, without a code change.
+- **Correction to this entry (made in round 4).** The retest line above, *"dashboard-authored stats reach the About screen"*, was verified by writing CMS state to the **app's own origin** — it proves the app-side reader, which is real and correct. It does **not** prove that editing in the running dashboard shows up in the running web preview: those are served on different ports, so their `localStorage` is partitioned and no live sync occurs. That limitation is pre-existing, affects every CMS slice, and is now logged as **D-18**. The accurate statement is: *the app renders CMS-authored stats*, and the supported way to move CMS state between the two is the dashboard's export/import JSON.
+- **Knock-on for D-07:** the client can change or blank the "1.2M+" figure from the dashboard without a code change — via export/import, or from a same-origin deployment.
 - **Scope boundary:** only the impact-numbers card was wired. The other Settings sections are still draft-only — logged as **D-17** rather than silently left.
 - **Status:** **FIXED**
 
@@ -429,6 +431,44 @@ label                  | declared target | resulting route | verdict
 - **Expected:** the edit persists, as it now does for *أرقام الأثر*.
 - **Actual:** the badge turns green ("تم الحفظ") but nothing is written. All of these sections are local `useState` seeded from `appConfig` / `seedMethods`, and `save()` only flips the badge. The edit is gone on reload and never reaches the app.
 - **Likely cause:** `dashboard/src/pages/Settings.tsx` was built as a visual mock. Only the impact-numbers card has been wired to the CMS store (D-08).
-- **Recommended fix:** extend the same pattern — move `heroTitle`/`heroSubtitle`, contact fields, socials and `zakatNisabEgp` into `mutate()` calls (they already exist on `CmsSettings`), then add a mobile reader for each. `paymentMethods` would need a new CMS slice.
-- **Demo guidance until then:** demo the impact-numbers card, which genuinely works end to end. Avoid presenting the other Settings sections as functional, or state that they are visual placeholders.
-- **Status:** Open
+- **Fix applied:**
+  1. **Dashboard** — all six cards now hold a draft and commit through `mutate()` on save: hero texts, contact details, socials, zakat nisab, payment methods, alongside the impact numbers wired in round 3. Drafts seed from the CMS store rather than the static `appConfig`/`seedMethods`, so a reload shows the saved values.
+  2. **Schema** — `paymentMethods` became a first-class CMS slice (`CmsState.paymentMethods`), the only one of the six with no existing home. Schema **4 → 5**, with a migration backfilling it for stored state.
+  3. **Mobile readers** — the app previously read compiled constants in five places. Now: `AppDrawer` (hero title), `ContactUsScreen` (hotline/email/address/hours + **each social link opens its own URL**, which it did not before — it opened the website for all four), `CmsPageScreen` (website), `ZakatCalculatorScreen` (nisab seed), `DonateScreen` (payment methods). `ContactUsScreen`'s contact list was module-level, so it snapshotted at import time — moved inside the component so an edit is picked up on the next render.
+- **Retest — PASS** (`qa/harness/settings-all.mjs`, `payment-methods.mjs`):
+  ```
+  editor → CMS store:                        app renders CMS state:
+  PASS | hero text committed                 PASS | ContactUs renders the CMS hotline
+  PASS | contact detail committed            PASS | drawer header renders the CMS hero title
+  PASS | social link committed               PASS | Zakat seeds its nisab from CMS
+  PASS | payment methods slice present       PASS | all 5 default methods render
+  PASS | survives a dashboard reload         PASS | CMS description reaches Donate
+                                             PASS | removed methods no longer offered
+                                             PASS | CMS availability respected
+  ```
+- **A harness trap worth recording:** payment methods sit on **step 4 of a 5-step wizard**. The first version of the test loaded the Donate route and asserted directly, saw an empty list, and reported a false failure. `payment-methods.mjs` now walks الوجهة → الاختيار → المبلغ first.
+- **Scope note:** `slotDurationMinutes`, `appName`, `splashText` and the brand colours remain uneditable — they were not part of the Settings page and were not added.
+- **Delivery caveat:** these two halves compose only in a same-origin deployment — see **D-18**.
+- **Status:** **FIXED**
+
+
+---
+
+## D-18 — Dashboard and Expo web are different origins, so CMS edits never reach the preview live
+
+- **Requirement:** implied by §5/§9 — the demo must not imply capability it does not have.
+- **Severity:** Medium · **Priority:** P2
+- **Found:** round 4, while building the end-to-end test for D-17. **Pre-existing and unrelated to any fix in this branch** — it affects every CMS slice (menu, home, pages, media, consultation schemas, settings), not just the ones wired here.
+- **Steps to reproduce:** edit anything in the dashboard at `localhost:5173`, save, then open the Expo web build at `localhost:8087`.
+- **Expected (per the comment previously in `mobile/src/store/cms.ts`):** *"it shares the exact same localStorage key as the dashboard, so edits made in the dashboard are reflected live in the preview."*
+- **Actual:** nothing is shared. `localStorage` is partitioned per **origin**, and a different port is a different origin. Proven rather than assumed:
+  ```
+  dashboard: http://localhost:5173   app: http://localhost:8087
+  PASS | different origins (so storage is partitioned)
+  PASS | app cannot see the dashboard-written CMS state — live sync is impossible cross-origin
+  ```
+- **Likely cause:** the comment assumed same-origin serving; the two dev servers have always run on separate ports.
+- **Fix applied (documentation only):** the inaccurate comment in `mobile/src/store/cms.ts` has been replaced with an accurate one stating the partitioning and pointing at the supported path. **No behaviour was changed** — making live sync work needs both apps served from one origin, which is a deployment decision, not a code fix.
+- **The supported sync path already exists** and was not built for this: dashboard → **أدوات النظام** → *تصدير الإعدادات JSON*, then import. It is also the only way to reach a real device.
+- **Demo guidance:** do not promise live dashboard→app sync. Either demo the two independently, or pre-load the app's CMS state via import before the session.
+- **Status:** Open — needs a deployment decision (single origin) or acceptance of the export/import flow

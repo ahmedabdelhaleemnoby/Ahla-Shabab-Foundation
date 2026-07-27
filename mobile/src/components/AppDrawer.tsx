@@ -1,13 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Modal, Animated, ScrollView, Image, StyleSheet, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { appConfig, makeDefaultCmsState, LEGACY_TAB_ROUTES, type NavTarget, type MenuGroup } from '@ahla/shared';
+import { makeDefaultCmsState, LEGACY_TAB_ROUTES, type NavTarget, type MenuGroup } from '@ahla/shared';
 import { colors, font } from '../theme';
 import { Icon, IconName } from './Icon';
 import { navRef } from '../navigation/ref';
 import { useDrawerOpen, closeDrawer } from '../store/drawer';
 import { useAppState, appState } from '../store/appState';
-import { getMenu } from '../store/cms';
+import { getMenu, getSettings } from '../store/cms';
 
 const DRAWER_W = 296;
 
@@ -71,7 +71,7 @@ export function AppDrawer() {
               <Image source={require('../../assets/logo.png')} style={{ width: 40, height: 40 }} resizeMode="contain" />
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={[font('800'), { fontSize: 14.5, color: colors.navy700 }]}>{appConfig.heroTitle}</Text>
+              <Text style={[font('800'), { fontSize: 14.5, color: colors.navy700 }]}>{getSettings().heroTitle}</Text>
               <Text style={[font('600'), { fontSize: 10.5, color: colors.muted, marginTop: 1 }]}>
                 {loggedIn && email ? email : 'زائر — سجّل دخولك'}
               </Text>

@@ -3,7 +3,7 @@
 **Commit:** `ec46501` · **Date:** 2026-07-26
 **Evidence base:** code inspection + browser testing of the Expo Web build (320/390/430/768 px) + admin dashboard testing. **No emulator or device testing** — Android build blocked.
 
-> **Revision 4 — post-fix.** Eight defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3). Requirements 3, 10, 11, 14, 16, 21 and 23 moved up accordingly. One new defect was found while fixing D-08 and is logged as **D-17** (remaining dashboard Settings sections are draft-only). Fix details and retest output: `DEFECTS.md`.
+> **Revision 5 — post-fix.** Nine defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4). Requirements 3, 10, 11, 14, 16, 21 and 23 moved up accordingly. Round 4 surfaced **D-18** (dashboard and Expo web are different origins, so CMS edits do not reach the preview live — pre-existing, logged open) and corrected the round-3 D-08 claim. Fix details and retest output: `DEFECTS.md`.
 
 Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 

@@ -3,16 +3,16 @@
 
 **Date:** 2026-07-26
 **Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 4 — post-fix. Eight defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3). One new defect (**D-17**) was found while fixing D-08 and is logged open. This report reflects the fixed build.
-**Working tree at audit start:** clean. **Now:** 17 source files modified across three fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
+**Revision:** 5 — post-fix. Nine defects fixed on request and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4). Round 4 surfaced **D-18**, a pre-existing delivery-path limitation now logged open, and required a correction to the D-08 claim. This report reflects the fixed build.
+**Working tree at audit start:** clean. **Now:** 20 source files modified across four fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
 **App version:** `app.json` 1.4.0, Android versionCode 8
 
 **Companion documents:** `REQUIREMENTS_STATUS.md` · `DEFECTS.md` · `NAVIGATION_MATRIX.md` · `PERSISTENCE_REPORT.md` · `BUILD_AND_TEST_RESULTS.md` · `DEMO_LIMITATIONS.md`
-**Evidence:** 71 mobile screenshots in `qa/screenshots/mobile/`, 19 dashboard screenshots in `qa/screenshots/dashboard/`, test harness scripts in `qa/logs/`
+**Evidence:** 82 mobile screenshots in `qa/screenshots/mobile/`, 19 dashboard screenshots in `qa/screenshots/dashboard/`, reproducible harness in `qa/harness/`
 
 > **Evidence gap — video:** Phase 7 of the brief asked for seven recorded flow videos. **No videos were recorded**; `qa/videos/` is empty. Each of the seven flows was instead exercised end-to-end by a scripted harness with per-step state assertions and screenshots at each stage, which is stronger evidence for pass/fail than a screen recording — but it is not the requested artefact, and is recorded here as an unmet deliverable rather than quietly omitted.
 >
-> Note: `qa/` is listed in `.gitignore`, so these artefacts stay on disk and are not committed.
+> Note: `.gitignore` tracks `qa/*.md` and `qa/harness/` (reports + the harness that produced them) and excludes the ~52 MB of screenshots, videos and run output, which stay on disk only.
 
 ---
 
@@ -44,13 +44,13 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 | **FAIL** | 1 | **0** |
 | **BLOCKED** | Android build/device testing | unchanged (inside #22) |
 | **Weighted completion** | ~79% | **~96%** |
-| Defects logged | 16 | **17** (**8 fixed**, 9 open — D-17 newly found) |
+| Defects logged | 16 | **18** (**9 fixed**, 9 open — D-17 fixed, D-18 newly found) |
 | — Critical | 0 | **0** |
 | — High | 2 | **0** (both fixed) |
-| — Medium | 7 | **2 + D-17** (D-03/04/05/06/08/09 fixed) |
+| — Medium | 7 | **2 + D-18** (D-03/04/05/06/08/09/17 fixed) |
 | — Low | 7 | 7 |
 | Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
-| Unit tests | 28/28 pass | **30/30 pass** (2 added) |
+| Unit tests | 28/28 pass | **32/32 pass** (4 added) |
 | Typecheck | clean (3 workspaces) | **clean (3 workspaces)** |
 
 ### Critical issues
@@ -68,11 +68,17 @@ One coverage gap must be stated clearly: **the Android build fails in this envir
 - ~~**D-08** dashboard impact-number editor inert~~ → **FIXED.** Worse than first diagnosed: `CmsSettings` had no `stats` field *and* the Settings page never imported the CMS store, so edits didn't survive a dashboard reload either. Schema bumped 3→4 with a migration; editor commits via `mutate()`; mobile reads via a new `getSettings()` with per-field fallback.
 - ~~**D-09** blank-email guests shared one identity~~ → **FIXED.** Email is now required, and the defensive fallback is per-submission rather than a shared constant. A second, worse variant surfaced while fixing: `??` meant a *cleared* field produced `''`, collapsing those submissions into an empty-string identity — now handled.
 
+### Also fixed (round 4)
+- ~~**D-17** remaining Settings sections draft-only~~ → **FIXED.** All six cards now commit through `mutate()`; `paymentMethods` became a CMS slice (schema 4→5 + migration); five mobile screens now read CMS values instead of compiled constants. A side-effect worth noting: each social button now opens **its own** URL — previously all four opened the website.
+
 ### Newly found while fixing (open)
-- **D-17 (Medium)** — the remaining dashboard Settings sections (hero texts, contact, socials, payment methods, zakat) are draft-only: the save badge turns green but nothing persists. Only the impact-numbers card is wired. Demo the impact card; treat the rest as visual placeholders.
+- **D-18 (Medium)** — the dashboard (`:5173`) and Expo web (`:8087`) are **different origins**, so their `localStorage` is partitioned and a dashboard edit never reaches the web preview live. Pre-existing and affecting every CMS slice, not just this branch's work. A comment in `mobile/src/store/cms.ts` asserted the opposite; it has been corrected. The supported sync path — dashboard → أدوات النظام → export/import JSON — already exists.
+
+### Correction to the round-3 D-08 claim
+The D-08 retest line *"dashboard-authored stats reach the About screen"* was verified by writing CMS state to the **app's own origin**. That proves the app-side reader, which is real. It does **not** prove live dashboard→preview delivery, which D-18 shows is impossible across origins. `DEFECTS.md` carries the corrected wording.
 
 ### Remaining open (none blocking)
-2 Medium — D-07 (unverified 1.2M stat, **client decision** — now editable from the dashboard), D-17 (above).
+2 Medium — D-07 (unverified 1.2M stat, **client decision**), D-18 (above).
 7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
 
 ---
@@ -146,7 +152,8 @@ The persistence fix deserves one plain sentence: **it changed the words, not the
 6. ~~**D-04 / D-05** — provider working-hours editing and the Reschedule action~~ — **done, retested, verified.**
 7. ~~**D-08** — wire the dashboard's impact-number editor through to the app~~ — **done, retested, verified.**
 8. ~~**D-09** — make the consultation email field required~~ — **done, retested, verified.**
-8b. **D-17** — wire the remaining Settings sections, or label them as placeholders.
+8b. ~~**D-17** — wire the remaining Settings sections~~ — **done, retested, verified.**
+8c. **D-18** — decide: serve both apps from one origin for live sync, or accept the existing export/import JSON flow and brief the client accordingly.
 9. **D-10 / D-11** — fix the two 320 px layout issues.
 10. **D-14** — clear the dead conditional and the stale Home comment.
 
@@ -192,7 +199,7 @@ Scope of this approval, stated plainly: the app is approved as a *presentation d
 
 ## 8. Files changed in the fix round
 
-Seventeen source files across three fix rounds (some touched more than once), no dependencies added, no behaviour changed beyond the eight defects:
+Twenty source files across four fix rounds (several touched more than once), no dependencies added, no behaviour changed beyond the nine defects:
 
 | File | Change | Defect |
 |---|---|---|
@@ -216,5 +223,12 @@ Seventeen source files across three fix rounds (some touched more than once), no
 | `mobile/src/store/cms.ts` | added `getSettings()` with per-field fallback | D-08 |
 | `mobile/src/screens/NewsScreen.tsx` | About stats read from CMS settings | D-08 |
 | `mobile/src/screens/ConsultationRequestScreen.tsx` | per-submission anonymous identity fallback | D-09 |
+| `shared/src/cms/cmsTypes.ts` | `paymentMethods` slice; schema 4 → 5 | D-17 |
+| `dashboard/src/pages/Settings.tsx` | all six cards commit via `mutate()` | D-17 |
+| `mobile/src/screens/ContactUsScreen.tsx` | contact + per-network social links from CMS | D-17 |
+| `mobile/src/screens/ZakatCalculatorScreen.tsx` | nisab seeded from CMS | D-17 |
+| `mobile/src/screens/DonateScreen.tsx` | payment methods from CMS | D-17 |
+| `mobile/src/components/AppDrawer.tsx` | hero title from CMS | D-17 |
+| `mobile/src/store/cms.ts` | `getPaymentMethods()`; corrected origin comment | D-17, D-18 |
 
 Post-fix evidence: `FIXED-*.png` in `qa/screenshots/mobile/`.

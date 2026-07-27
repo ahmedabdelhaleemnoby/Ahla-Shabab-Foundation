@@ -18,7 +18,7 @@ Committed so the findings are reproducible rather than merely readable.
    ```
    Wait for the first bundle to finish (~40 s) before running anything.
 
-For the dashboard suites (`dash.mjs`, `dash2.mjs`), also start:
+For the dashboard suites (`dash.mjs`, `dash2.mjs`, `settings-dashboard.mjs`, `settings-all.mjs`), also start:
 ```bash
 npm run dev --workspace dashboard
 ```
@@ -52,6 +52,8 @@ Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 | `availability.mjs` | provider working-hours editing + booking reschedule | D-04, D-05 |
 | `settings.mjs` | CMS-driven About stats; consultation email required + dedup | D-08, D-09 |
 | `settings-dashboard.mjs` | dashboard impact editor commits to the CMS store (needs `:5173`) | D-08 |
+| `settings-all.mjs` | all six Settings cards commit; app renders them; proves the origin split (needs both servers) | D-17, D-18 |
+| `payment-methods.mjs` | CMS payment methods reach the Donate wizard's step 4 | D-17 |
 | `persist.mjs` | what survives a reload | PERSISTENCE_REPORT |
 | `responsive.mjs`, `overflow.mjs`, `crop.mjs` | 320/390/430/768 px layout, overflow, truncation | REQUIREMENTS §20, D-10/D-11 |
 | `shots.mjs` | evidence screenshots | — |
@@ -59,13 +61,15 @@ Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 | `final.mjs` | network inventory (asserts 0 non-localhost requests) | DEMO_LIMITATIONS |
 | `retest.mjs`, `retest2.mjs`, `last.mjs` | post-fix verification of D-01/D-02/D-03/D-06 | DEFECTS |
 
-## Two cautions for anyone extending these
+## Three cautions for anyone extending these
 
 **Use real pointer events.** React Native Web's responder system ignores synthetic `dispatchEvent` clicks. Presses must be `mouse.move → down → ~110 ms → up`; a zero-delay `mouse.click()` is also unreliable. `formlib.press()` does this correctly — reuse it.
 
+**Walk multi-step flows.** Donation payment methods live on **step 4 of a 5-step wizard**; asserting straight after loading the Donate route finds an empty list and reports a false failure. `payment-methods.mjs` walks الوجهة → الاختيار → المبلغ first.
+
 **Reset the stack between assertions.** Pushed screens stay in the DOM while hidden, so a selector scanning the whole document can match a stale screen and report a false result. Use `__nav.reset({index:0, routes:[{name:'Main', params:{screen: tab}}]})`, and match on *exact* trimmed text — substring matching collides badly in Arabic (`تبرع` is inside `تبرع الآن`, `تبرع للحالة`, …).
 
-Both mistakes produced false failures during the initial audit; the harness-accuracy note in `NAVIGATION_MATRIX.md` records what they looked like.
+All three produced false failures at some point in this work; the harness-accuracy note in `NAVIGATION_MATRIX.md` records what the first two looked like.
 
 ## Scripts deliberately not committed
 

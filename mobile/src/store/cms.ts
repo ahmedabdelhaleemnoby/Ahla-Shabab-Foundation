@@ -5,6 +5,7 @@ import {
   type CmsState,
   type CmsSettings,
   type MenuGroup,
+  type PaymentMethodInfo,
   type HomeSection,
   type ConsultationTypeConfig,
 } from '@ahla/shared';
@@ -12,12 +13,16 @@ import {
 /**
  * Mobile-side CMS reader.
  *
- * The dashboard persists CMS edits to the browser's localStorage. Native builds
- * cannot see that storage, so they use the shared defaults. When the app runs
- * on WEB (Expo web / mobile-web preview) it shares the exact same localStorage
- * key as the dashboard, so edits made in the dashboard are reflected live in the
- * preview — the honest "both read the same CMS state wherever technically
- * possible" path. To sync a real device, export JSON from the dashboard.
+ * The dashboard persists CMS edits to the browser's localStorage under
+ * CMS_STORAGE_KEY; this reader loads the same key, falling back to the compiled
+ * defaults when nothing is stored (always the case on native).
+ *
+ * IMPORTANT — localStorage is partitioned per ORIGIN, and in this setup the two
+ * apps are served on different ports (dashboard :5173, Expo web :8087). They are
+ * therefore separate origins with separate storage, and a dashboard edit does
+ * NOT appear in the web preview. Live sync only works if both are served from
+ * one origin. The supported way to move CMS state either way — to the preview or
+ * to a real device — is the dashboard's Tools page: export JSON, then import it.
  */
 function readCms(): CmsState {
   if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
@@ -50,7 +55,16 @@ export function getSettings(): CmsSettings {
     ...fallback,
     ...stored,
     stats: { ...fallback.stats, ...(stored?.stats ?? {}) },
+    socials: { ...fallback.socials, ...(stored?.socials ?? {}) },
   };
+}
+
+/** Donation methods authored in the dashboard; compiled defaults if unset. */
+export function getPaymentMethods(): PaymentMethodInfo[] {
+  const stored = readCms().paymentMethods;
+  return Array.isArray(stored) && stored.length > 0
+    ? stored
+    : makeDefaultCmsState().paymentMethods;
 }
 
 const sorted = <T extends { sortOrder: number }>(a: T[]): T[] => [...a].sort((x, y) => x.sortOrder - y.sortOrder);

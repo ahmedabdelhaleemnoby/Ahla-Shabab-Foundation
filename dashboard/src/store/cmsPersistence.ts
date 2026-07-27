@@ -41,6 +41,10 @@ export function migrate(state: CmsState): CmsState {
   if (!s.settings?.stats) {
     s = { ...s, settings: { ...s.settings, stats: { ...makeDefaultCmsState().settings.stats } } };
   }
+  // v4 → v5: payment methods became an editable CMS slice.
+  if (!Array.isArray(s.paymentMethods)) {
+    s = { ...s, paymentMethods: makeDefaultCmsState().paymentMethods.map((m) => ({ ...m })) };
+  }
   if (s.version !== CMS_SCHEMA_VERSION) {
     s = { ...s, version: CMS_SCHEMA_VERSION };
   }

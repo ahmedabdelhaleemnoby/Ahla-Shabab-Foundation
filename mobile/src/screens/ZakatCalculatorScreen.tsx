@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { egp } from '@ahla/shared';
+import { getSettings } from '../store/cms';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -19,14 +20,14 @@ const FIELDS: { key: FieldKey; label: string; hint: string; icon: IconName; subt
   { key: 'liabilities', label: 'الخصوم والديون عليك', hint: 'يُخصم من إجمالي المال', icon: 'arrow-up', subtract: true },
 ];
 
-// Approximate nisab (value of 85g gold). Editable by the user.
-const DEFAULT_NISAB = 200000;
+// Nisab (value of 85g gold) seeded from the dashboard setting, then editable
+// by the user for the current session.
 const ZAKAT_RATE = 0.025;
 
 export default function ZakatCalculatorScreen() {
   const nav = useNavigation<any>();
   const [values, setValues] = useState<Record<FieldKey, string>>({ cash: '', gold: '', trade: '', owed: '', liabilities: '' });
-  const [nisab, setNisab] = useState(String(DEFAULT_NISAB));
+  const [nisab, setNisab] = useState(String(getSettings().zakatNisabEgp));
 
   const set = (k: FieldKey, v: string) => setValues((prev) => ({ ...prev, [k]: v.replace(/[^0-9]/g, '') }));
   const n = (v: string) => Number(v || 0);

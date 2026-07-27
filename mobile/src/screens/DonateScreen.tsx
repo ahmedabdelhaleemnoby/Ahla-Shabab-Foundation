@@ -9,7 +9,6 @@ import { colors, font, num, row, rowBetween } from '../theme';
 import {
   cases,
   projects,
-  paymentMethods,
   makeBookingRef,
   initialDonationStatus,
   isMethodUsable,
@@ -18,6 +17,7 @@ import {
   egp,
   type PaymentMethod,
 } from '@ahla/shared';
+import { getPaymentMethods } from '../store/cms';
 import { appState } from '../store/appState';
 
 /* Donation journey (demo): destination → case/project → amount & recurrence
@@ -35,7 +35,7 @@ const DESTINATIONS: { id: string; label: string; hint: string; icon: IconName; p
 
 const AMOUNTS = ['مبلغ آخر', '250', '500', '1000'];
 
-/** Brand visuals per method — availability/behavior comes from shared paymentMethods. */
+/** Brand visuals per method — availability/behaviour comes from the CMS payment methods. */
 const BRAND: Record<PaymentMethod, { brand?: string; brandColor?: string; icon?: 'credit-card' | 'smartphone' | 'home' }> = {
   'بطاقة بنكية': { icon: 'credit-card' },
   فوري: { brand: 'fawry', brandColor: colors.fawryNavy },
@@ -80,7 +80,7 @@ export default function DonateScreen() {
 
   const effective = amount === 'مبلغ آخر' ? custom : amount;
   const total = effective ? `${effective} ج.م` : '—';
-  const methodInfo = paymentMethods.find((m) => m.id === method);
+  const methodInfo = getPaymentMethods().find((m) => m.id === method);
   const needsPick = !!destMeta.pick;
 
   const validateStep = (): string | null => {
@@ -287,7 +287,7 @@ export default function DonateScreen() {
         <>
           <Label text="اختر طريقة الدفع" />
           <View style={{ gap: 8 }}>
-            {paymentMethods.map((m) => {
+            {getPaymentMethods().map((m) => {
               const on = method === m.id;
               const available = m.availability === 'متاحة';
               const b = BRAND[m.id];
