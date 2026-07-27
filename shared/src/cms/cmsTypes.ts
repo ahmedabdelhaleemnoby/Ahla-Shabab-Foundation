@@ -13,8 +13,10 @@
  * composed.
  */
 
+import type { PaymentMethodInfo } from '../types';
+
 /** Bump when the shape changes; `cmsMigrations` upgrades older stored blobs. */
-export const CMS_SCHEMA_VERSION = 4;
+export const CMS_SCHEMA_VERSION = 5;
 export const CMS_STORAGE_KEY = 'ahla_cms_v1';
 /** Media blobs live in their own key so a quota problem can't corrupt the core CMS. */
 export const CMS_MEDIA_KEY = 'ahla_cms_media_v1';
@@ -369,6 +371,8 @@ export interface CmsActivityEntry {
 export interface CmsState {
   version: number;
   settings: CmsSettings;
+  /** Donation methods shown on the app's Donate screen; editable from the dashboard. */
+  paymentMethods: PaymentMethodInfo[];
   menu: MenuGroup[];
   home: HomeSection[];
   pages: CmsPage[];

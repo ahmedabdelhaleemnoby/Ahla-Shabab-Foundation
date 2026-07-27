@@ -1,8 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Save, Phone, Share2, Wallet, Home, Calculator, BarChart3 } from 'lucide-react';
 import {
-  appConfig,
-  paymentMethods as seedMethods,
   type PaymentMethodInfo,
   type PaymentAvailability,
 } from '@ahla/shared';
@@ -12,9 +10,9 @@ import { useCms, mutate } from '../store/cmsStore';
 /* App settings — everything the mobile app displays that isn't content:
    impact numbers, home hero texts, contact info, socials, payment methods, zakat.
 
-   Impact numbers are backed by the CMS store, so saving them reaches the app's
-   About screen. The remaining sections below are still local-only draft state —
-   they render and validate but do not persist yet (see qa/DEFECTS.md D-17).
+   Each card holds a local draft and commits to the CMS store on save, so an
+   edit reaches the mobile app (which reads the same state via getSettings /
+   getPaymentMethods).
    TODO(backend): GET/PUT /admin/config + PATCH /admin/payment-methods/:id. */
 
 const AVAILABILITIES: PaymentAvailability[] = ['متاحة', 'قيد التفعيل', 'غير متاحة حالياً'];
@@ -25,16 +23,35 @@ export default function Settings() {
   const cmsState = useCms();
   // Draft copy; committed to the CMS store (and therefore to the app) on save.
   const [impact, setImpact] = useState({ ...cmsState.settings.stats });
-  const [cfg, setCfg] = useState({ ...appConfig, socials: { ...appConfig.socials } });
-  const [methods, setMethods] = useState<PaymentMethodInfo[]>(seedMethods.map((m) => ({ ...m })));
+  const [cfg, setCfg] = useState({ ...cmsState.settings, socials: { ...cmsState.settings.socials } });
+  const [methods, setMethods] = useState<PaymentMethodInfo[]>(cmsState.paymentMethods.map((m) => ({ ...m })));
   const [saved, setSaved] = useState<Record<string, boolean>>({ impact: true, hero: true, contact: true, socials: true, methods: true, zakat: true });
 
   const touch = (key: string) => setSaved((s) => ({ ...s, [key]: false }));
+  /** Every section commits to the CMS store, so a save reaches the app. */
   const save = (key: string) => {
+    const log = (entityName: string) => ({ action: 'عدّل الإعدادات', entityType: 'إعدادات', entityName });
     if (key === 'impact') {
-      mutate({ action: 'عدّل أرقام الأثر', entityType: 'إعدادات', entityName: 'أرقام الأثر' }, (d) => {
-        d.settings.stats = { ...impact };
+      mutate(log('أرقام الأثر'), (d) => { d.settings.stats = { ...impact }; });
+    } else if (key === 'hero') {
+      mutate(log('نصوص الشاشة الرئيسية'), (d) => {
+        d.settings.heroTitle = cfg.heroTitle;
+        d.settings.heroSubtitle = cfg.heroSubtitle;
       });
+    } else if (key === 'contact') {
+      mutate(log('بيانات التواصل'), (d) => {
+        d.settings.hotline = cfg.hotline;
+        d.settings.email = cfg.email;
+        d.settings.address = cfg.address;
+        d.settings.workingHours = cfg.workingHours;
+        d.settings.website = cfg.website;
+      });
+    } else if (key === 'socials') {
+      mutate(log('روابط التواصل الاجتماعي'), (d) => { d.settings.socials = { ...cfg.socials }; });
+    } else if (key === 'zakat') {
+      mutate(log('حاسبة الزكاة'), (d) => { d.settings.zakatNisabEgp = Number(cfg.zakatNisabEgp) || 0; });
+    } else if (key === 'methods') {
+      mutate(log('وسائل الدفع'), (d) => { d.paymentMethods = methods.map((m) => ({ ...m })); });
     }
     setSaved((s) => ({ ...s, [key]: true }));
   };

@@ -1,31 +1,34 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { appConfig } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, radius, row } from '../theme';
+import { getSettings } from '../store/cms';
 
-/* Contact details come from the shared app config — editable from the dashboard (إعدادات التطبيق). */
-const CONTACTS: { icon: IconName; label: string; value: string; ltr?: boolean }[] = [
-  { icon: 'phone', label: 'الخط الساخن', value: appConfig.hotline, ltr: true },
-  { icon: 'mail', label: 'البريد الإلكتروني', value: appConfig.email, ltr: true },
-  { icon: 'map-pin', label: 'العنوان', value: appConfig.address },
-  { icon: 'clock', label: 'مواعيد العمل', value: appConfig.workingHours },
-];
-
-const SOCIAL: { icon: IconName; label: string }[] = [
-  { icon: 'facebook', label: 'فيسبوك' },
-  { icon: 'instagram', label: 'إنستجرام' },
-  { icon: 'youtube', label: 'يوتيوب' },
-  { icon: 'twitter', label: 'إكس' },
+/* Contact details and socials are authored in the dashboard (إعدادات التطبيق).
+   Both lists are built inside the component so an edit is picked up on the next
+   render rather than snapshotted at module-import time. */
+type SocialKey = 'facebook' | 'instagram' | 'youtube' | 'twitter';
+const SOCIAL: { icon: IconName; label: string; key: SocialKey }[] = [
+  { icon: 'facebook', label: 'فيسبوك', key: 'facebook' },
+  { icon: 'instagram', label: 'إنستجرام', key: 'instagram' },
+  { icon: 'youtube', label: 'يوتيوب', key: 'youtube' },
+  { icon: 'twitter', label: 'إكس', key: 'twitter' },
 ];
 
 export default function ContactUsScreen() {
   const nav = useNavigation<any>();
+  const settings = getSettings();
+  const CONTACTS: { icon: IconName; label: string; value: string; ltr?: boolean }[] = [
+    { icon: 'phone', label: 'الخط الساخن', value: settings.hotline, ltr: true },
+    { icon: 'mail', label: 'البريد الإلكتروني', value: settings.email, ltr: true },
+    { icon: 'map-pin', label: 'العنوان', value: settings.address },
+    { icon: 'clock', label: 'مواعيد العمل', value: settings.workingHours },
+  ];
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
@@ -54,7 +57,7 @@ export default function ContactUsScreen() {
       </Text>
       <View style={[row, { gap: 10 }]}>
         {SOCIAL.map((s) => (
-          <Pressable key={s.label} onPress={() => Linking.openURL(appConfig.website).catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
+          <Pressable key={s.label} onPress={() => Linking.openURL(settings.socials[s.key] || settings.website).catch(() => {})} style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingVertical: 14 }}>
             <Icon name={s.icon} size={20} color={colors.navy700} />
             <Text style={[font('700'), { fontSize: 9.5, color: colors.slate, marginTop: 6 }]}>{s.label}</Text>
           </Pressable>

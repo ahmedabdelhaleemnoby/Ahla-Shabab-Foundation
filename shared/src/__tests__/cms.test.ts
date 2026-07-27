@@ -7,7 +7,7 @@ import {
   defaultPages,
   defaultMedia,
 } from '../cms';
-import { foundationStats } from '../data';
+import { foundationStats, paymentMethods } from '../data';
 
 describe('CMS defaults', () => {
   it('builds a valid default state at the current schema version', () => {
@@ -67,8 +67,8 @@ describe('CMS defaults', () => {
     }
   });
 
-  it('is at schema v4 and deep-copies media + consultations', () => {
-    expect(CMS_SCHEMA_VERSION).toBe(4);
+  it('is at schema v5 and deep-copies media + consultations', () => {
+    expect(CMS_SCHEMA_VERSION).toBe(5);
     const a = makeDefaultCmsState();
     const b = makeDefaultCmsState();
     a.media[0].title = 'x';
@@ -88,6 +88,30 @@ describe('CMS defaults', () => {
     const other = makeDefaultCmsState();
     s.settings.stats.beneficiaries = 'changed';
     expect(other.settings.stats.beneficiaries).not.toBe('changed');
+  });
+
+  // v5 made payment methods an editable CMS slice so the dashboard's
+  // وسائل الدفع card reaches the app's Donate screen (D-17).
+  it('seeds payment methods as an editable slice, copied per instance', () => {
+    const s = makeDefaultCmsState();
+    expect(s.paymentMethods.length).toBe(paymentMethods.length);
+    expect(new Set(s.paymentMethods.map((m) => m.id)).size).toBe(s.paymentMethods.length);
+
+    const other = makeDefaultCmsState();
+    s.paymentMethods[0].availability = 'غير متاحة حالياً';
+    expect(other.paymentMethods[0].availability).not.toBe('غير متاحة حالياً');
+  });
+
+  // Every field the dashboard Settings page edits must exist on CmsSettings,
+  // or the save silently drops it (D-17).
+  it('exposes every dashboard-editable settings field', () => {
+    const s = makeDefaultCmsState().settings;
+    for (const k of ['heroTitle', 'heroSubtitle', 'hotline', 'email', 'address', 'workingHours', 'website', 'zakatNisabEgp'] as const) {
+      expect(s[k], `settings.${k} missing`).toBeDefined();
+    }
+    for (const k of ['facebook', 'instagram', 'youtube', 'twitter'] as const) {
+      expect(s.socials[k], `socials.${k} missing`).toBeDefined();
+    }
   });
 
   // The email is the identity key linking a returning guest's requests (D-09).

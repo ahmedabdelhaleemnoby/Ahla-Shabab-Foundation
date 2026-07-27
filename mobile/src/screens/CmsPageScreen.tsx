@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, Image, Pressable, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { appConfig, LEGACY_TAB_ROUTES, type PageSection, type ContentBlock, type NavTarget } from '@ahla/shared';
+import { LEGACY_TAB_ROUTES, type PageSection, type ContentBlock, type NavTarget } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, EmptyState } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { colors, font, num, row } from '../theme';
-import { getCmsPageBySlug, getMediaSrc } from '../store/cms';
+import { getCmsPageBySlug, getMediaSrc, getSettings } from '../store/cms';
 import type { RootProps } from '../navigation/types';
 
 /**
@@ -126,7 +126,7 @@ function BlockView({ block: b, onCta }: { block: ContentBlock; onCta: (t?: NavTa
     case 'contact':
       return (
         <Pressable
-          onPress={() => Linking.openURL(contactUrl(b.contactKind ?? 'website', b.contactValue ?? appConfig.website)).catch(() => {})}
+          onPress={() => Linking.openURL(contactUrl(b.contactKind ?? 'website', b.contactValue ?? getSettings().website)).catch(() => {})}
           style={[row, { gap: 10, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 12, marginVertical: 8, backgroundColor: '#fff' }]}
         >
           <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
