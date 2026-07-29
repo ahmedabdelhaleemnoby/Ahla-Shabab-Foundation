@@ -613,3 +613,192 @@ npx tsx scripts/seed-consultation-types.mjs --prune                        # dry
 API_TOKEN=<bearer> npx tsx scripts/seed-consultation-types.mjs --apply --prune
 ```
 `--prune` deletes the two duplicates first; omit it to seed alongside them. Dry run is the default, so the first command is safe to run at any time.
+
+---
+
+## 19. Swagger schemas + field renames — implementation spec for the API
+
+`/api/docs` renders, but the spec behind it documents **no payloads**: 0 `components.schemas`, 0 request bodies, 0 response bodies across all 113 routes (verified 2026-07-28; the JSON is byte-identical to the copy taken earlier that day). An integrator has to guess every shape.
+
+This section is what to change. **The §18.2 renames are folded in** — write the DTOs with the *final* names, so the schemas don't document a shape that is about to change.
+
+### 19.1 Bootstrap — `main.ts`
+
+```ts
+const config = new DocumentBuilder()
+  .setTitle('أحلى شباب API')
+  .setVersion('1.0.0')
+  .addServer('https://portfolio.27lashabab.com', 'production')   // ← missing today
+  .addBearerAuth({ type: 'http', scheme: 'bearer' }, 'access-token')
+  .build();
+```
+
+Without `addServer`, generated clients have no base URL.
+
+> **Check the global `ValidationPipe` while you are here.** If it runs with `whitelist: true`, any property absent from a DTO is **silently stripped** from the request. That is the mechanism by which `disclaimer`, `consent` fields and `validationMessage` would vanish on seeding (§18.6) — adding them to the DTOs fixes both problems at once. If it runs with `forbidNonWhitelisted: true` the seeder gets a `400` instead, which is noisier but easier to diagnose.
+
+### 19.2 The response envelope
+
+Every response is wrapped in `{ data: … }`, lists as `{ data: { data: [], meta: {} } }`. Declaring that 113 times by hand is not worth it — one reusable decorator covers it:
+
+```ts
+// common/swagger/api-data-response.decorator.ts
+import { applyDecorators, Type } from '@nestjs/common';
+import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
+
+export const ApiDataResponse = <T extends Type<unknown>>(model: T, isArray = false) =>
+  applyDecorators(
+    ApiExtraModels(model),
+    ApiOkResponse({
+      schema: {
+        properties: {
+          data: isArray
+            ? { type: 'array', items: { $ref: getSchemaPath(model) } }
+            : { $ref: getSchemaPath(model) },
+        },
+      },
+    }),
+  );
+```
+
+For the paginated variant, wrap `{ data: T[], meta: PaginationMetaDto }` the same way.
+
+### 19.3 Renames to apply (from §18.2)
+
+Apply these **in the DTOs and the serializers together** — the point is that the wire format changes, not just the docs.
+
+| Current | Rename to | Why |
+|---|---|---|
+| `schemaVersion` | `version` | app, dashboard, migrations and tests all use `version` |
+| `consultationTypes` | `consultations` | matches `CmsState.consultations` |
+| `contactPhone` | `hotline` | `contactPhone` invites confusion with a provider's phone |
+| `contactEmail` | `email` | |
+| `contactAddress` | `address` | |
+| `socialLinks` | `socials` | |
+| `zakatNisab` | `zakatNisabEgp` | the value is currency-specific; the suffix is deliberate |
+
+And **add** these, absent today: `media` (the library already exists behind `/admin/cms/media` — expose it on the public read, since `getMediaSrc()` resolves `imageId`/`mediaId` throughout the CMS and renders nothing without it), plus `splashText`, `website`, `donationReassurance` on settings. `donationReassurance` is the donation-screen legal text; its absence is user-visible.
+
+`activity` and `updatedAt` are optional — dashboard-only, lowest priority.
+
+### 19.4 DTOs
+
+```ts
+// cms/dto/cms-settings.dto.ts
+export class SocialsDto {
+  @ApiProperty({ example: 'https://facebook.com/ahlashabab' }) facebook: string;
+  @ApiProperty({ example: '' }) instagram: string;
+  @ApiProperty({ example: '' }) youtube: string;
+  @ApiProperty({ example: '' }) twitter: string;
+}
+
+export class FoundationStatsDto {
+  @ApiProperty({ example: '12', description: 'Display string, not a count' })
+  governorates: string;
+  @ApiProperty({ example: '1.2M+' }) beneficiaries: string;
+  @ApiProperty({ example: '+12' }) yearsOfService: string;
+}
+
+export class CmsSettingsDto {
+  @ApiProperty({ example: 'خواطر أحلى شباب' }) appName: string;
+  @ApiProperty() heroTitle: string;
+  @ApiProperty() heroSubtitle: string;
+  @ApiProperty() splashText: string;              // add
+  @ApiProperty({ example: '#18489F' }) primaryColor: string;
+  @ApiProperty({ example: '#E9AF31' }) secondaryColor: string;
+  @ApiProperty({ example: '19XXX' }) hotline: string;        // was contactPhone
+  @ApiProperty() email: string;                              // was contactEmail
+  @ApiProperty() address: string;                            // was contactAddress
+  @ApiProperty() workingHours: string;
+  @ApiProperty() website: string;                            // add
+  @ApiProperty({ type: SocialsDto }) socials: SocialsDto;    // was socialLinks
+  @ApiProperty({ example: 357000 }) zakatNisabEgp: number;   // was zakatNisab
+  @ApiProperty() donationReassurance: string;                // add
+  @ApiProperty() demoLabel: string;
+  @ApiProperty({ type: FoundationStatsDto }) stats: FoundationStatsDto;
+}
+```
+
+```ts
+// cms/dto/form-field.dto.ts
+export const FORM_FIELD_TYPES = ['text','textarea','phone','whatsapp','email','number','age',
+  'governorate','radio','checkbox','multiselect','date','time','file','info','consent'] as const;
+
+export class FormFieldDto {
+  @ApiProperty({ example: 'name' }) key: string;
+  @ApiProperty({ enum: FORM_FIELD_TYPES }) type: (typeof FORM_FIELD_TYPES)[number];
+  @ApiProperty({ example: 'الاسم بالكامل' }) label: string;
+  @ApiProperty({ default: false }) required: boolean;
+  @ApiProperty({ default: false }) hidden: boolean;
+  @ApiProperty({ example: 0 }) sortOrder: number;
+  @ApiPropertyOptional({ type: [String] }) options?: string[];
+  @ApiPropertyOptional() placeholder?: string;
+  @ApiPropertyOptional({ description: 'Arabic error copy shown on failed validation' })
+  validationMessage?: string;
+  @ApiPropertyOptional() help?: string;
+  @ApiPropertyOptional({ description: 'Show this field only when showIfKey === showIfValue' })
+  showIfKey?: string;
+  @ApiPropertyOptional() showIfValue?: string;
+}
+```
+
+`consent` must be in the enum — every app form ends with a required consent checkbox, and without it the API cannot represent one (§18.6).
+
+```ts
+// cms/dto/consultation-type.dto.ts
+export class ConsultationTypeDto {
+  @ApiProperty({ example: 'نفسية', description: 'Arabic key — also the app route param' })
+  key: string;
+  @ApiProperty({ example: 'استشارة نفسية' }) name: string;
+  @ApiProperty({ example: 'heart' }) icon: string;
+  @ApiProperty() description: string;
+  @ApiProperty({ description: 'Advisory text shown on every form. Required on medical types.' })
+  disclaimer: string;
+  @ApiProperty({ enum: ['published', 'draft'] }) status: 'published' | 'draft';
+  @ApiProperty() visible: boolean;
+  @ApiProperty() homeVisible: boolean;
+  @ApiProperty({ type: [String] }) availableTimes: string[];
+  @ApiProperty() sortOrder: number;
+  @ApiProperty({ type: [FormFieldDto] }) fields: FormFieldDto[];
+}
+```
+
+`CreateConsultationTypeDto` can be `OmitType(ConsultationTypeDto, [] as const)` — the server assigns the id.
+
+### 19.5 Controllers
+
+```ts
+@ApiTags('CMS')
+@Controller('cms')
+export class CmsController {
+  @Get()
+  @ApiOperation({ summary: 'Full CMS state consumed by the mobile app' })
+  @ApiDataResponse(CmsStateDto)
+  find() { /* … */ }
+}
+
+@ApiTags('Admin · CMS')
+@ApiBearerAuth('access-token')
+@Controller('admin/cms/consultations')
+export class AdminConsultationTypesController {
+  @Post()
+  @ApiBody({ type: CreateConsultationTypeDto })
+  @ApiCreatedResponse({ type: ConsultationTypeDto })
+  create(@Body() dto: CreateConsultationTypeDto) { /* … */ }
+
+  @Delete(':key')
+  @ApiParam({ name: 'key', example: 'نفسية', description: 'URL-encode Arabic keys' })
+  @ApiNoContentResponse()
+  remove(@Param('key') key: string) { /* … */ }
+}
+```
+
+### 19.6 Order of work
+
+1. `addServer` + the `ApiDataResponse` helper — five minutes, unblocks client generation.
+2. **`GET /cms`** with the renames — this is the one the app consumes; nothing else can be integrated until its shape is settled.
+3. **`POST /admin/cms/consultations`** — the seeder writes here, and a documented body means its payload can be validated before it runs rather than debugged from a 400.
+4. `POST /consultations`, `/bookings`, `/donations` — the public write paths.
+5. The remaining admin routes, as they come up.
+
+Verify with `node qa/harness/api-contract.mjs` after step 2 — it diffs the live response against what the app expects and will go quiet when the renames land.
