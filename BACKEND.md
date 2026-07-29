@@ -603,12 +603,13 @@ Per-field, the API also has no `placeholder`, `validationMessage`, `hidden`, `so
 
 **Still outstanding after seeding:**
 
-1. **Two duplicates.** `psychological` and `family` already exist and cover the same ground as نفسية and أسرية. The script does **not** delete them; remove them via `DELETE /admin/cms/consultations/{key}` or the app will list both.
+1. ~~Two duplicates~~ — handled by `--prune`, which deletes `psychological` and `family` before seeding. It aborts rather than continuing if a delete fails, since seeding on top of a duplicate leaves both visible. `legal` is never pruned: it is not a duplicate.
 2. **`legal` (قانونية) has no app equivalent.** It is left untouched, but the app cannot render it — there is no form schema for it on the app side. Either add one, or drop the type.
 3. **If the read-back shows `disclaimer` or `consent` were dropped**, that is a schema change on the API, not something the app can work around. Both are on every form today and neither is cosmetic — see the two warnings above.
 
 Usage:
 ```bash
-npx tsx scripts/seed-consultation-types.mjs                       # dry run
-API_TOKEN=<bearer> npx tsx scripts/seed-consultation-types.mjs --apply
+npx tsx scripts/seed-consultation-types.mjs --prune                        # dry run
+API_TOKEN=<bearer> npx tsx scripts/seed-consultation-types.mjs --apply --prune
 ```
+`--prune` deletes the two duplicates first; omit it to seed alongside them. Dry run is the default, so the first command is safe to run at any time.

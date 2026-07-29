@@ -7,8 +7,14 @@
  * `consultationTypes` is what the app renders. If a type is missing, that form
  * is unreachable; if a field is missing, it simply never appears.
  *
- *   node scripts/seed-consultation-types.mjs            # dry run — prints payloads
+ *   node scripts/seed-consultation-types.mjs                      # dry run
  *   API_TOKEN=<bearer> node scripts/seed-consultation-types.mjs --apply
+ *   API_TOKEN=<bearer> node scripts/seed-consultation-types.mjs --apply --prune
+ *
+ * --prune first deletes the API's `psychological` and `family` types, which
+ * duplicate what نفسية and أسرية provide. Without it the app lists both.
+ * `legal` is never pruned — it is not a duplicate, it simply has no app-side
+ * form schema, and removing it is a separate product decision.
  *
  * Dry run is the default deliberately: this writes to a deployed service.
  * Get a token with POST /api/v1/admin/auth/login; pass the TOKEN, never a password.
@@ -38,6 +44,9 @@ import { defaultConsultations } from '../shared/src/cms/cmsDefaults.ts';
 const BASE = process.env.API_BASE ?? 'https://portfolio.27lashabab.com/api/v1';
 const TOKEN = process.env.API_TOKEN;
 const APPLY = process.argv.includes('--apply');
+const PRUNE = process.argv.includes('--prune');
+/** Existing API types that duplicate an app type, keyed by the app type they duplicate. */
+const DUPLICATES = { psychological: 'نفسية', family: 'أسرية' };
 
 /**
  * Full-fidelity payload. Arabic keys are kept verbatim (decided) — note they are
@@ -100,11 +109,12 @@ try {
   if (existing.length) {
     const keys = existing.map((t) => t.key);
     console.log(`\nalready on the server: ${keys.join(', ')}`);
-    const overlap = keys.filter((k) => ['psychological', 'family'].includes(k));
+    const overlap = keys.filter((k) => k in DUPLICATES);
     if (overlap.length) {
-      console.log(`  ⚠ ${overlap.join(' and ')} duplicate what نفسية/أسرية will provide.`);
-      console.log(`    This script does not delete them — remove via DELETE /admin/cms/consultations/{key}`);
-      console.log(`    or the app will show both.`);
+      console.log(`  ${PRUNE ? '·' : '⚠'} ${overlap.join(' and ')} duplicate what نفسية/أسرية will provide.`);
+      console.log(PRUNE
+        ? `    --prune is set: they will be deleted first.`
+        : `    Not deleted — pass --prune, or the app will show both.`);
     }
     if (keys.includes('legal')) {
       console.log(`  ⚠ 'legal' (قانونية) has no equivalent in the app and is left untouched.`);
@@ -112,6 +122,11 @@ try {
     }
   }
 } catch { /* offline: skip the warning, the payloads are still valid */ }
+
+if (PRUNE) {
+  console.log(`\n--prune: will DELETE ${Object.keys(DUPLICATES).join(', ')} before seeding`);
+  for (const [k, v] of Object.entries(DUPLICATES)) console.log(`    ${k} → superseded by ${v}`);
+}
 
 if (!APPLY) {
   console.log(`\n--- payloads ---`);
@@ -125,12 +140,29 @@ if (!TOKEN) {
   process.exit(1);
 }
 
+const auth = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
+if (PRUNE) {
+  console.log(`\n--- pruning duplicates ---`);
+  for (const key of Object.keys(DUPLICATES)) {
+    const res = await fetch(`${BASE}/admin/cms/consultations/${encodeURIComponent(key)}`, {
+      method: 'DELETE', headers: auth,
+    });
+    if (res.ok || res.status === 404) {
+      console.log(`  ${res.status === 404 ? '·' : '✓'} ${key}${res.status === 404 ? ' (already absent)' : ' deleted'}`);
+    } else {
+      console.log(`  ✗ ${key} — HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
+      console.log(`    Aborting: seeding on top of a duplicate would leave both visible.`);
+      process.exit(1);
+    }
+  }
+}
+
+console.log(`\n--- seeding ---`);
 let ok = 0, failed = 0;
 for (const p of payloads) {
   const res = await fetch(`${BASE}/admin/cms/consultations`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
-    body: JSON.stringify(p),
+    method: 'POST', headers: auth, body: JSON.stringify(p),
   });
   const text = await res.text();
   if (res.ok) { ok++; console.log(`  ✓ ${p.key}`); }
