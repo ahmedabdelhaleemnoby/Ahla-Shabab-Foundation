@@ -2,7 +2,9 @@
 
 Backend requirements for **جمعية خواطر أحلى شباب**, derived from the Technical Offer (§5–§8) and the already-built frontend (`mobile/` app + `dashboard/`). Every entity and endpoint below maps to a real screen or module that already consumes it via mock data in `@ahla/shared` — the job of the backend is to replace those mocks with a real REST API + database, changing nothing about the UI contracts.
 
-> Status: **not started** (deferred). This document is the source of truth for what to build. The frontend is a demo on `@ahla/shared` mock data (app **v1.4.0**).
+> Status: **an implementation now exists and is deployed** — `https://portfolio.27lashabab.com/api/v1` (Swagger: `/api/docs`). 113 endpoints, bearer auth, covering most of this spec.
+>
+> **The app has not been wired to it.** The mobile app and dashboard still run entirely on `@ahla/shared` mock data (app **v1.4.0**), and the QA acceptance report's "zero external requests" finding describes that state. Integration is a separate piece of work — see **§18** for the field-level differences that must be settled first.
 >
 > **Updated 2026-07-05** to cover the newer mobile screens: in-app Notifications + preferences, News/Articles feed, Volunteer applications, Contact-us messages, My Bookings, Donation history/receipts, Account settings, Zakat calculator (nisab config), FAQ, Onboarding. Sections marked **(v1.1)** are those additions.
 >
@@ -498,3 +500,72 @@ The QA acceptance pass established this precisely, and it is the shortest useful
 ### Build note, not a backend concern but it will bite you
 
 The mobile project is a **bare** Expo workflow — `android/` is committed, so `expo prebuild` never runs and **nothing in `app.json` reaches a native build**. Two defects came from exactly this: the version stayed at `1.0.0`/`versionCode 1` (D-19) and the launcher icon stayed the default Android robot (D-20). `scripts/sync-android-icons.mjs` and a manual `build.gradle` edit patch the symptoms; the durable fix is to adopt prebuild or run the sync scripts as part of CI. Also: the Android build fails from an exFAT volume (no hard links, which AGP requires) — build from a local disk or CI.
+
+---
+
+## 18. Contract reconciliation — the deployed API vs this spec (2026-07-28)
+
+An implementation is live at `https://portfolio.27lashabab.com/api/v1`. This section records **what actually exists** and where it differs from the app's expectations, so integration starts from facts rather than assumptions.
+
+**Verified read-only and unauthenticated.** Public `GET` endpoints were probed directly; the 93 admin endpoints and the 18 `/me/*` endpoints require a bearer token and were **not** exercised. Their shapes below are taken from the route list, not from responses — treat them as unconfirmed.
+
+Re-run the comparison at any time:
+```bash
+node qa/harness/api-contract.mjs
+```
+
+### 18.1 What the API already covers
+
+113 endpoints, titled `أحلى شباب API v1.0.0`, `bearer` auth (`access-token`). Coverage tracks this document closely:
+
+| Area | Endpoints | Notes |
+|---|---|---|
+| Auth | `POST /auth/otp/request`, `/otp/verify`, `/refresh`, `/logout` | Passwordless email OTP exactly as §5.2 |
+| Admin auth | `POST /admin/auth/login` | Separate password flow for staff, as specced |
+| Public content | `/home`, `/foundation`, `/cases`, `/projects`, `/articles`, `/services`, `/categories`, `/providers`, `/consultants` | All returning data |
+| Writes | `POST /consultations`, `/bookings`, `/donations`, `/volunteers`, `/contact` | The five public submit paths |
+| Account | 18 × `/me/*` — profile, bookings, consultations, donations, favorites, notifications, device tokens | |
+| **Provider self-service** | `/me/provider/bookings`, `/{id}/status`, `/{id}/schedule`, `/me/provider/overview` | **Matches §8 exactly**, including a separate `schedule` route so a reschedule need not touch status |
+| CMS | `GET /cms` public; `PUT /admin/cms`, `/cms/menu`, `/cms/home`, `/cms/settings`, pages, media, consultations, import/export/backup | |
+| Payments | `POST /webhooks/payment` | The gateway callback §11 requires |
+
+### 18.2 Differences that would break the app today
+
+`GET /cms` is the one that matters — the app consumes `CmsState` directly.
+
+| Concern | API sends | App expects | Recommended resolution |
+|---|---|---|---|
+| Schema version | `schemaVersion` | `version` | **API renames** — the app, dashboard, migrations and tests all use `version` |
+| Consultation types | `consultationTypes` | `consultations` | **API renames** — matches `CmsState.consultations` |
+| Contact details | `contactPhone`, `contactEmail`, `contactAddress` | `hotline`, `email`, `address` | **API renames.** `hotline` is the intended meaning; `contactPhone` invites confusion with a provider's phone |
+| Socials | `socialLinks` | `socials` | **API renames** |
+| Zakat nisab | `zakatNisab` | `zakatNisabEgp` | **API renames** — the `Egp` suffix is deliberate; the value is currency-specific |
+| Media library | *(absent)* | `media` | **API adds.** `/admin/cms/media` exists, so expose it on the public read too — `getMediaSrc()` resolves `imageId`/`mediaId` throughout the CMS and silently renders nothing without it |
+| Missing settings | *(absent)* | `splashText`, `website`, `donationReassurance` | **API adds.** `donationReassurance` is the donation-screen legal text — its absence is user-visible |
+| Audit / timestamps | *(absent)* | `activity`, `updatedAt` | **App tolerates** — optional, dashboard-only. Lowest priority |
+| Payment methods | ✅ all five fields align | — | **No change** |
+| `cases`, `consultants` | ✅ item shapes align | — | **No change** |
+
+**Direction of travel:** rename on the **API** side. Nine of these are pure naming, and the app's names are load-bearing across `shared/`, the dashboard store, the migrations and the test suite — changing them there is a far larger, riskier diff than renaming response fields in one serializer.
+
+### 18.3 Blocking gaps
+
+1. **`consultationTypes` is empty.** The dynamic consultation form is CMS-driven; with an empty array the app renders **no fields at all**. Seed the five types (نفسية، دينية، طبية، أسرية، أعمال) with their `FormField[]` schemas from `shared/src/cms/cmsDefaults.ts` before any integration test.
+2. **Swagger documents no payloads.** All 113 routes carry `operationId`, `tags` and a bare `200`/`201`, with **zero request or response schemas** and no `components.schemas`. Integrating against it means guessing every body. Decorating the NestJS DTOs with `@ApiProperty` would generate them automatically — this is the single highest-value fix on the API side.
+3. **No `servers` block** in the spec, so generated clients have no base URL.
+
+### 18.4 Response envelope
+
+Not previously specified here; the implementation chose:
+
+```jsonc
+{ "data": <payload> }                                  // single resource
+{ "data": { "data": [...], "meta": {                   // paginated list
+    "total": 12, "page": 1, "limit": 20, "totalPages": 1 } } }
+```
+
+The double nesting on lists is awkward but harmless. **Document it as the standard** (§12) so clients unwrap consistently, or flatten lists to `{ data: [...], meta: {...} }` — either is fine, but pick one.
+
+### 18.5 Already correct — worth not regressing
+
+`settings.stats` returns `{ governorates: "12", beneficiaries: "1.2M+", yearsOfService: "+12" }`. Strings, as §6 requires, and **the governorate count is the real 12** rather than the unverified 22. The `beneficiaries` figure is still the unapproved `1.2M+` — see D-07; it is now editable, so this is a content decision, not a code one.

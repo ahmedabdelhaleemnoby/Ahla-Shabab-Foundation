@@ -43,6 +43,11 @@ Environment overrides: `CHROME_PATH`, `BASE_URL` (default `http://localhost:8087
 
 Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 
+`api-contract.mjs` is the exception to "everything runs locally": it probes the
+deployed API over the internet, read-only and unauthenticated. Override the host
+with `API_BASE=…`. It touches public `GET` endpoints only — the admin and `/me`
+surfaces need a bearer token and are deliberately out of scope.
+
 ## What each script covers
 
 | Script | Covers | Report section |
@@ -64,6 +69,7 @@ Screenshots land in `qa/screenshots/` — gitignored, regenerated on each run.
 | `payment-methods.mjs` | CMS payment methods reach the Donate wizard's step 4 | D-17 |
 | `shared-origin.mjs` | dashboard edit → app, on one origin (needs `npm run demo`) | D-18 |
 | `low-severity.mjs` | 320–430 px tab/CTA/footer layout + social-link visibility | D-10, D-11, D-12, D-15 |
+| `api-contract.mjs` | live API vs the app's expected types (needs internet, no auth) | BACKEND §18 |
 | `persist.mjs` | what survives a reload | PERSISTENCE_REPORT |
 | `responsive.mjs`, `overflow.mjs`, `crop.mjs` | 320/390/430/768 px layout, overflow, truncation | REQUIREMENTS §20, D-10/D-11 |
 | `shots.mjs` | evidence screenshots | — |
