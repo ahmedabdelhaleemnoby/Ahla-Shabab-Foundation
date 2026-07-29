@@ -569,3 +569,34 @@ The double nesting on lists is awkward but harmless. **Document it as the standa
 ### 18.5 Already correct — worth not regressing
 
 `settings.stats` returns `{ governorates: "12", beneficiaries: "1.2M+", yearsOfService: "+12" }`. Strings, as §6 requires, and **the governorate count is the real 12** rather than the unverified 22. The `beneficiaries` figure is still the unapproved `1.2M+` — see D-07; it is now editable, so this is a content decision, not a code one.
+
+### 18.6 Consultation types — two incompatible definitions (blocking)
+
+§18.3 recorded `consultationTypes` as empty. It is no longer: the API now returns **three** types. They do not match the app's five, in taxonomy *or* schema, and this must be settled before integration.
+
+| | API (live) | App (`cmsDefaults.ts`) |
+|---|---|---|
+| Types | `psychological`, `legal`, `family` | `نفسية`, `دينية`, `طبية`, `أسرية`, `أعمال` |
+| Key language | latin | **Arabic — and the key is a route param** (`ConsultationRequest: { type }`) and the config lookup key |
+| Type name | `label` | `name` |
+| Enabled flag | `enabled` | `visible` + `status` (`published`/`draft`) |
+| Fields per type | 6–8 | 11–12 |
+| Consent field | **absent** | present and **required** on every type |
+| Disclaimer | **not modelled** | present on every type |
+
+**Only `psychological` and `family` overlap.** The API has `legal` (قانونية), which the app does not offer; the app has دينية, طبية and أعمال, which the API does not.
+
+**Two omissions are more than cosmetic:**
+
+1. **No consent field.** Every app form ends with a required checkbox — *"أوافق على أن تُعالَج بياناتي بسرية لغرض الاستشارة فقط"*. The API's types have none, so an integrated app would collect personal health and family data **without recording consent**. That is a data-protection question, not a UI detail.
+2. **No `disclaimer`.** The app shows *"هذه استشارة استرشادية ولا تُغني عن التشخيص أو العلاج المتخصص"* on every form. Dropping it from a **medical** consultation is a liability question.
+
+Per-field, the API also has no `placeholder`, `validationMessage`, `hidden`, `sortOrder` or the `showIfKey`/`showIfValue` conditional logic. `validationMessage` carries the Arabic error copy the QA pass verified end to end; without it the app falls back to generic messages.
+
+**Decisions needed before anyone seeds:**
+
+- **Which taxonomy is authoritative?** Five types (app) or three plus `legal` (API)? If `legal` is wanted, it needs a form schema; if the app's three extra types are wanted, they need creating.
+- **Latin or Arabic keys?** The app's Arabic keys are route params, so changing them touches navigation and deep links. Latin keys are the safer long-term choice, but it is a frontend change, not a data one.
+- **Extend the API schema** with `disclaimer` (string) and support for `consent` field type, plus `validationMessage` — or accept that the integrated app loses all three.
+
+`scripts/seed-consultation-types.mjs` translates the app's five into the API's current shape and reports exactly what the translation drops. It is **dry-run by default**; `--apply` needs `API_TOKEN` (a bearer token — never a password). It does **not** delete the API's existing three, so applying it as-is would leave `legal` in place and collide on `psychological` and `family`. Resolve the questions above first.
