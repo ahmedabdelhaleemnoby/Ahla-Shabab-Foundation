@@ -593,10 +593,22 @@ The double nesting on lists is awkward but harmless. **Document it as the standa
 
 Per-field, the API also has no `placeholder`, `validationMessage`, `hidden`, `sortOrder` or the `showIfKey`/`showIfValue` conditional logic. `validationMessage` carries the Arabic error copy the QA pass verified end to end; without it the app falls back to generic messages.
 
-**Decisions needed before anyone seeds:**
+**Decided (2026-07-28):**
 
-- **Which taxonomy is authoritative?** Five types (app) or three plus `legal` (API)? If `legal` is wanted, it needs a form schema; if the app's three extra types are wanted, they need creating.
-- **Latin or Arabic keys?** The app's Arabic keys are route params, so changing them touches navigation and deep links. Latin keys are the safer long-term choice, but it is a frontend change, not a data one.
-- **Extend the API schema** with `disclaimer` (string) and support for `consent` field type, plus `validationMessage` — or accept that the integrated app loses all three.
+- **Taxonomy — the app's five win.** نفسية، دينية، طبية، أسرية، أعمال.
+- **Keys stay Arabic.** They are route params in the app (`ConsultationRequest: { type }`), so latin keys would have meant a navigation change rather than a data migration. Note they must be **URL-encoded** in the `PATCH`/`DELETE /admin/cms/consultations/{key}` routes.
+- **Fidelity — send everything, then verify.** Rather than trimming the payload to the shape the API happens to return today, `scripts/seed-consultation-types.mjs` sends the app's full definition: `disclaimer`, `consent` fields, `validationMessage`, `placeholder`, conditional `showIf*`, the lot. Where the two sides name the same thing differently it sends **both** spellings (`name`+`label`, `visible`/`status`+`enabled`), which is harmless if one is ignored. It then re-reads `GET /cms` and reports exactly what the API kept.
 
-`scripts/seed-consultation-types.mjs` translates the app's five into the API's current shape and reports exactly what the translation drops. It is **dry-run by default**; `--apply` needs `API_TOKEN` (a bearer token — never a password). It does **not** delete the API's existing three, so applying it as-is would leave `legal` in place and collide on `psychological` and `family`. Resolve the questions above first.
+  If the API's DTO whitelists properties, the extras are stripped silently — the read-back is how you find out rather than discovering it in the app.
+
+**Still outstanding after seeding:**
+
+1. **Two duplicates.** `psychological` and `family` already exist and cover the same ground as نفسية and أسرية. The script does **not** delete them; remove them via `DELETE /admin/cms/consultations/{key}` or the app will list both.
+2. **`legal` (قانونية) has no app equivalent.** It is left untouched, but the app cannot render it — there is no form schema for it on the app side. Either add one, or drop the type.
+3. **If the read-back shows `disclaimer` or `consent` were dropped**, that is a schema change on the API, not something the app can work around. Both are on every form today and neither is cosmetic — see the two warnings above.
+
+Usage:
+```bash
+npx tsx scripts/seed-consultation-types.mjs                       # dry run
+API_TOKEN=<bearer> npx tsx scripts/seed-consultation-types.mjs --apply
+```
