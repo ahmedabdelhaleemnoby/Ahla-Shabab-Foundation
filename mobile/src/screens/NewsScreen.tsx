@@ -4,18 +4,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { foundationValues, foundationInitiatives, articles, workGovernorates } from '@ahla/shared';
 
-const MILESTONES = [
+/* Fallbacks only — the dashboard (إعدادات التطبيق) is the source of truth for
+   both of these. Every figure on this screen is unverified (QA D-07), so it must
+   be correctable without a release. */
+const MILESTONES_FALLBACK = [
   { year: '2013', label: 'بداية الفكرة' },
   { year: '2015', label: 'أول قافلة إغاثية' },
   { year: '2019', label: 'توسع في المحافظات' },
   { year: '2022', label: 'إطلاق وصلات المياه' },
   { year: '2025', label: 'مستمرون بفضلكم' },
-];
-
-const IMPACT = [
-  { value: '+1,200,000', label: 'مستفيد من خدماتنا' },
-  { value: '+650', label: 'مبادرة ومشروع' },
-  { value: '+10,000', label: 'متطوع فعّال' },
 ];
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
@@ -44,7 +41,16 @@ const initiativeIcons: Record<string, IconName> = {
 
 export default function NewsScreen() {
   const nav = useNavigation<any>();
-  const { stats } = getSettings();
+  const settings = getSettings();
+  const { stats } = settings;
+  const MILESTONES = settings.milestones?.length ? settings.milestones : MILESTONES_FALLBACK;
+  /* The beneficiaries figure is deliberately absent here — it is already shown in
+     the stat card above. Rendering it twice meant a dashboard edit produced a
+     screen that contradicted itself (999K+ in the card, +1,200,000 below it). */
+  const IMPACT = [
+    { value: stats.initiatives ?? '+650', label: 'مبادرة ومشروع' },
+    { value: stats.volunteers ?? '+10,000', label: 'متطوع فعّال' },
+  ].filter((x) => x.value.trim() !== '');
   return (
     <Screen
       header={<AppBar title="عن الجمعية" onBack={() => nav.navigate('Home')} />}

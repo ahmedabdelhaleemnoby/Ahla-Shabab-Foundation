@@ -265,8 +265,21 @@ label                  | declared target | resulting route | verdict
 - **Evidence:** `qa/screenshots/mobile/tab-About.png` (1.2M+ card clearly visible), `w320-About.png`
 - **Likely cause:** `NewsScreen.tsx:68` renders `foundationStats.beneficiaries` (`'1.2M+'` from `shared/src/data.ts:66`) and `NewsScreen.tsx:15-19` defines a local hardcoded `IMPACT` array.
 - **Note in the app's favour:** the separate **"22 محافظة"** claim is *not* rendered anywhere — `foundationStats.governorates: 22` exists in data but no screen displays it (verified by grep). The About page instead lists the 12 real governorates plus "وفي توسع مستمر…", which is the honest presentation.
-- **Recommended fix:** confirm with the client whether these figures are approved. If not, remove the `IMPACT` block and the beneficiaries stat card, or replace with figures the foundation can substantiate. This is a **judgement call for the client**, not an unambiguous bug — flagging because the stated intent was to eliminate unverified impact numbers, and they remain one tab away.
-- **Status:** Open — needs client decision
+- **Correction (2026-07-30).** Earlier rounds claimed these were "now editable from the dashboard". That was only **two of five** — `beneficiaries` and `yearsOfService`. `+650 مبادرة`, `+10,000 متطوع` and the 2013–2025 timeline were still hardcoded in `NewsScreen.tsx`, so answering "drop them" would still have required a code release.
+- **A real bug behind it:** the beneficiaries claim was rendered **twice** on the same screen — once from CMS (`1.2M+ مستفيد` stat card) and once hardcoded (`+1,200,000 مستفيد من خدماتنا`). Editing the dashboard produced a self-contradicting About page: `999K+` in the card, `+1,200,000` immediately below it.
+- **Fixed:** the duplicated row is gone (the figure already appears in the stat card above), and the remaining figures plus the milestone timeline now read from CMS — `stats.initiatives`, `stats.volunteers`, `settings.milestones`, all optional with fallbacks to today's values, so a backend that has not caught up still works. Blanking a figure removes its row rather than rendering an empty stat.
+- **Retest — PASS:**
+  ```
+  PASS | duplicated beneficiaries row gone
+  PASS | stat cards follow the dashboard
+  PASS | impact block follows the dashboard
+  PASS | old hardcoded figures no longer appear
+  PASS | milestone timeline follows the dashboard
+  PASS | blanking a figure removes its row entirely
+  ```
+- **What remains is purely the client's call:** confirm the real numbers, or blank them. No code release needed either way now — which is what the earlier claim promised but did not deliver.
+- **For the backend:** `settings.stats.initiatives`, `settings.stats.volunteers` and `settings.milestones` are new optional fields. Add them to `defaultSettings()` when convenient; the app falls back until then.
+- **Status:** Open — client decision only
 
 ---
 

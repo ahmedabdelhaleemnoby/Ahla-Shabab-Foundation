@@ -38,7 +38,16 @@ export const defaultSettings: CmsSettings = {
     governorates: String(foundationStats.governorates),
     beneficiaries: foundationStats.beneficiaries,
     yearsOfService: String(foundationStats.yearsOfService),
+    initiatives: '+650',
+    volunteers: '+10,000',
   },
+  milestones: [
+    { year: '2013', label: 'بداية الفكرة' },
+    { year: '2015', label: 'أول قافلة إغاثية' },
+    { year: '2019', label: 'توسع في المحافظات' },
+    { year: '2022', label: 'إطلاق وصلات المياه' },
+    { year: '2025', label: 'مستمرون بفضلكم' },
+  ],
 };
 
 /* ---------------- Sidebar menu (mirrors mobile AppDrawer) ---------------- */

@@ -322,12 +322,22 @@ export interface CmsSettings {
   demoLabel: string;
   /** Impact figures shown on the app's About screen; editable from the dashboard. */
   stats: FoundationStatsSettings;
+  /** About-screen milestone timeline. Optional; falls back to compiled values. */
+  milestones?: { year: string; label: string }[];
 }
 
 export interface FoundationStatsSettings {
   governorates: string;
   beneficiaries: string;
   yearsOfService: string;
+  /**
+   * The About screen's "أثرنا في المجتمع" block. Optional so a backend that has
+   * not caught up still validates — the app falls back to the compiled values.
+   * Present so the whole block is dashboard-editable and can be corrected or
+   * blanked without a release (QA D-07).
+   */
+  initiatives?: string;
+  volunteers?: string;
 }
 
 /* ------------------------------------------------------------------ */
