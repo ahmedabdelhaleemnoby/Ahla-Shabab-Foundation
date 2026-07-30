@@ -988,3 +988,103 @@ validation. Measured by generating `GET /api/docs-json` before and after:
 summaries 5 → 141, write operations with a body schema 2 → 52 of 67, query
 parameters 95 → 126. The 15 without an enumerable body are 10 genuinely bodyless
 toggles, 5 handlers that take `@Body() any`, and the free-form settings map above.
+
+---
+
+## 22. API integration — the shared client (2026-07-30)
+
+Decisions taken: **API-first with fallback to the bundled data**, and **the mobile
+public surface first**. The second follows from §21 — `/admin` and `/me` cannot be
+verified until PR #2 deploys, and shipping unverifiable code first is the wrong
+order.
+
+### 22.1 What exists now
+
+`shared/src/api/` — consumed by both the app and the dashboard. Before this there
+was no network code in the repo at all; all 63 files importing `@ahla/shared`
+read compiled mock arrays.
+
+| module | responsibility |
+| --- | --- |
+| `config.ts` | `baseUrl` is *injected*, not read from env. Metro exposes `process.env.EXPO_PUBLIC_*`, Vite exposes `import.meta.env.VITE_*`; referencing either in shared code breaks the other bundler. Each app calls `configureApi()` once at startup. |
+| `http.ts` | Envelope unwrapping (`{data}` and `{data:{data,meta}}`), manual timeout (`AbortSignal.timeout` is absent from older Hermes), `ApiError` for every failure including network, so callers catch one type. |
+| `errors.ts` | `ApiError` with the server's Arabic `message` and per-field `fields`. `isForbidden` is separate from `isAuthError` because of §21: while PR #2 is undeployed every `/admin` route 403s regardless of role, so "insufficient permissions" would be a lie. |
+| `fallback.ts` | Reads degrade to bundled data. **Writes deliberately do not.** |
+| `mappers.ts` | Wire → app types. |
+| `cmsMapper.ts` | `GET /cms` → `CmsState`, tolerant of both schema versions. |
+| `endpoints.ts` | Typed functions for the public surface. |
+
+### 22.2 Why reads and writes behave differently
+
+A read that quietly serves the compiled defaults is the difference between a demo
+that works on hotel wifi and one that shows a spinner in front of the client. A
+*write* that pretends to succeed is worse than any error message — so submissions
+call `request()` directly and let `ApiError` reach the form, which already has the
+Arabic copy and the per-field messages it needs.
+
+### 22.3 The CMS merge, and why it is not a replacement
+
+The deployed API is a schema version behind (`schemaVersion: 5`, with
+`contactPhone` / `contactEmail` / `contactAddress` / `socialLinks` / `zakatNisab` /
+`consultationTypes`). Both spellings are read, so nothing breaks when PR #1 ships.
+
+More importantly its payload is **poorer** than the bundled defaults: no
+`splashText`, `website`, `donationReassurance`, `media`, `milestones`, and no
+`initiatives` / `volunteers` impact figures. So `mapCmsState` merges per field
+*over* the defaults. Trusting the payload wholesale empties the About screen.
+
+Consultation types get a stricter rule. The live types (`psychological`, `legal`,
+`family`) carry no `disclaimer`, no `consent` field, and no `options` on their
+choice fields. A radio with no options is an unanswerable question and a missing
+consent checkbox is a compliance regression (§18.6), so an API type supplies its
+own **form** only when it has all three; otherwise it contributes labels only and
+the bundled form is kept. English keys are aliased onto the app's Arabic keys
+(`psychological` → `نفسية`) because those keys are route params.
+
+`legal` (قانونية) has no bundled form and is not self-sufficient, so it is
+skipped — the documented §18.6 behaviour.
+
+### 22.4 Payment methods needed real translation
+
+The API sends latin ids and short groups; the app's `PaymentMethod` is an Arabic
+union and `group` must be one of three exact display strings.
+
+| API | app |
+| --- | --- |
+| `card` / `إلكتروني` | `بطاقة بنكية` / `دفع إلكتروني` |
+| `fawry` / `إلكتروني` | `فوري` / `دفع إلكتروني` |
+| `instapay` / `تحويل` | `إنستاباي` / `تحويل بنكي` |
+| `vodafone` / `محفظة` | `فودافون كاش` / `محفظة إلكترونية` |
+| `bank` / `تحويل` | `تحويل بنكي` / `تحويل بنكي` |
+
+An unmapped id is **dropped**, not guessed: a method the app cannot label
+correctly must not appear in the donate flow. `manual` defaults to `true` when
+absent — the safer branch, since it never claims a payment succeeded.
+
+### 22.5 Verification
+
+`npx tsx scripts/verify-api-layer.ts` — 41/42 against the live API. It validates
+the *mapped* objects, not the wire payload, and covers the fallback path (reads
+serve bundled content, writes still throw) plus an intentionally invalid POST,
+which returns 400 and stores nothing. Reads only otherwise: this points at a live
+service, so it creates no consultations, bookings or donations.
+
+### 22.6 New finding — no service in the public list can be booked
+
+`GET /services` returns ids `svc-1`…`svc-6`. `Service.id` is `@default(uuid())` in
+the Prisma schema and `CreateBookingSchema.serviceId` is `z.string().uuid()`, so
+those seeded ids cannot satisfy the booking schema. **The booking flow is
+unusable end-to-end** until either the seed data uses UUIDs or the DTO drops
+`.uuid()`. Tracked as a known issue in the verify script rather than a failure.
+
+### 22.7 Not done yet
+
+No screens are wired — this is the foundation. Remaining, in order:
+
+1. Mobile public reads (CMS, cases, projects, articles, providers) behind the
+   existing stores, so screens keep their current shape.
+2. Mobile public writes (consultation, contact, volunteer, donation) with
+   `ApiError.fields` surfaced per input.
+3. Bookings — blocked on §22.6.
+4. Dashboard auth + admin surface — blocked on §21 / PR #2.
+5. `/me` (profile, favourites, notifications) — blocked on §21 / PR #2.
