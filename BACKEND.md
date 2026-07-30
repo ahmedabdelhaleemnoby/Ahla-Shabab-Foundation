@@ -906,3 +906,85 @@ Three reasons, in order of weight:
 5. Keep `/bookings` for the free-services catalogue flow. The two coexist; they are not merged.
 
 **Still open regardless of A or B:** the API's `legal` (قانونية) consultation type has no app-side form schema, so the app cannot render it (§18.6). Give it one or drop it.
+
+---
+
+## 21. Blocker found while documenting the routes (2026-07-30) — **the authenticated API does not work**
+
+Found while adding Swagger decorators to the remaining backend controllers, then
+verified with a test harness rather than by reading. This supersedes the working
+assumption in §18/§19 that the admin API was merely *unverified* — it is broken.
+
+### 21.1 What is wrong
+
+`JwtAccessStrategy.validate()` resolves to `{ adminUser }` or `{ user }`, and
+Passport assigns that return value straight to `request.user`. Nothing anywhere
+in the codebase assigns `request.adminUser` — but three things read it:
+`RolesGuard`, `CurrentAdmin`, and `ActivityLogInterceptor`.
+
+Consequences:
+
+| Surface | Symptom |
+| --- | --- |
+| Every `@RequirePermission` route (~93, i.e. the whole `/admin` API) | **403 `صلاحيات غير كافية`**, regardless of how the role's permissions are configured |
+| Every `/me` route (18) | Answers **200** while reading `.sub`/`.id` off the wrapper object — so it queries with `undefined` |
+
+The `/me` half is the more dangerous of the two, because nothing fails loudly:
+the routes return success while operating on nothing.
+
+The strategy's own comment states the intent the guard never implemented:
+
+```ts
+// Return object with adminUser key so the guard sets request.adminUser
+return { adminUser };
+```
+
+### 21.2 Evidence
+
+Reproduced with the real guard chain (global order `JwtAuthGuard` → `RolesGuard`)
+and Prisma stubbed, so it needs no database and no credentials. The admin token
+below carries a role that **explicitly grants** `users:read`:
+
+| case | before | after |
+| --- | --- | --- |
+| admin token, role **has** `users:read` | **403** | 200 |
+| `/me` with a user token | 200 but `id`/`sub` = `null` | 200, both resolve |
+| admin token, role **lacks** the permission | 403 | 403 |
+| user-type token on an admin route | 403 | 403 |
+| anonymous / malformed token | 401 | 401 |
+
+The deny cases hold in both directions, so the fix is not "let everyone through".
+
+### 21.3 Why this matters here
+
+**This, not the missing bearer token, is why the consultation-type seeding could
+never have completed.** `scripts/seed-consultation-types.mjs --apply` posts to
+`/admin/cms/consultations`, which is `@RequirePermission('cms', 'write')` — it
+would have returned 403 with a perfectly valid token. The same applies to every
+admin write this document has listed as "unconfirmed".
+
+Fixed in backend PR #2 (`fix/auth-request-user-shape`), with a regression test at
+`test/auth-request-shape.e2e-spec.ts`. **Verify the deployment runs this same
+code before concluding it is affected** — the finding is confirmed against the
+repo at `7a3af02`, not against `portfolio.27lashabab.com`.
+
+### 21.4 Two smaller findings from the same pass
+
+- **`PATCH /admin/cms/settings` accepts any key.** Its schema is
+  `z.record(z.string(), z.any())`, so a misspelled key is stored and then ignored
+  by the app rather than rejected. This bears directly on the §18.2 renames: a
+  dashboard still sending `contactPhone` instead of `hotline` gets a 200 and the
+  edit silently does nothing. Worth tightening to the known keys.
+- **`POST /webhooks/payment` is `@Public()` with no signature verification.**
+  Anything that can reach that URL can mark a donation paid. Documented on the
+  route; needs a shared secret or provider signature check before real payments.
+
+### 21.5 Route documentation status
+
+All 141 routes across 39 controllers are now tagged and summarised (backend PR #3,
+stacked on #1). Request bodies are derived from the Zod schemas that validate
+them rather than duplicated into DTO classes, so the docs cannot drift from the
+validation. Measured by generating `GET /api/docs-json` before and after:
+summaries 5 → 141, write operations with a body schema 2 → 52 of 67, query
+parameters 95 → 126. The 15 without an enumerable body are 10 genuinely bodyless
+toggles, 5 handlers that take `@Body() any`, and the free-form settings map above.
