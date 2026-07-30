@@ -433,7 +433,7 @@ Seed the DB directly from the existing mocks in `@ahla/shared` so the apps look 
 - **(v1.3) CMS persistence strategy**: single-row `cms_state` table (simple, atomic) vs normalized tables per entity type (more queryable). Single-row is strongly recommended given the CMS is edited as a unit and queried as a snapshot.
 - **(v1.3) CMS media storage**: store processed images in the same `UPLOAD_DIR` as booking/case media, or a separate CDN bucket? Max resolution/quality settings (current dashboard compresses client-side to ~80% JPEG ≤1280px).
 - **(v1.3) CMS permission key**: add a dedicated `cms` permission module, or reuse `portfolio` for structural config? Finer-grained control (e.g. separate `cms.forms` for the consultation form builder) may be warranted.
-- **(v1.4) Consultation → booking flow**: when a `consultation_request` is accepted, does it become a `booking` against a provider (one pipeline), or stay a parallel inbox the team works manually? The demo has them as two unconnected stores, which is the most visible missing link — see §17.
+- **(v1.4) Consultation → booking flow**: → **§20 is a full decision brief with a recommendation (option A: one pipeline).** Needs a yes/no, not more analysis.
 - **(v1.4) Provider identity**: are providers `admin_users` with a restricted role, or a separate `providers` login? The mobile provider dashboard assumes a signed-in provider can read and mutate **only their own** bookings and schedule, which needs whichever model you pick to carry an ownership check.
 - **(v1.4) Impact figures**: confirm the real numbers (or agree to drop the block). They are CMS-editable now, so this is a content decision, not a code change.
 
@@ -824,3 +824,85 @@ None of these were visible from the outside, because the deployed instance holds
 
 - **`npm ci` fails.** `@nestjs/swagger@11` peer-requires `@nestjs/common@^11`, but the project is on NestJS 10.4.22 — install needs `--legacy-peer-deps`. Pin swagger to `^7`/`^8` for NestJS 10, separately.
 - **`POST /admin/cms/consultations` has no validation** — `@Body() body: any`, spread straight into a JSON column. Good news for the seeder (nothing strips `disclaimer`, `consent` or `validationMessage`, answering §18.6's open question) but not something to leave on an admin write endpoint.
+
+---
+
+## 20. Decision brief — do consultations become bookings?
+
+This is the one design question gating integration (§15). It was a one-line note; here is the evidence and a recommendation.
+
+### 20.1 What exists today
+
+Two separate models, and they are **not** variations on one shape:
+
+| | `ConsultationRequest` | `Booking` |
+|---|---|---|
+| Identity | `email` **required**, `phone` | `applicantName`, `phone` — **no email at all** |
+| What it is about | `type` (CMS consultation key) | `serviceId` → `Service` (non-null FK) |
+| Assigned to | *nobody* | `providerId` → `Provider` (non-null FK) |
+| When | `preferredChannel`, `preferredTime` — **preferences** | `date` + `timeSlot` — **an actual appointment** |
+| Answers | `extraFieldsJson` | `extraFieldsJson` |
+| Status default | `جديد` | `قيد الانتظار` |
+| Extras | — | `gender`, `city`, `nationalId`, `governorateId` FK |
+
+A consultation request is *"someone asked, here is when they'd prefer"*. A booking is *"this provider, this service, this slot"*. Neither is a subset of the other.
+
+### 20.2 The app has already answered this
+
+`ProviderBooking` in `mobile/src/store/providerStore.ts` — what the provider dashboard actually renders — is a **merge of both**:
+
+```
+from ConsultationRequest   email · whatsapp · consultationType · preferredComm
+                           specializedAnswers · submissionDate · generalDescription
+from Booking               appointmentDate · appointmentTime · applicantName
+```
+
+Three of those exist **only** on `ConsultationRequest` and have no column on `Booking`: `email`, `type`, `preferredChannel`. So the screen that was built, reviewed and demoed assumes *a consultation request that has been scheduled* — a single pipeline. It cannot be fed by `Booking` rows without losing the consultation type, the preferred channel, and the email.
+
+Corroborating: `ConsultationRequest.status` already includes **`تم تحديد موعد`** ("appointment scheduled"). The model anticipates scheduling — it simply has nowhere to put the result.
+
+### 20.3 The two options
+
+**A — one pipeline.** A consultation request gains scheduling fields and stays the same row for its whole life.
+
+```prisma
+model ConsultationRequest {
+  // … existing …
+  providerId String?   @map("provider_id")   // set when scheduled
+  provider   Provider? @relation(...)
+  date       DateTime? @db.Date
+  timeSlot   String?   @map("time_slot")
+}
+```
+
+- Status flow already fits: `جديد` → `قيد المراجعة` → `تم تحديد موعد` → `مكتمل` / `ملغي`
+- `/me/provider/bookings` returns scheduled consultation requests **and** service bookings, unioned
+- One row, one reference, one audit trail. The reference the beneficiary was given never changes
+- Preserves `email`, so the returning-guest link (§6, D-09) keeps working end to end
+
+**B — two stages, converted.** An accepted consultation request creates a `Booking` row.
+
+- Needs a `serviceId`, which a consultation does not have — you would invent a synthetic "consultation" Service per type, or make the FK nullable
+- `Booking` has no `email`; you would add one, or always join back to the request
+- Two rows and two references for one thing, with a link field and a sync question on every status change
+- The app's provider screen would need reshaping, since it reads consultation-only fields
+
+### 20.4 Recommendation — **A**
+
+Three reasons, in order of weight:
+
+1. **It matches what is already built.** The provider dashboard, its shipped seed data, and the QA-verified reschedule behaviour all assume the merged shape. B means changing a screen that is signed off.
+2. **`Booking.serviceId` is a non-null FK to the service catalogue.** A consultation is not a catalogue service. Satisfying that constraint means either fake Service rows or relaxing the FK — both worse than three nullable columns on the model that already holds the data.
+3. **B risks the email link.** `email` is the identity key for the whole returning-guest feature and `Booking` has no column for it. Any conversion has to carry it across or join back, and getting that wrong silently breaks the feature the demo leads with.
+
+**Cost of A:** three nullable columns, one migration, and a union in `/me/provider/bookings`. **Cost of B:** a synthetic service taxonomy, a new email column or a permanent join, dual references, and a provider-screen rewrite.
+
+### 20.5 If A is chosen, the order of work
+
+1. Migration: add `providerId`, `date`, `timeSlot` to `consultation_requests` (all nullable).
+2. `PATCH /admin/consultations/:id/schedule` — assign provider + slot, set status `تم تحديد موعد`.
+3. `/me/provider/bookings` returns the union; `/me/provider/bookings/:id/schedule` already exists and keeps its "must not change status" rule (§8).
+4. App: point `providerStore` at the API. `ProviderBooking` needs no shape change — that is the point.
+5. Keep `/bookings` for the free-services catalogue flow. The two coexist; they are not merged.
+
+**Still open regardless of A or B:** the API's `legal` (قانونية) consultation type has no app-side form schema, so the app cannot render it (§18.6). Give it one or drop it.
