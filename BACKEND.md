@@ -599,7 +599,7 @@ Per-field, the API also has no `placeholder`, `validationMessage`, `hidden`, `so
 - **Keys stay Arabic.** They are route params in the app (`ConsultationRequest: { type }`), so latin keys would have meant a navigation change rather than a data migration. Note they must be **URL-encoded** in the `PATCH`/`DELETE /admin/cms/consultations/{key}` routes.
 - **Fidelity — send everything, then verify.** Rather than trimming the payload to the shape the API happens to return today, `scripts/seed-consultation-types.mjs` sends the app's full definition: `disclaimer`, `consent` fields, `validationMessage`, `placeholder`, conditional `showIf*`, the lot. Where the two sides name the same thing differently it sends **both** spellings (`name`+`label`, `visible`/`status`+`enabled`), which is harmless if one is ignored. It then re-reads `GET /cms` and reports exactly what the API kept.
 
-  If the API's DTO whitelists properties, the extras are stripped silently — the read-back is how you find out rather than discovering it in the app.
+  **Answered while implementing §19 (2026-07-30):** the API applies **no validation** on this route — it is `@Body() body: any`, spread straight into a JSON column. Nothing is stripped, so the full-fidelity payload persists verbatim, `disclaimer` and `consent` included. The read-back stays in the script as a guard in case validation is added later.
 
 **Still outstanding after seeding:**
 
@@ -616,7 +616,15 @@ API_TOKEN=<bearer> npx tsx scripts/seed-consultation-types.mjs --apply --prune
 
 ---
 
-## 19. Swagger schemas + field renames — implementation spec for the API
+## 19. Swagger schemas + field renames — **implemented**
+
+> **Status: done, awaiting review** — [`AbdelrahmanSaad10/ahlashabab_backend_app` PR #1](https://github.com/AbdelrahmanSaad10/ahlashabab_backend_app/pull/1), branch `feat/swagger-schemas-and-cms-renames`, commit `a60db3d`.
+>
+> Verified against a fresh database: build clean, app boots, and `qa/harness/api-contract.mjs` reports `GET /cms` **fully aligned** — top level, settings and paymentMethods all matching, where before it was 8 settings fields missing and 5 unexpected.
+>
+> Schemas went 0 → 8, plus request/response bodies and the missing `servers` entry. The spec below is what was built; it is kept for reference and for the ~100 routes still to be decorated.
+>
+> **Once merged, §18.2 and §18.3's first and third points are closed.** The remainder of §18.3 — seeding `consultations` — is unblocked but still needs the token (§18.6).
 
 `/api/docs` renders, but the spec behind it documents **no payloads**: 0 `components.schemas`, 0 request bodies, 0 response bodies across all 113 routes (verified 2026-07-28; the JSON is byte-identical to the copy taken earlier that day). An integrator has to guess every shape.
 
@@ -795,10 +803,24 @@ export class AdminConsultationTypesController {
 
 ### 19.6 Order of work
 
-1. `addServer` + the `ApiDataResponse` helper — five minutes, unblocks client generation.
-2. **`GET /cms`** with the renames — this is the one the app consumes; nothing else can be integrated until its shape is settled.
-3. **`POST /admin/cms/consultations`** — the seeder writes here, and a documented body means its payload can be validated before it runs rather than debugged from a 400.
-4. `POST /consultations`, `/bookings`, `/donations` — the public write paths.
-5. The remaining admin routes, as they come up.
+1. ~~`addServer` + the `ApiDataResponse` helper~~ — **done.**
+2. ~~**`GET /cms`** with the renames~~ — **done.** The blocker for everything else.
+3. ~~**`POST /admin/cms/consultations`**~~ — **documented.** Validation deliberately *not* added: the route takes `@Body() body: any` and spreads it into a JSON column, so adding a DTO whitelist would change runtime behaviour and could reject the seeder's payload mid-run. Separate change.
+4. `POST /consultations`, `/bookings`, `/donations` — the public write paths. **Not done.**
+5. The remaining ~100 admin routes — **not done**, same pattern.
 
-Verify with `node qa/harness/api-contract.mjs` after step 2 — it diffs the live response against what the app expects and will go quiet when the renames land.
+Verify with `node qa/harness/api-contract.mjs`; it is quiet for `GET /cms` as of PR #1.
+
+### 19.7 Bugs found while implementing (all fixed in the same PR)
+
+None of these were visible from the outside, because the deployed instance holds hand-seeded data that happens to be correct.
+
+1. **Fresh installs skipped every migration.** `getState()` creates the first CMS row already stamped at `CMS_SCHEMA_VERSION`, so `migrate()` runs nothing against it. `defaultSettings()`/`defaultPaymentMethods()` — not the migration backfills — are therefore what a new deployment gets, and they returned only `foundationName`/`tagline`/`logoUrl`, none of which the app reads. **A fresh deploy served settings the app could not use.** Both defaults now return the full current schema, with the invariant recorded in a comment: a migration that backfills a field must add it to the defaults too.
+2. **`paymentMethods` had the wrong shape** in both the v5 migration default and the fresh-install default — `key/label/enabled/icon`, which nothing consumes; the Donate screen reads `id/group/description/availability/manual`. Latent only because the live data was seeded by hand: a reset or fresh deploy would have rendered **no payment methods**.
+3. **`media` was never read at all.** It lives in the `CmsMedia` table rather than the CMS blob, so it was not merely missing from the response — nothing queried it. Every CMS-authored image resolved to nothing through `getMediaSrc()`.
+4. `defaultSettings()` had the foundation name as `أهل الشباب` rather than `أحلى شباب`.
+
+### 19.8 Two things left open on the API
+
+- **`npm ci` fails.** `@nestjs/swagger@11` peer-requires `@nestjs/common@^11`, but the project is on NestJS 10.4.22 — install needs `--legacy-peer-deps`. Pin swagger to `^7`/`^8` for NestJS 10, separately.
+- **`POST /admin/cms/consultations` has no validation** — `@Body() body: any`, spread straight into a JSON column. Good news for the seeder (nothing strips `disclaimer`, `consent` or `validationMessage`, answering §18.6's open question) but not something to leave on an admin write endpoint.
