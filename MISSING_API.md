@@ -96,8 +96,9 @@ fine — but "likely" is not verified, and this is the whole dashboard.
 
 | | Endpoint | Why |
 | --- | --- | --- |
-| 🟠 | `PATCH /admin/consultations/{id}/schedule` | To turn a consultation request into an appointment. Needs three nullable columns on `consultation_requests` (`providerId`, `date`, `timeSlot`). `ConsultationRequest.status` already includes `تم تحديد موعد` with nowhere to record the result. **Blocked on the §20 A/B decision.** |
-| 🟡 | Columns for `Consultant.type`, `sessions`, `featured` | None exist on `Provider`. The app infers `type` from the specialization text and defaults `featured` to false. |
+| 🟡 | Columns for `Consultant.type`, `sessions`, `featured` | None exist on `Provider`. The app infers `type` from the specialization text and defaults `featured` to false. Cosmetic. |
+
+`PATCH /admin/consultations/{id}/schedule` **now exists** — §20 option A was implemented.
 
 ---
 
@@ -105,20 +106,19 @@ fine — but "likely" is not verified, and this is the whole dashboard.
 
 | Question | Recommendation |
 | --- | --- |
-| Do consultations become bookings? (`BACKEND.md` §20) | **Option A** — one pipeline, three nullable columns |
 | `legal` (قانونية): give it a form schema, or drop it? | The app cannot render it today, so it is skipped |
 | Impact figures (`+650`, `+10,000`) — approve or blank? | Client's call (QA D‑07) |
 | Real social profile URLs | Row stays hidden until supplied |
-| Which manual-payment list is right — the app's or the backend's? | Needed to fix the InstaPay case |
 
 ---
 
 ## 5. Shortest path to done
 
-1. **Get a bearer token** — it closes the two ❓ items *and* unblocks seeding.
-2. **Seed the consultation types.** One command once the token exists.
-3. **Sign the payment webhook** (and make it 400 rather than 500) before taking
-   real money.
-4. **Settle the manual-payment list** so InstaPay donations can complete.
+1. **Set `WEBHOOK_SECRET`, then deploy.** PR #4 makes the payment webhook fail
+   closed in production — without the secret set, that route returns 503.
+   Everything else in PR #4 is inert until deployed.
+2. **Get a bearer token.** It closes both ❓ items *and* unblocks seeding.
+3. **Seed the consultation types** — the last item with real user impact.
+4. **Restore PR #3** (§0c) if the API documentation is wanted back.
 
 Everything else is cosmetic or a product decision.
