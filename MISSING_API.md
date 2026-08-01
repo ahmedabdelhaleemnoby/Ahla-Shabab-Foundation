@@ -1,6 +1,6 @@
 # Missing from the backend
 
-**Re-checked 2026‑07‑30, after the deploy.** What still stands between the current
+**Re-checked 2026‑08‑01, after PR #4 merged.** What still stands between the current
 backend and a fully API‑backed app + dashboard.
 
 Every item was verified against the live API at
@@ -39,16 +39,41 @@ now work. That was the most serious item.
 
 ---
 
+## 0b. Fixed in PR #4 — merged, **awaiting deploy**
+
+| | Item |
+| --- | --- |
+| 🔴 | **Payment webhook failed open.** HMAC ran only `if (secret)` and no secret is set in production, so it was effectively public. Now fails closed in production, validates the body (400 not 500), and compares signatures in constant time. `WEBHOOK_SECRET` documented in `.env.example` — **it must be set before the next deploy or the route will start rejecting**. |
+| 🟡 | **`settings.milestones` was `[]`.** 6 → 7 created the key but left it empty; migrations only run when `current < N` and the deployment was already on 7, so it needed a 7 → 8 step. |
+| 🟡 | **`GET /governorates` shipped `createdAt` + nested `workAreas`** on all 27 rows. Now `id` and `name` only. |
+
+Also confirmed already fixed directly on `main` by the backend developer: the
+`@UsePipes`/`@CurrentUser` bug, the non-uuid id constraints, `GET /governorates`
+itself, and the InstaPay manual-payment correction. **§20 option A was also
+implemented** — `ConsultationRequest` now has `providerId`, `date` and `timeSlot`,
+and `consultations.service.schedule()` exists.
+
+---
+
+## 0c. ⚠️ PR #3 was lost
+
+`gh` reports PR #3 (Swagger documentation for all 141 routes) as **MERGED**, but
+its merge commit `0c03057` is **not an ancestor of current `main`** — it was
+discarded by a force-push or reset. `src/common/swagger/zod-to-openapi.ts`,
+`api-zod-body.decorator.ts` and `api-pagination-query.decorator.ts` are gone, and
+only **2 of 39** controllers still carry `@ApiTags`.
+
+The commits still exist on GitHub, so this is recoverable. Not restored here
+because it is unrelated to the fixes in PR #4.
+
+---
+
 ## 1. Still outstanding
 
 | | Item | Detail |
 | --- | --- | --- |
 | 🔴 | **Consultation types still not seeded** | The backend serves `psychological` / `legal` / `family` with **no `disclaimer`, no `consent` field, and no `options`** on choice fields. The app does not break — the mapper merges them onto the bundled forms and keeps those — but the API is not driving the consultation forms, and the consent checkbox exists only because the app supplies it. Compliance point, `BACKEND.md` §18.6. **Needs a bearer token:** `scripts/seed-consultation-types.mjs --apply --prune` |
-| 🔴 | **`POST /webhooks/payment` is still unauthenticated** — and now returns **HTTP 500** on a malformed body instead of a 400 | Anything that can reach the URL can attempt to mark a donation paid. Needs a signature check before real payments, and input validation. |
-| 🟠 | **Manual-payment rules disagree** | Backend hardcodes `MANUAL_METHODS = [تحويل بنكي, فوري]`; the app drives it off each method's `manual` flag. They differ on two, in opposite directions: `إنستاباي` (app manual, backend gateway) and `فوري` (app gateway, backend manual). **An InstaPay donation therefore waits for a gateway callback that never arrives.** Not re-verifiable without creating a real donation. |
-| 🟡 | **`settings.milestones` is `[]`** | The key now exists and is editable, but is empty, so the About timeline still comes from the app's bundled values. Populate it or accept that it is app-owned. |
 | 🟡 | **`paymentMethods` still use latin ids** (`card`, `fawry`, `instapay`, `vodafone`, `bank`) | Harmless for the app — the mapper translates them to the Arabic union — but the dashboard will show latin ids. Migration 5→6 renames settings keys and does not touch these. |
-| 🟡 | **`GET /governorates` leaks join data** | Each of the 27 rows carries `createdAt` and a nested `workAreas` array. Only `id` and `name` are needed; this bloats a payload the app fetches on every form. |
 | 🟡 | **`PATCH /admin/cms/settings` accepts any key** | Schema is `z.record(z.string(), z.any())`, so a misspelled key is stored and silently ignored — a quiet way to lose an edit. |
 | 🟡 | **Five routes take `@Body() any`** | `PUT /admin/cms`, both `admin/cms/pages` writes, both generic `admin/portfolio` writes. |
 | 🟡 | `FCM_SERVER_KEY` empty | Push notifications will not send. Config, not code. |
