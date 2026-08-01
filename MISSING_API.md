@@ -1,135 +1,99 @@
 # Missing from the backend
 
-**As of 2026‑07‑30.** What still stands between the current backend and a fully
-API‑backed app + dashboard.
+**Re-checked 2026‑07‑30, after the deploy.** What still stands between the current
+backend and a fully API‑backed app + dashboard.
 
-Every item here was verified — against the live API at
-`https://portfolio.27lashabab.com/api/v1`, against the repo at
-`AbdelrahmanSaad10/ahlashabab_backend_app`, or against a locally seeded copy of
-the database. Where something could not be verified, it says so.
+Every item was verified against the live API at
+`https://portfolio.27lashabab.com/api/v1`, or against the repo. Where something
+could not be verified, it says so explicitly.
 
-Companion documents: `BACKEND.md` §18–§22 for the reasoning, and
-`scripts/verify-api-layer.ts` to re‑run the checks.
+Re-run the checks with `npx tsx scripts/verify-api-layer.ts`.
+Reasoning and history: `BACKEND.md` §18–§22.
 
 | | meaning |
 | --- | --- |
+| ✅ | Verified working on the live API |
 | 🔴 | Blocks the project |
 | 🟠 | Blocks one feature |
 | 🟡 | Works, but wrong or fragile |
 | ⚪ | Decision needed, not code |
+| ❓ | Cannot be verified without a bearer token |
 
 ---
 
-## 0. The one thing that matters most
+## 0. What got fixed — verified live
 
-🔴 **Nothing is deployed.** PRs #1, #2 and #3 are all merged into `main`
-(`56d9c53`) and the live API is still running the old code — it answers
-`schemaVersion: 5` with `contactPhone` and `consultationTypes`.
+The deploy landed and most of the list is genuinely done.
 
-**Deploying unblocks 111 of the 141 routes.** Until then:
-
-| Surface | Routes | What happens |
-| --- | ---: | --- |
-| `/admin/*` — the entire dashboard | 93 | **403** on every route, whatever the role says |
-| `/me/*` — profile, favourites, donations, notifications | 18 | Answers **200** while querying with an `undefined` user id |
-
-Cause and fix are in `BACKEND.md` §21. Everything below is secondary to this.
-
----
-
-## 1. Fixed and awaiting review — PR #4
-
-Not missing any more, but not merged either. Listed so nobody fixes them twice.
-
-| | Was broken | Detail |
+| | Item | Evidence |
 | --- | --- | --- |
-| 🔴 | `POST /donations`, `POST /bookings`, `PATCH /me` **rejected every request** | A method‑level `@UsePipes` applies the Zod schema to *every* parameter, so it also validated `@CurrentUser()` — `null` for a guest, the user entity with a token. Both fail the body schema. The two main public write paths were dead for everyone. |
-| 🔴 | Booking any service was impossible | `serviceId` required `.uuid()`, but seeded ids are `svc-1`…`svc-6`. Same for the admin filters `categoryId` / `providerId`. |
-| 🟠 | `GET /governorates` did not exist | Added. |
-| 🟡 | `settings.milestones` never populated | Added via a 6 → 7 migration. |
+| ✅ | **Deployed.** `GET /cms` reports `version: 7` | was `schemaVersion: 5` |
+| ✅ | **CMS contract aligned.** `hotline`, `email`, `address`, `socials`, `zakatNisabEgp`, `splashText`, `website`, `donationReassurance` | all present in `settings` |
+| ✅ | **`consultations`, `media`, `activity`, `updatedAt`, `version`** top-level keys | were missing |
+| ✅ | **`POST /donations` and `POST /bookings` accept a body again** | invalid payloads now return **per-field** errors, not the root `{"": "Expected object, received null"}` |
+| ✅ | **UUID constraint relaxed.** `serviceId: "svc-6"` is accepted | probed with a bad `timeSlot`; only `timeSlot` is rejected |
+| ✅ | **`GET /governorates` exists** | 200, returns all 27 |
+
+The two public write paths that were completely dead — donations and bookings —
+now work. That was the most serious item.
 
 ---
 
-## 2. Endpoints that do not exist
+## 1. Still outstanding
 
-| | Endpoint | Why it is needed |
+| | Item | Detail |
 | --- | --- | --- |
-| 🟠 | `PATCH /admin/consultations/{id}/schedule` | To turn a consultation request into a booked appointment. Needs three nullable columns on `consultation_requests` (`providerId`, `date`, `timeSlot`) and a union in `/me/provider/bookings`. `ConsultationRequest.status` already includes `تم تحديد موعد` but has nowhere to record the result. See `BACKEND.md` §20 — **needs the option A/B decision first**. |
-| 🟡 | Anything exposing `Consultant.type`, `sessions`, `featured` | No column exists on `Provider` for any of them. The app currently infers `type` from the specialization text and defaults `featured` to `false`. Cosmetic today; a schema addition to do properly. |
+| 🔴 | **Consultation types still not seeded** | The backend serves `psychological` / `legal` / `family` with **no `disclaimer`, no `consent` field, and no `options`** on choice fields. The app does not break — the mapper merges them onto the bundled forms and keeps those — but the API is not driving the consultation forms, and the consent checkbox exists only because the app supplies it. Compliance point, `BACKEND.md` §18.6. **Needs a bearer token:** `scripts/seed-consultation-types.mjs --apply --prune` |
+| 🔴 | **`POST /webhooks/payment` is still unauthenticated** — and now returns **HTTP 500** on a malformed body instead of a 400 | Anything that can reach the URL can attempt to mark a donation paid. Needs a signature check before real payments, and input validation. |
+| 🟠 | **Manual-payment rules disagree** | Backend hardcodes `MANUAL_METHODS = [تحويل بنكي, فوري]`; the app drives it off each method's `manual` flag. They differ on two, in opposite directions: `إنستاباي` (app manual, backend gateway) and `فوري` (app gateway, backend manual). **An InstaPay donation therefore waits for a gateway callback that never arrives.** Not re-verifiable without creating a real donation. |
+| 🟡 | **`settings.milestones` is `[]`** | The key now exists and is editable, but is empty, so the About timeline still comes from the app's bundled values. Populate it or accept that it is app-owned. |
+| 🟡 | **`paymentMethods` still use latin ids** (`card`, `fawry`, `instapay`, `vodafone`, `bank`) | Harmless for the app — the mapper translates them to the Arabic union — but the dashboard will show latin ids. Migration 5→6 renames settings keys and does not touch these. |
+| 🟡 | **`GET /governorates` leaks join data** | Each of the 27 rows carries `createdAt` and a nested `workAreas` array. Only `id` and `name` are needed; this bloats a payload the app fetches on every form. |
+| 🟡 | **`PATCH /admin/cms/settings` accepts any key** | Schema is `z.record(z.string(), z.any())`, so a misspelled key is stored and silently ignored — a quiet way to lose an edit. |
+| 🟡 | **Five routes take `@Body() any`** | `PUT /admin/cms`, both `admin/cms/pages` writes, both generic `admin/portfolio` writes. |
+| 🟡 | `FCM_SERVER_KEY` empty | Push notifications will not send. Config, not code. |
 
 ---
 
-## 3. Data and seeding
+## 2. Cannot be verified without a bearer token
 
-| | Problem | Effect |
-| --- | --- | --- |
-| 🔴 | **Consultation types not seeded.** Live has `psychological` / `legal` / `family`, with **no `disclaimer`, no `consent` field, and no `options`** on choice fields. | The app cannot use the API's forms and falls back to its bundled ones. A radio with no options is unanswerable, and the missing consent checkbox is a compliance regression (`BACKEND.md` §18.6). Run `scripts/seed-consultation-types.mjs --apply --prune` — **needs a bearer token**. |
-| 🟡 | **`paymentMethods` rows still use latin ids** (`card`, `instapay`). Migration 5 → 6 renames settings keys but does not touch payment ids, so they will survive the deploy. | Harmless today — the app's mapper translates them — but the dashboard will show latin ids. |
-| ⚪ | `legal` (قانونية) has no app‑side form schema. | The app cannot render it, so it is skipped. Either seed it a form or drop the type. |
-
----
-
-## 4. Contract mismatches
-
-| | Mismatch | Effect |
-| --- | --- | --- |
-| 🟠 | **Manual‑payment rules disagree.** Backend hardcodes `MANUAL_METHODS = [تحويل بنكي, فوري]`; the app drives it off the `manual` flag per method. They disagree on two, in opposite directions: | |
-| | • `إنستاباي` — app: manual → `قيد المراجعة`. Backend: gateway → `قيد التأكيد`. | **An InstaPay donation waits for a gateway callback that never arrives** and is never confirmed. |
-| | • `فوري` — app: gateway. Backend: manual. | A Fawry donation waits on admin review instead of the gateway. |
-| 🟡 | `POST /volunteers` and `POST /bookings` take a numeric `governorateId`, but the app collects a governorate **name**. | Solved by `GET /governorates` (PR #4) — the client must map name → id before submitting. |
-| 🟡 | `/home` and `/foundation` return `stats` as a **list** of `{key,value,label}`, while `settings.stats` is an **object**. | Two shapes for the same idea. The app flattens by key; worth unifying. |
-| 🟡 | `settings.stats` has no `initiatives` / `volunteers`, though the `/home` stats list does. | The About screen's impact figures cannot be edited from the CMS. |
-
----
-
-## 5. Security — before real money moves
-
-| | Issue |
+| | Item |
 | --- | --- |
-| 🔴 | **`POST /webhooks/payment` is `@Public()` with no signature verification.** Anything that can reach the URL can mark any donation **paid**. Needs a shared secret or provider signature check before taking live payments. |
-| 🟡 | **`PATCH /admin/cms/settings` accepts any key** — its schema is `z.record(z.string(), z.any())`. A misspelled key is stored and then ignored rather than rejected, which is a silent way to lose an edit. |
-| 🟡 | **Five routes take `@Body() any`** with no validation: `PUT /admin/cms`, both `admin/cms/pages` writes, and both generic `admin/portfolio` writes. |
-| 🟡 | `FCM_SERVER_KEY` is empty, so push notifications will not send. Config, not code. |
+| ❓ | **Does the admin API actually work now?** `/admin/*` answers 401 with no token and 401 with a garbage token — which is correct but uninformative, because `JwtAuthGuard` rejects before `RolesGuard` ever runs. The only way to tell a working admin API from the old blanket-403 one is a **valid** token. 93 routes ride on this. |
+| ❓ | **Do the 18 `/me` routes resolve a user?** Same reason. |
+
+The auth fix is merged and the deploy clearly happened, so both are *likely*
+fine — but "likely" is not verified, and this is the whole dashboard.
 
 ---
 
-## 6. Decisions needed (not code)
+## 3. Endpoints that still do not exist
 
-| | Question | Recommendation |
+| | Endpoint | Why |
 | --- | --- | --- |
-| ⚪ | Do consultations become bookings? (`BACKEND.md` §20) | **Option A** — one pipeline. Three nullable columns on `consultation_requests`. |
-| ⚪ | `legal` consultation type: give it a form, or drop it? | — |
-| ⚪ | Impact figures (`+650` initiatives, `+10,000` volunteers) — approve or blank? | Client's call (QA D‑07). |
-| ⚪ | Real social profile URLs | The row stays hidden until supplied. |
+| 🟠 | `PATCH /admin/consultations/{id}/schedule` | To turn a consultation request into an appointment. Needs three nullable columns on `consultation_requests` (`providerId`, `date`, `timeSlot`). `ConsultationRequest.status` already includes `تم تحديد موعد` with nowhere to record the result. **Blocked on the §20 A/B decision.** |
+| 🟡 | Columns for `Consultant.type`, `sessions`, `featured` | None exist on `Provider`. The app infers `type` from the specialization text and defaults `featured` to false. |
 
 ---
 
-## 7. Route inventory
+## 4. Decisions needed (not code)
 
-141 routes across 39 controllers, all tagged and documented (PR #3).
-
-| Area | Routes | Status |
-| --- | ---: | --- |
-| Public reads — `/cms` `/home` `/foundation` `/cases` `/projects` `/articles` `/categories` `/services` `/providers` `/consultants` | 20 | ✅ Live, verified, mapped |
-| Public writes — consultation, contact, volunteer | 3 | ✅ Live, validation verified |
-| Public writes — donation, booking | 3 | 🔴 Dead → fixed in PR #4 |
-| `GET /governorates` | 1 | 🟠 New in PR #4 |
-| Auth — `/auth/*`, `/admin/auth/login` | 5 | ⚠️ Live, untested (needs a real OTP / password) |
-| `/me/*` | 18 | 🔴 Blocked on deploy |
-| `/admin/*` | 93 | 🔴 Blocked on deploy |
-| `POST /webhooks/payment` | 1 | 🟡 Live, unauthenticated |
-
-**24 of 141 usable today.**
+| Question | Recommendation |
+| --- | --- |
+| Do consultations become bookings? (`BACKEND.md` §20) | **Option A** — one pipeline, three nullable columns |
+| `legal` (قانونية): give it a form schema, or drop it? | The app cannot render it today, so it is skipped |
+| Impact figures (`+650`, `+10,000`) — approve or blank? | Client's call (QA D‑07) |
+| Real social profile URLs | Row stays hidden until supplied |
+| Which manual-payment list is right — the app's or the backend's? | Needed to fix the InstaPay case |
 
 ---
 
-## 8. Shortest path to done
+## 5. Shortest path to done
 
-1. **Deploy `main`.** Unblocks 111 routes — the whole dashboard and all of `/me`.
-2. **Merge and deploy PR #4.** Unblocks donations, bookings and `PATCH /me`.
-3. **Seed the consultation types** (needs a bearer token). Restores the consent
-   checkbox and the five Arabic‑keyed types.
-4. **Fix the manual‑payment list** so InstaPay donations can complete.
-5. **Sign the payment webhook** before taking real money.
+1. **Get a bearer token** — it closes the two ❓ items *and* unblocks seeding.
+2. **Seed the consultation types.** One command once the token exists.
+3. **Sign the payment webhook** (and make it 400 rather than 500) before taking
+   real money.
+4. **Settle the manual-payment list** so InstaPay donations can complete.
 
-Items 1–3 are what stand between this and a fully API‑backed app.
+Everything else is cosmetic or a product decision.

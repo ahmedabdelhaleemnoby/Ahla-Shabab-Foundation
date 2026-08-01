@@ -152,17 +152,51 @@ async function main() {
   const svc = await fetchServices({ limit: 5 });
   check('items unwrapped from { data: { data, meta } }', Array.isArray(svc.items) && svc.items.length > 0);
   check('meta.total present', typeof svc.meta.total === 'number' && svc.meta.total > 0, JSON.stringify(svc.meta));
-  // Service.id is `@default(uuid())` in the Prisma schema and
-  // CreateBookingSchema requires `z.string().uuid()`, but the seeded rows use
-  // `svc-1`..`svc-6`, so no service from the public list can be booked.
-  knownIssue('serviceId is a UUID (POST /bookings requires one)',
-    svc.items.every((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x.id)),
-    `seeded ids: ${svc.items.map((x) => x.id).join(', ')}`);
+  // What matters is not whether the ids look like uuids — they do not, they are
+  // `svc-1`..`svc-6` — but whether POST /bookings accepts them. Probed with a
+  // deliberately bad timeSlot so nothing is ever created: if serviceId is still
+  // rejected it shows up in the field errors alongside timeSlot.
+  const probe = await fetch(`${BASE}/bookings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      serviceId: svc.items[0]?.id,
+      applicantName: 'اختبار',
+      phone: '01000000000',
+      date: '2026-08-05',
+      timeSlot: 'DELIBERATELY-INVALID',
+    }),
+  });
+  const probeFields = Object.keys(((await probe.json())?.error?.fields) ?? {});
+  check(`POST /bookings accepts the ids GET /services returns (${svc.items[0]?.id})`,
+    probe.status === 400 && !probeFields.includes('serviceId'),
+    `rejected fields: ${probeFields.join(', ') || '(none)'}`);
 
   console.log('\n## GET /home (stats list -> object)');
   const home = await fetchHomeAggregate();
   const flat = statsListToObject(home.stats);
   check('stats flattened by key', Object.keys(flat).length >= 3, JSON.stringify(flat));
+
+  /* ------------------------------------------------- raw (unmapped) API state */
+  // Everything above validates the MAPPED result, which the fallback protects.
+  // These report what the backend itself is actually serving.
+  console.log('\n## raw GET /cms — the backend\'s own state, before mapping');
+  const rawCms: any = await (await fetch(`${BASE}/cms`)).json().then((j: any) => j.data ?? j);
+  const rawTypes: any[] = rawCms.consultations ?? rawCms.consultationTypes ?? [];
+  console.log(`  wire version: ${rawCms.version ?? rawCms.schemaVersion}   keys: ${[...rawTypes.map((t) => t.key)].join(', ')}`);
+  knownIssue('consultation types are seeded with the app\'s five Arabic keys',
+    ['نفسية', 'دينية', 'طبية', 'أسرية', 'أعمال'].every((k) => rawTypes.some((t) => t.key === k)),
+    `backend has: ${rawTypes.map((t) => t.key).join(', ')}`);
+  knownIssue('every backend consultation type carries a disclaimer',
+    rawTypes.length > 0 && rawTypes.every((t) => !!t.disclaimer));
+  knownIssue('every backend consultation type carries a consent field',
+    rawTypes.length > 0 && rawTypes.every((t) => (t.fields ?? []).some((f: any) => f.type === 'consent')));
+  knownIssue('settings.milestones is populated',
+    Array.isArray(rawCms.settings?.milestones) && rawCms.settings.milestones.length > 0,
+    `value: ${JSON.stringify(rawCms.settings?.milestones)}`);
+  knownIssue('paymentMethods use the app\'s Arabic ids',
+    (rawCms.paymentMethods ?? []).every((m: any) => /[؀-ۿ]/.test(String(m.id))),
+    `backend ids: ${(rawCms.paymentMethods ?? []).map((m: any) => m.id).join(', ')}`);
 
   /* -------------------------------------------------------- write error path */
   console.log('\n## POST /consultations with a deliberately invalid body (creates nothing)');
