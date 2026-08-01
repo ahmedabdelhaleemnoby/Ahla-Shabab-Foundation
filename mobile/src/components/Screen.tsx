@@ -6,19 +6,30 @@ import { colors, spacing } from '../theme';
 /**
  * Base screen frame: safe-area, paper background, optional scroll body with the
  * standard 16px gutter. `footer` renders a sticky CTA above the tab bar.
+ *
+ * On a TAB root the raised «تبرع» button is lifted 26px above the bar
+ * (TabBar.styles.raiseWrap), so it overlaps the bottom-centre of a sticky footer
+ * (QA D2-01). Pass `underRaisedTab` on the three tab roots that have a footer —
+ * Cases, Donate and About — to reserve that clearance. It is opt-in rather than
+ * automatic because the other 14 footer screens are pushed screens with no tab
+ * bar, where the same padding would only add dead space.
  */
+const RAISED_TAB_CLEARANCE = 28;
 export function Screen({
   children,
   header,
   footer,
   scroll = true,
   contentStyle,
+  underRaisedTab = false,
 }: {
   children: React.ReactNode;
   header?: React.ReactNode;
   footer?: React.ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Reserve room for the raised tab-bar button sitting over this footer. */
+  underRaisedTab?: boolean;
 }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -34,7 +45,9 @@ export function Screen({
       ) : (
         <View style={[styles.content, { flex: 1 }, contentStyle]}>{children}</View>
       )}
-      {footer}
+      {footer ? (
+        <View style={underRaisedTab ? { paddingBottom: RAISED_TAB_CLEARANCE } : undefined}>{footer}</View>
+      ) : null}
     </SafeAreaView>
   );
 }

@@ -58,7 +58,7 @@ between submitting a consultation and logging in.
 | **Critical defects** | **0** |
 | **High defects** | **0** |
 | Medium defects | 0 |
-| Low defects | 2 (D2-01 raised-button overlap, D2-02 stale walkthrough doc) |
+| Low defects | 2 — **both fixed and retested 2026-08-01** (D2-01 raised-button overlap, D2-02 stale walkthrough command) |
 
 ### Automated check tallies
 
@@ -96,9 +96,11 @@ two false FAILs on login linking (a second module instance under ESM).
 
 1. **Do not reload between submitting a consultation and logging in** — it resets
    the identity. Worth building into the demo script.
-2. Fix D2-01 (add ~28 px bottom padding to the sticky CTA) — cosmetic, ~5 minutes.
-3. Refresh `CLIENT_DEMO_WALKTHROUGH.md` for the new tab set and the About-screen
-   governorates.
+2. ~~Fix D2-01~~ — **done.** `Screen` gained an opt-in `underRaisedTab` prop,
+   applied to the three tab roots that have a footer. Retested at 320 px.
+3. ~~Refresh `CLIENT_DEMO_WALKTHROUGH.md`~~ — **done.** The body was already
+   accurate; the stale part was §12.3's one-origin command, which no longer
+   starts the dashboard now that it lives in its own repository.
 4. Get the client's decision on the «+650» / «+10,000» impact figures, still
    unapproved from pass 1.
 5. If the demo will be shown on a phone, run an emulator or device pass first —
@@ -118,10 +120,14 @@ dashboard displays submitted answers, the bottom navigation does not obscure
 content, no crashes or page errors were observed, all builds pass, and no
 requested screen is missing.
 
-It is **not** an unqualified approval because of two open items, neither of which
-blocks a demo: the cosmetic overlap (D2-01) and a walkthrough document that
-predates the change set (D2-02) — the document the demo is meant to be run from.
-Two requirements also remain PARTIAL on coverage rather than on behaviour.
+Both Low defects raised by this pass (D2-01, D2-02) have since been **fixed and
+retested**, with no regression: `qa2-nav.mjs` 39 PASS, `qa2-flows.mjs` 46 PASS,
+typecheck exit 0.
+
+The qualification therefore now rests only on **coverage**, not on known
+breakage: two requirements remain PARTIAL because tablet width, keyboard-open
+state and font scaling were not exercised, and not every control across all 42
+screens was pressed.
 
 **This approval covers browser-verified behaviour only.** It does not cover
 device behaviour, and it does not cover anything backend-dependent.

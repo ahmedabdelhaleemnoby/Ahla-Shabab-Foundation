@@ -17,6 +17,7 @@
 
 
 Two defects, both Low. No Critical or High defects were found.
+**Both were fixed and retested on 2026-08-01** — see the resolution notes.
 
 ---
 
@@ -39,7 +40,19 @@ button remains tappable either side of the circle.
 sticky CTA sits directly on top of the bar with no reserved gap.
 **Recommended fix:** add ~28 px bottom padding to the sticky CTA container, or
 reduce the raise.
-**Status:** OPEN — cosmetic; does not block the demo.
+**Status:** **FIXED 2026-08-01.**
+
+*Exact fix:* `Screen.tsx` gained an opt-in `underRaisedTab` prop that wraps the
+footer in `paddingBottom: 28`. It is opt-in rather than automatic because only
+**three** of the 17 footer screens are tab roots (`Cases`, `Donate`, `About`) —
+the other 14 are pushed screens with no tab bar, where the same padding would add
+dead space. Those three now pass `underRaisedTab`.
+
+*Retest:* re-captured at 320×700 on all three screens. The green CTA now ends
+clear of the raised circle with a visible gap; before, the circle covered its
+lower-centre. Evidence: `qa2-tabbar-320.png`, `qa2-fix-donate.png`,
+`qa2-fix-about.png`. Regression: `qa2-nav.mjs` 39 PASS, `qa2-flows.mjs` 46 PASS,
+typecheck exit 0 — unchanged from before the fix.
 
 ---
 
@@ -54,7 +67,25 @@ governorates and the provider dashboard.
 **Actual:** last updated **2026-07-28**, before this change set.
 **Evidence:** git metadata; 196 lines.
 **Recommended fix:** refresh the navigation and governorate sections.
-**Status:** OPEN.
+**Status:** **FIXED 2026-08-01.**
+
+*Finding on closer reading:* the body was **not** materially wrong — sections 1–11
+already describe the five-item bar, the Home restructure, the About-screen
+governorates, the email-normalisation logic and the provider dashboard. The real
+staleness was elsewhere:
+
+*Exact fix:*
+1. §12.3 gave `npm run demo:build && npm run demo` for running the app and
+   dashboard on one origin. **That command no longer starts the dashboard** — it
+   moved to its own repository in `9afd39f`. Replaced with the sibling-checkout
+   + `ADMIN_DIR=…` sequence, and noted that without it the app still runs alone.
+2. §12.6 said the APK was emulator-tested. True of the `v1.4.0` build, but a
+   reader would carry it over to the newer build. Added an explicit note that
+   pass 2 **built but never installed or launched** any APK.
+3. Added a dated header note covering the pass-2 result, the D2-01 fix, and the
+   reload warning for the same-email flow.
+
+*Retest:* re-read end to end; 196 → 224 lines.
 
 ---
 

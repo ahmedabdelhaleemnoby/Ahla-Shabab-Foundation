@@ -41,6 +41,10 @@
 | 21 | Demo safety | **PASS** | 0 external network requests observed; 0 user-visible TODO/FIXME/Mock; 10 TODOs all in code comments as `TODO(backend)`/`TODO(production)` | — | none |
 | 22 | Build success | **PASS** | typecheck, 32 unit tests, web export, Android release APK all succeed | — | none |
 | 23 | No dead buttons | **PARTIAL** | All 5 tabs, Home CTAs, governorate chips, gate CTAs, provider tabs and consultation submit verified live | **Not every button in all 42 screens was exercised** | full sweep if required |
-| 24 | Client walkthrough document | **PASS** | `CLIENT_DEMO_WALKTHROUGH.md`, 196 lines | Last updated 2026-07-28 — predates this change set | refresh for the new tab set |
+| 24 | Client walkthrough document | **PASS** | `CLIENT_DEMO_WALKTHROUGH.md`, 224 lines | — | none — refreshed 2026-08-01 (D2-02) |
 
 **Totals — 22 PASS · 2 PARTIAL · 0 FAIL · 0 BLOCKED.**
+
+Both Low defects (D2-01, D2-02) were fixed and retested on 2026-08-01; see
+`DEFECTS.md`. The two PARTIALs are unchanged — they are coverage gaps in this
+pass, not defects.

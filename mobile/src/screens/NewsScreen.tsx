@@ -54,6 +54,7 @@ export default function NewsScreen() {
   return (
     <Screen
       header={<AppBar title="عن الجمعية" onBack={() => nav.navigate('Home')} />}
+      underRaisedTab
       footer={
         <StickyFooter>
           {/* Both flex: a fixed 130 px forced "تواصل معنا" onto two lines while
