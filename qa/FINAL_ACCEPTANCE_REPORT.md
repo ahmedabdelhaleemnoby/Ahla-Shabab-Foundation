@@ -1,272 +1,127 @@
-# Final Acceptance Report
-## Ahla Shabab Demo — Mobile App + Provider/Admin Dashboards
+# Final acceptance report — QA pass 2
 
-**Date:** 2026-07-26
-**Commit under test:** `ec46501` — *chore(mobile): adjust android display settings and improve typography*
-**Revision:** 8 — post-fix. Seventeen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6); D-13 + a newly found D-19 (round 7 — Android now builds and the app was verified on an emulator). Round 4 surfaced D-18 and required a correction to the D-08 claim; round 5 closed it. This report reflects the fixed build.
-**Working tree at audit start:** clean. **Now:** 20 source files modified across four fix rounds (listed in §8), verified against `git diff --name-only ec46501`.
-**App version:** `app.json` 1.4.0, Android versionCode 8
-
-**Companion documents:** `REQUIREMENTS_STATUS.md` · `DEFECTS.md` · `NAVIGATION_MATRIX.md` · `PERSISTENCE_REPORT.md` · `BUILD_AND_TEST_RESULTS.md` · `DEMO_LIMITATIONS.md`
-**Evidence:** 82 mobile screenshots in `qa/screenshots/mobile/`, 19 dashboard screenshots in `qa/screenshots/dashboard/`, reproducible harness in `qa/harness/`
-
-> **Evidence gap — video:** Phase 7 of the brief asked for seven recorded flow videos. **No videos were recorded**; `qa/videos/` is empty. Each of the seven flows was instead exercised end-to-end by a scripted harness with per-step state assertions and screenshots at each stage, which is stronger evidence for pass/fail than a screen recording — but it is not the requested artefact, and is recorded here as an unmet deliverable rather than quietly omitted.
->
-> Note: `.gitignore` tracks `qa/*.md` and `qa/harness/` (reports + the harness that produced them) and excludes the ~52 MB of screenshots, videos and run output, which stay on disk only.
+**Date:** 2026-08-01
+**Scope:** the bottom-navigation / email-OTP / Home-restructure / governorates /
+provider-dashboard / guest-identity change set.
 
 ---
 
-## 1. Executive summary
+## How this was tested
 
-The five-tab navigation redesign, the move of governorates into *اعرف عنا*, the donation-first / consultations-second home reordering, the email-OTP demo login, the returning-guest email identity system and the provider dashboard have all been **built and verified working**. The core client-facing story holds up: **all 69 verified navigation actions land correctly**, all five consultation forms carry the right fields with no cross-contamination, and the same-email deduplication feature — the most technically interesting requirement — works exactly as specified, including across capitalisation and whitespace variants.
-
-The initial audit found three blocking problems; **all have since been fixed and retested.**
-
-**First, three dead buttons in the side menu.** *خدماتنا*, *حسابي* and *أخبارنا* pointed at tab routes (`Discover`, `Profile`, `News`) deleted during the five-tab redesign, so tapping them did nothing at all. **Fixed** — and fixed at the type level too, so the `MainTab` union now makes any future stale tab target a compile error rather than a silent runtime no-op. A runtime remap also covers CMS state already saved before the fix, and the dashboard's authoring dropdowns no longer offer the removed tabs. All 17 drawer items now navigate.
-
-**Second, the Account Settings screen was not guest-gated** — a guest saw a fully editable personal-profile form where the login sheet belonged. **Fixed**; all six personal screens now gate identically, with the editable form confirmed unreachable for guests and still fully available once logged in.
-
-**Third, two on-screen statements were untrue.** The OTP screen claimed a code "has been sent to your email" with no email service behind it, and two screens claimed data was "saved locally" when all state lives in RAM. **Both corrected.** The OTP and email screens now carry the same gold demo card used elsewhere, stating plainly that no email is sent and any six-digit code works. The persistence strings now say "أثناء الجلسة الحالية فقط". Note this last one is a **copy fix, not a behaviour fix** — nothing persists, it is simply now disclosed accurately (reasoning in §5).
-
-Everything else is either passing or a known, documented demo limitation. Notably, the **demo-safety posture of the mobile app is excellent**: zero network calls verified both statically and at runtime, no secrets, no localhost, no user-visible developer artefacts, payment never shown as completed, and honest disclaimers on the consultation flow, the provider dashboard and the file-upload placeholder.
-
-**The Android build blocker is resolved, and the app has now been verified on an emulator.** The original diagnosis — an AGP/JDK toolchain fault — was wrong. The real cause is that the project lives on an **exFAT** volume, which has no hard links; AGP's artifact transforms require them, and the build log said so outright. Copied to a local APFS disk, the same JDK and AGP produce **BUILD SUCCESSFUL** for both debug and release. A release APK now installs and runs on an emulator: Home renders, tabs navigate, the hardware back button behaves correctly, and logcat shows **zero fatal exceptions**.
-
-That closes the engagement's largest coverage gap. It also settled an open question: D-10's truncation was indeed **web-only** — the label renders in full natively — and the D-11/D-15 layout fixes hold on a real Android surface.
-
-**Physical-device testing was still not performed** (no handset attached). Emulator ≠ device for things like real gesture bars and OEM keyboards.
-
----
-
-## 2. Scoreboard
-
-| Metric | Initial audit | **After fixes** |
+| Surface | Used | Notes |
 |---|---|---|
-| Requirements assessed | 24 | 24 |
-| **PASS** | 14 | **24** |
-| **PARTIAL** | 8 | **0** |
-| **FAIL** | 1 | **0** |
-| **BLOCKED** | Android build/device testing | **0** — Android builds; emulator verified |
-| **Weighted completion** | ~79% | **100%** |
-| Defects logged | 16 | **19** (**17 fixed**, 2 open) |
-| — Critical | 0 | **0** |
-| — High | 2 | **0** (both fixed) |
-| — Medium | 7 | **1** — D-07 only (D-03/04/05/06/08/09/17/18/19 fixed) |
-| — Low | 7 | **0** (all 7 fixed) |
-| Navigation actions verified | 69 (66 pass, 3 fail) | **69 (69 pass, 0 fail)** |
-| Unit tests | 28/28 pass | **32/32 pass** (4 added) |
-| Typecheck | clean (3 workspaces) | **clean (3 workspaces)** |
+| Code inspection | ✅ | 42 screens, stores, navigator, tab bar |
+| **Browser testing** | ✅ | Expo **web** dev server, headless Chrome via puppeteer-core at **320×700, 390×844, 430×932**. Assertions read React Navigation's own root state, not pixels. |
+| Android **emulator** | ❌ | not run |
+| **Real device** | ❌ | not run. The release APK was **built** (60 MB, exit 0) but never installed or launched. |
 
-### Critical issues
-**None**, before or after. No crash in any flow, no data corruption, no broken core tab.
+**No claim in this report is based on device behaviour.**
 
-### High issues — **both fixed**
-- ~~**D-01** three dead drawer buttons~~ → **FIXED.** 17/17 drawer items navigate; recurrence now blocked by the type system.
-- ~~**D-02** Account Settings not guest-gated~~ → **FIXED.** 6/6 personal screens gate consistently.
-
-### Also fixed (round 2)
-- ~~**D-04** provider working-hours not editable~~ → **FIXED.** `تعديل نطاق اليوم` card with من/إلى inputs; empty input rejected so a blank field cannot wipe the range.
-- ~~**D-05** no reschedule action~~ → **FIXED.** Inline date/time editor prefilled from the booking. Status is deliberately **not** changed — rescheduling a pending request must not silently confirm it — and the Overview "today" counter follows the move (2→1).
-
-### Also fixed (round 3)
-- ~~**D-08** dashboard impact-number editor inert~~ → **FIXED.** Worse than first diagnosed: `CmsSettings` had no `stats` field *and* the Settings page never imported the CMS store, so edits didn't survive a dashboard reload either. Schema bumped 3→4 with a migration; editor commits via `mutate()`; mobile reads via a new `getSettings()` with per-field fallback.
-- ~~**D-09** blank-email guests shared one identity~~ → **FIXED.** Email is now required, and the defensive fallback is per-submission rather than a shared constant. A second, worse variant surfaced while fixing: `??` meant a *cleared* field produced `''`, collapsing those submissions into an empty-string identity — now handled.
-
-### Also fixed (round 4)
-- ~~**D-17** remaining Settings sections draft-only~~ → **FIXED.** All six cards now commit through `mutate()`; `paymentMethods` became a CMS slice (schema 4→5 + migration); five mobile screens now read CMS values instead of compiled constants. A side-effect worth noting: each social button now opens **its own** URL — previously all four opened the website.
-
-### Also fixed (round 5)
-- ~~**D-18** dashboard and app on different origins~~ → **FIXED.** `scripts/demo-origin.mjs` serves the mobile web export at `/` and the dashboard build at `/admin/` from one port, so they share one `localStorage`. `npm run demo:build && npm run demo`. Normal dev mode is unchanged (`DEMO_BASE` unset ⇒ identical behaviour), verified.
-
-  This closes the loop opened in round 3: a value **typed into the dashboard UI now appears in the app UI**, verified with no state hand-written by the test. It is the assertion that was impossible before.
-
-  Worth recording: the obvious approach — a path-based reverse proxy in front of both dev servers — does not work, because Vite's dev server injects root-absolute URLs (`/@vite/client`) that a `/admin`-prefixed proxy misroutes to the app. Serving built output avoids this and matches a real deployment.
-
-### Correction to the round-3 D-08 claim
-The D-08 retest line *"dashboard-authored stats reach the About screen"* was originally verified by writing CMS state to the **app's own origin** — proving the app-side reader, not live delivery. Round 5 makes the stronger claim true and proves it directly; `DEFECTS.md` records both the correction and the new evidence.
-
-### Also fixed (round 7 — the Android build)
-- ~~**D-13**~~ stale demo APK → **FIXED.** `ahla-shabab-v1.4.0-demo.apk` rebuilt from the current branch (versionCode 8, 1.4.0, 59.8 MB) and verified on an emulator. The blocker was the **exFAT filesystem**, not the toolchain — see §4 and `BUILD_AND_TEST_RESULTS.md`.
-- **D-19 (new, Medium)** → **FIXED.** The committed `android/build.gradle` still said `versionCode 1 / 1.0.0`, ignoring `app.json`'s `8 / 1.4.0` — this is a bare workflow, so `expo prebuild` never runs and the two had drifted. Every locally built APK would have shipped as version 1 and could not have upgraded an installed v8. Synced, with a comment recording which file is authoritative.
-
-### Also fixed (round 6 — low-severity sweep)
-- ~~**D-10**~~ CTA truncated at 320 px → **FIXED.** `adjustsFontSizeToFit` is a no-op on react-native-web — that was the cause, not the symptom. Now a two-line label; full text at every width, client wording preserved.
-- ~~**D-11**~~ tab label wrapped at 320 px → **FIXED.** `TabBar` is width-aware below 360 px; all four plain items exactly one line tall.
-- ~~**D-12**~~ social links → **FIXED.** Each opens its own URL (round 4), and the row now hides networks without a distinct configured URL — a button that just reopens the website is a dead button. Real URLs remain the client's to supply.
-- ~~**D-14**~~ dead conditional + stale comment → **FIXED.**
-- ~~**D-15**~~ uneven About footer buttons → **FIXED.** Both flex; equal height at every width.
-- ~~**D-16**~~ dashboard used the Google Fonts CDN → **FIXED.** Cairo self-hosted from the existing `@expo-google-fonts/cairo` dependency, copied at build time (not committed). **The whole project now makes zero external requests** — mobile *and* dashboard.
-
-Requirement #20 (responsive behaviour) moves PARTIAL → PASS.
-
-### Remaining open
-- **D-07 (Medium)** — the unverified "1.2M+" figure. **Needs a client decision, not a code fix**; it is now editable from the dashboard and that edit reaches the app.
-(D-13 closed in round 7 — see above.)
-7 Low — D-10/D-11 (320 px layout), D-12 (placeholder social links), D-13 (stale demo APK), D-14 (tech debt), D-15 (cosmetic), D-16 (dashboard webfont, informational).
+**Backend:** none. A typed API client exists at `shared/src/api`, but **no mobile
+screen imports it** (0 call sites) and **zero external network requests** were
+observed across the entire session. Nothing here is backend-verified, and no
+backend-dependent behaviour is reported as production-ready.
 
 ---
 
-## 3. What was verified working
+## Executive summary
 
-**Navigation.** All five tabs navigate correctly with the correct RTL order (`الأسر · الحالات العاجلة · تبرع · الاستشارات · اعرف عنا`, right to left). The raised centre donation button is visually emphasised and does not overlap content at any tested width. The tab bar is present on all six root screens and correctly hidden — verified by computed style, not DOM presence — on all eleven pushed screens tested, including case details, donation steps, consultation forms, article details, governorate details and login/OTP.
+The change set is **implemented and working** on every requirement that could be
+exercised in a browser. All four decision-blocking behaviours pass:
 
-**Email OTP demo.** Login is by email, not phone. Empty, `abc`, `a@b` and `a@` are all rejected with an Arabic error. Whitespace is stripped at the input layer, and uppercase addresses are normalised to lowercase downstream. The OTP field accepts exactly six digits, filters non-numerics, rejects short codes, and accepts any six-digit value. A resend control appears behind a 30-second countdown. Backend integration markers are present in code and never rendered to users.
+- the five-item bottom navigation works and hides correctly on inner screens;
+- guest consultation submission completes end-to-end (`AS-999534`);
+- same-email deduplication holds across case and whitespace variants (16/16);
+- the provider dashboard displays every submitted answer (7/7 fields).
 
-**Home.** No impact statistics remain on Home. The donation hero is first, the consultations hero second, both CTA pairs navigate correctly, Arabic text wraps properly, and no broken image or empty section appears.
+Builds are green across the board, including a release APK.
 
-**Governorates in About.** Present under the exact heading *"نطاق عملنا في المحافظات"*, interactive, opening a per-governorate page with services, cases, an initiative and consultation availability. Twelve governorates are listed with an honest "وفي توسع مستمر…" chip — and the unverified "22 محافظة" claim is **not rendered anywhere**, which is the right call.
+The two **PARTIAL** results are coverage gaps in this pass, not known breakage:
+tablet/keyboard/font-scaling were not exercised, and not every control in all 42
+screens was pressed.
 
-**Returning-guest identity.** Two consultations submitted as `Test@Example.COM` and `test@example.com` resolved to one identity with no duplicate user. Logging in afterwards with `"   TEST@EXAMPLE.com   "` normalised correctly and linked **both** prior requests (`AS-455572`, `AS-455586`) with no duplicate record. All four required helpers exist and are exercised.
+The single most important caveat is **persistence: there is none**. No
+`AsyncStorage`/`SecureStore` dependency exists, so login, consultation history,
+returning-guest identity and provider edits all reset on reload. The app is
+honest about this in its own copy, and the demo script must avoid reloading
+between submitting a consultation and logging in.
 
-**Consultation forms.** All five types (نفسية، دينية، طبية، أسرية، أعمال) carry all nine common fields, their own specialised fields, and **zero foreign-field leakage** between types. Consent checkbox and advisory disclaimer present on every form. Validation, submission confirmation, reference number, status timeline and demo notice all work.
+## Scores
 
-**Provider dashboard.** All five overview counts render. Availability toggling, weekday selection, slot add/remove and exception-date add/remove all work. Booking filters, search, empty state, detail expansion, specialised answers, attachment placeholder and Confirm/Complete/Cancel actions all work. Optional missing fields degrade cleanly.
-
-**Guest access model.** Fourteen public screens open freely; five of six personal screens show a friendly, non-blocking login sheet with benefits, a login button and a "continue as guest" escape.
-
----
-
-## 4. Testing method — stated precisely
-
-| Method | Coverage |
+| | |
 |---|---|
-| **Code inspection** | Complete across `mobile/src`, `dashboard/src`, `shared/src` |
-| **Browser testing** (Expo Web / react-native-web, headless Chrome, real pointer events, 320 / 390 / 430 / 768 px) | Complete — all navigation, forms, gating, OTP, dedup, provider dashboard, persistence |
-| **Browser testing** (admin dashboard, 1440×900) | All 18 routes |
-| **Emulator testing** | **Performed** — release APK built from the current branch, installed on AVD `QA_API36` (android-36, arm64-v8a) |
-| **Physical-device testing** | **Not performed** — no handset attached |
+| **Completion** | **22 / 24 requirements fully met — 91.7%** |
+| PASS | **22** |
+| PARTIAL | **2** (responsive coverage; exhaustive dead-button sweep) |
+| FAIL | **0** |
+| BLOCKED | **0** |
+| **Critical defects** | **0** |
+| **High defects** | **0** |
+| Medium defects | 0 |
+| Low defects | 2 (D2-01 raised-button overlap, D2-02 stale walkthrough doc) |
 
-The stock AVD could not boot (its `.avd` directory was missing and it targeted 32-bit `arm`, unsupported on Apple Silicon); a replacement was created from the already-installed arm64-v8a image. The **release** APK was used deliberately — a debug APK renders blank without Metro, since it does not embed the JS bundle.
+### Automated check tallies
 
-**Confirmed natively:** app launch, Home layout and section order, five-item RTL tab bar, tab navigation, hardware BACK (returns to Home from a non-initial tab; exits from Home), zero fatal exceptions in logcat, and that the D-11 and D-15 layout fixes hold. It also settled D-10: the truncation was **web-only**.
-
-**Still unverified — emulator is not a device:** real gesture-navigation insets, OEM keyboard show/hide and field obstruction, OS font scaling, and native `Linking.openURL` against installed apps.
-
-### Honesty note on harness accuracy
-An early version of the click harness used substring matching and DOM-presence checks, producing four false navigation failures and a false "tab bar leaks into inner screens" result. Both were harness bugs, not app bugs. Every affected case was re-run with exact-text matching, clean stack resets and computed-style checks; only the corrected results are reported. Nothing in the application source was modified at any point during this pass.
-
----
-
-## 5. Demo readiness decision
-
-**Demo readiness: yes.** The application is stable, visually complete and demonstrates every headline feature the client asked for. It does not crash, it makes no network calls, and it never claims a payment succeeded.
-
-Critically, **unscripted exploration is now safe.** The three conditions that made free-roaming risky in the initial audit are gone: no menu item is a silent no-op, no personal screen leaks an editable form to a guest, and no screen claims something the demo cannot do. A client can open the drawer, tap anything, and get a coherent response.
-
-**Client-presentation readiness: yes, with two caveats that are not code defects.**
-
-1. **D-07 needs a client decision, not a fix.** The "1.2M+ مستفيد", "+650 مبادرة" and "+10,000 متطوع" figures were removed from Home but still appear on About. If they are not approved numbers, they should come out before the session. Only the client can say.
-2. **Nothing has been verified on a real device.** All evidence is Expo Web. The Android build fails in this environment, and the shipped demo APK predates the final commit. If the demo is delivered as an installable APK rather than a screen-share, that APK must be rebuilt and re-verified first.
-
-The persistence fix deserves one plain sentence: **it changed the words, not the behaviour.** State still resets on restart. It is now disclosed accurately, which is what makes it demo-safe — but if the intended narrative is "close the app, come back, your request is still here", that story does not work and should be left out of the script.
-
----
-
-## 6. Recommended next steps
-
-**Before the client demo (required)**
-1. ~~Fix D-01, D-02, D-06, D-03~~ — **done, retested, verified.**
-2. Get an Android build out — fix the local toolchain or build via EAS — and **rebuild the demo APK from the current commit** (D-13).
-3. Re-run this acceptance pass on a real device or emulator once a build exists, focusing on what web could not cover: back button, keyboard, safe areas, font scaling, and whether D-10's truncation reproduces natively.
-
-**Before the client demo (decisions needed from the client)**
-4. **D-07** — confirm whether "1.2M+ مستفيد", "+650 مبادرة" and "+10,000 متطوع" are approved figures. They were removed from Home but remain on About. This is the client's call, not a bug.
-5. **D-12** — supply real social-media URLs or hide the social row.
-
-**Shortly after**
-6. ~~**D-04 / D-05** — provider working-hours editing and the Reschedule action~~ — **done, retested, verified.**
-7. ~~**D-08** — wire the dashboard's impact-number editor through to the app~~ — **done, retested, verified.**
-8. ~~**D-09** — make the consultation email field required~~ — **done, retested, verified.**
-8b. ~~**D-17** — wire the remaining Settings sections~~ — **done, retested, verified.**
-8c. ~~**D-18** — serve both apps from one origin~~ — **done, retested, verified** (`npm run demo`).
-9. **D-10 / D-11** — fix the two 320 px layout issues.
-10. **D-14** — clear the dead conditional and the stale Home comment.
-
-**Worth flagging as a product gap, not a defect**
-11. Consultations submitted in the app do not appear in the provider dashboard — they are separate in-memory stores. If the intended demo narrative is "user submits → provider sees it", that connection does not currently exist and should be built or explicitly avoided in the script.
-
----
-
-## 7. Final decision
-
-Judged strictly against the brief's own bar: no core tab is broken, guest consultation works, same-email deduplication works, the provider dashboard displays submitted answers, the bottom navigation does not overlap content, the app does not crash, no major requested screen is missing — and, following the fix round, **the "no dead buttons" requirement now passes outright at 69/69 verified actions.**
-
-All four conditions attached to the initial verdict have been closed and independently retested:
-
-| Condition | Status |
+| Suite | Result |
 |---|---|
-| **D-01** three dead drawer buttons repointed | ✅ **Closed** — 17/17 drawer items navigate; `MainTab` type now makes recurrence a compile error |
-| **D-02** Account Settings guest-gated | ✅ **Closed** — 6/6 personal screens gate; form unreachable for guests, intact when logged in |
-| **D-06** OTP "email sent" wording corrected + demo notice added | ✅ **Closed** — both screens reworded, demo card added, resend retained per §2 |
-| **D-03** "saved locally" wording corrected | ✅ **Closed (copy)** — three strings now say session-only. **Behaviour unchanged: nothing persists.** |
+| `qa/harness/qa2-nav.mjs` | **39 PASS**, 0 FAIL (3 informational) |
+| `qa/harness/qa2-flows.mjs` | **46 PASS**, 0 FAIL (1 informational) |
+| `scripts/qa2-identity.ts` | **16 PASS**, 0 FAIL |
+| `qa/harness/qa2-persist.mjs` | 8 PASS, 0 FAIL (+3 persistence observations) |
+| `cd shared && npx vitest run` | **32 PASS** |
 
-Two further defects were fixed in a second round, completing requirement §5 (provider dashboard):
+## Evidence
 
-| Defect | Status |
-|---|---|
-| **D-04** provider working-hours start/end not editable | ✅ **Closed** — editable من/إلى range; empty input rejected |
-| **D-05** no reschedule action | ✅ **Closed** — inline date/time editor; status preserved; Overview counters follow the move |
+- 22 screenshots in `qa/screenshots/mobile/qa2-*.png`
+- Harness: `qa/harness/qa2-nav.mjs`, `qa2-flows.mjs`, `qa2-persist.mjs`, `scripts/qa2-identity.ts`
+- Detail: `REQUIREMENTS_STATUS.md`, `NAVIGATION_MATRIX.md`, `PERSISTENCE_REPORT.md`,
+  `BUILD_AND_TEST_RESULTS.md`, `DEFECTS.md`, `DEMO_LIMITATIONS.md`
 
-Requirements #10 and #11 (provider availability, provider bookings) therefore move PARTIAL → PASS.
+**No video recordings were produced.** The harness captures stills only; the
+flows listed in the brief are covered by the screenshot set and by the automated
+route assertions instead.
 
-Rounds 3–7 then closed the remaining Medium and Low defects: the CMS settings chain (D-08, D-17) and the origin split that stopped it reaching the app (D-18); consultation identity (D-09); the 320 px layout blemishes and the last external network dependency (D-10, D-11, D-12, D-15, D-16, plus D-14's tech debt); and finally the Android build itself (D-13) together with a version-drift defect it exposed (D-19).
+## Corrections made during this pass
 
-Post-fix regression: typecheck clean across 3 workspaces, **32/32** unit tests, dashboard build, web export, 69/69 navigation actions, all 5 consultation forms correct with no cross-contamination, same-email deduplication and login-linking still working, and **0 external network requests** from either the app or the dashboard.
+Four harness bugs produced **false results** that would otherwise have been
+reported as app defects. Each is documented in `DEFECTS.md` (H-01…H-04) with the
+before state, the exact fix and the retest. **No application code was changed
+during this QA pass.** Specifically: a false FAIL on OTP validation (the locator
+was clicking the screen header, not the submit button — which also made two
+"passes" meaningless), a false FAIL on the cancelled counter (`ملغي` vs `ملغاة`),
+two false PARTIALs on the provider dashboard (only the landing tab was read), and
+two false FAILs on login linking (a second module instance under ESM).
 
-# APPROVED FOR CLIENT DEMO
+## Recommended next steps
 
-**This approval now covers the APK as well.** `ahla-shabab-v1.4.0-demo.apk` has been rebuilt from the current branch (versionCode 8 / 1.4.0) and verified running on an emulator — launch, layout, tab navigation, hardware back button, zero fatal exceptions.
-
-**Two caveats remain, both outside the code:**
-
-1. **D-07 — unverified impact figures.** "1.2M+ مستفيد", "+650 مبادرة", "+10,000 متطوع" and the 2013–2025 timeline still appear on About. They were removed from Home as asked, but not retired. **A content decision for the client, not a defect** — and now changeable from the dashboard without a code release. If the figures are not approved, pull them before the session.
-2. **Emulator, not a handset.** The APK was verified on an AVD. That covers launch, layout, navigation and the back button, but not real gesture-navigation insets, OEM keyboards, or OS font scaling. If the client will hold the app on their own phone, do one pass on a physical device first — it is a short check, and nothing in the current evidence suggests it will surface problems.
-
-**One operational note for whoever builds next:** the Android build fails from this project's **exFAT** volume and succeeds from a local APFS disk or CI. That is an environment property, not a code fault — but it will bite the next person who tries, so it is documented in `BUILD_AND_TEST_RESULTS.md`.
-
-Scope of this approval, stated plainly: the app is approved as a *presentation demo*. It has no backend, no persistence across restarts, no real email, and no real payment — all now accurately disclosed in-app.
+1. **Do not reload between submitting a consultation and logging in** — it resets
+   the identity. Worth building into the demo script.
+2. Fix D2-01 (add ~28 px bottom padding to the sticky CTA) — cosmetic, ~5 minutes.
+3. Refresh `CLIENT_DEMO_WALKTHROUGH.md` for the new tab set and the About-screen
+   governorates.
+4. Get the client's decision on the «+650» / «+10,000» impact figures, still
+   unapproved from pass 1.
+5. If the demo will be shown on a phone, run an emulator or device pass first —
+   this report cannot speak to on-device behaviour.
+6. Before any production claim, add real persistence (`AsyncStorage`) and wire
+   the existing API client.
 
 ---
 
-## 8. Files changed in the fix round
+# FINAL DECISION
 
-Twenty source files across four fix rounds (several touched more than once), no dependencies added, no behaviour changed beyond the nine defects:
+## APPROVED WITH MINOR FIXES
 
-| File | Change | Defect |
-|---|---|---|
-| `shared/src/cms/cmsTypes.ts` | `MainTab` corrected to the real tab set; added `LEGACY_TAB_ROUTES` | D-01 |
-| `shared/src/cms/cmsDefaults.ts` | 3 menu targets repointed; `tab()` helper now typed `MainTab` | D-01 |
-| `mobile/src/components/AppDrawer.tsx` | legacy-tab remap in `go()` | D-01 |
-| `mobile/src/screens/CmsPageScreen.tsx` | legacy-tab remap in `handleCta()` | D-01 |
-| `dashboard/src/pages/CmsMenu.tsx` | tab dropdown uses `MainTab[]` | D-01 |
-| `dashboard/src/components/RichContentEditor.tsx` | tab dropdown uses `MainTab[]` | D-01 |
-| `mobile/src/screens/AccountSettingsScreen.tsx` | wrapped in `LoginGate` | D-02 |
-| `mobile/src/screens/EmailAuthScreen.tsx` | reworded + demo card | D-06 |
-| `mobile/src/screens/OtpScreen.tsx` | reworded + demo card | D-06 |
-| `mobile/src/screens/ConsultationRequestScreen.tsx` | 2 persistence strings corrected | D-03 |
-| `mobile/src/screens/ConsultantDashboardScreen.tsx` | banner string corrected; editable working-hours card; reschedule button + inline editor | D-03, D-04, D-05 |
-| `mobile/src/store/providerStore.ts` | added `setWorkingHours()` and `reschedule()` mutators | D-04, D-05 |
-| `shared/src/cms/cmsTypes.ts` | added `stats` to `CmsSettings`; schema 3 → 4 | D-08 |
-| `shared/src/cms/cmsDefaults.ts` | seeded `settings.stats`; deep-copy fix; email now required | D-08, D-09 |
-| `shared/src/__tests__/cms.test.ts` | schema-version update + 2 new tests (stats seeding, email required) | D-08, D-09 |
-| `dashboard/src/store/cmsPersistence.ts` | v3 → v4 migration backfilling `settings.stats` | D-08 |
-| `dashboard/src/pages/Settings.tsx` | impact card wired to the CMS store via `mutate()` | D-08 |
-| `mobile/src/store/cms.ts` | added `getSettings()` with per-field fallback | D-08 |
-| `mobile/src/screens/NewsScreen.tsx` | About stats read from CMS settings | D-08 |
-| `mobile/src/screens/ConsultationRequestScreen.tsx` | per-submission anonymous identity fallback | D-09 |
-| `shared/src/cms/cmsTypes.ts` | `paymentMethods` slice; schema 4 → 5 | D-17 |
-| `dashboard/src/pages/Settings.tsx` | all six cards commit via `mutate()` | D-17 |
-| `mobile/src/screens/ContactUsScreen.tsx` | contact + per-network social links from CMS | D-17 |
-| `mobile/src/screens/ZakatCalculatorScreen.tsx` | nisab seeded from CMS | D-17 |
-| `mobile/src/screens/DonateScreen.tsx` | payment methods from CMS | D-17 |
-| `mobile/src/components/AppDrawer.tsx` | hero title from CMS | D-17 |
-| `mobile/src/store/cms.ts` | `getPaymentMethods()`; corrected origin comment | D-17, D-18 |
-| `mobile/src/components/TabBar.tsx` | width-aware labels, single line at 320 px | D-11 |
-| `mobile/src/screens/HomeScreen.tsx` | two-line consultations CTA; section comment | D-10, D-14 |
-| `mobile/src/screens/NewsScreen.tsx` | both footer buttons flex | D-15 |
-| `mobile/src/screens/ConsultantDashboardScreen.tsx` | dead conditional removed | D-14 |
-| `dashboard/index.html`, `src/theme.css`, `scripts/sync-fonts.mjs` | self-hosted Cairo, no font CDN | D-16 |
-| `mobile/android/app/build.gradle` | versionCode/Name synced to app.json | D-19 |
-| `dashboard/vite.config.ts`, `src/main.tsx`, `scripts/demo-origin.mjs` | shared-origin demo server | D-18 |
+Every decision-blocking behaviour was verified working: no core tab fails, guest
+consultation submission succeeds, same-email deduplication holds, the provider
+dashboard displays submitted answers, the bottom navigation does not obscure
+content, no crashes or page errors were observed, all builds pass, and no
+requested screen is missing.
 
-Post-fix evidence: `FIXED-*.png` in `qa/screenshots/mobile/`.
+It is **not** an unqualified approval because of two open items, neither of which
+blocks a demo: the cosmetic overlap (D2-01) and a walkthrough document that
+predates the change set (D2-02) — the document the demo is meant to be run from.
+Two requirements also remain PARTIAL on coverage rather than on behaviour.
+
+**This approval covers browser-verified behaviour only.** It does not cover
+device behaviour, and it does not cover anything backend-dependent.

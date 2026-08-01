@@ -1,49 +1,46 @@
-# Requirement Status
+# Requirement status — QA pass 2
 
-**Commit:** `ec46501` · **Date:** 2026-07-26
-**Evidence base:** code inspection + browser testing of the Expo Web build (320/390/430/768 px) + admin dashboard testing + **Android emulator testing of a release APK** (AVD `QA_API36`, android-36 arm64-v8a). No physical-device testing.
+> **QA pass 2 — 2026-08-01.** Verification of the bottom-navigation / email-OTP /
+> governorates / provider-dashboard / guest-identity change set.
+>
+> **Test surfaces used:** code inspection, and **browser testing** against the
+> Expo **web** build (headless Chrome 390×844, 320×700, 430×932) driven by
+> puppeteer-core, asserting against React Navigation's own root state.
+> **Not performed:** Android emulator testing, and real-device testing. The
+> release APK was **built** but never installed or launched, so no claim is made
+> about on-device behaviour.
+>
+> **Backend:** the app runs entirely on `@ahla/shared` mock data. A typed API
+> client exists in `shared/src/api`, but **no mobile screen imports it** (0 call
+> sites) and **zero external network requests** were observed across the whole
+> session. Nothing here is backend-verified.
 
-> **Revision 8 — post-fix.** Fifteen defects fixed and retested: D-01, D-02, D-06, D-03 (round 1); D-04, D-05 (round 2); D-08, D-09 (round 3); D-17 (round 4); D-18 (round 5); D-10, D-11, D-12, D-15, D-16 (round 6); D-13 + a newly found D-19 (round 7 — the Android build now succeeds and the app was verified on an emulator). Requirements 3, 10, 11, 14, 16, 21 and 23 moved up accordingly. Round 4 surfaced D-18 (the two apps were separate origins, so CMS edits never reached the app) and corrected the round-3 D-08 claim; round 5 closed it with a shared-origin demo server — a value typed in the dashboard now appears in the app, proven end to end. Fix details: `DEFECTS.md`.
-
-Statuses: PASS · PARTIAL · FAIL · BLOCKED · NOT APPLICABLE
 
 | # | Requirement | Status | Evidence | Remaining issue | Action |
 |---|---|---|---|---|---|
-| 1 | Five-item bottom navigation | **PASS** | All 5 tabs navigate correctly; RTL order right→left `[الأسر][الحالات العاجلة][تبرع][الاستشارات][اعرف عنا]` on all root screens. `tab-*.png`, `NAVIGATION_MATRIX.md §1` | Six tab *routes* are registered; `Home` has no `META` entry so `TabBar` renders `null` for it — 5 items display. Consequence: on first launch no tab is highlighted. Cosmetic. | Optionally highlight a default tab |
-| 2 | Bottom bar hidden on internal screens | **PASS** | 11/11 pushed screens verified hidden by computed style + rect (0×0), not DOM presence. Bar present on all 6 root screens. `vis-*.png` | None | — |
-| 3 | Email OTP demo | **PASS** ✅*fixed* | Email login (not phone) ✓; empty/`abc`/`a@b`/`a@` rejected with Arabic error ✓; spaces stripped at input ✓; uppercase normalised to lowercase on login ✓; 6-digit box ✓; any 6 digits accepted ✓; non-numeric filtered ✓; resend with 30 s countdown ✓; `TODO(production)` markers present in code ✓; no TODO text user-visible ✓ | ~~D-06~~ **fixed** — both screens reworded, demo card added, resend kept per §2 | — |
-| 4 | Home statistics removed | **PASS** (literal) | Home carries no impact numbers; full text dump confirms. `tab-Home.png` | **D-07** — the 1.2M+ figure was *relocated* to About, not retired, alongside +650/+10,000 and a hardcoded 2013–2025 timeline. **Now editable from the dashboard** (~~D-08~~ fixed), so the client can change or blank it without a code change | Client decision on whether these figures are approved |
-| 5 | Donation section first | **PASS** | Donation hero is section 1 (`HomeScreen.tsx:30-66`); both CTAs work (تبرع الآن → Donate, حالات التبرع → Cases) | None | — |
-| 6 | Consultations section second | **PASS** ✅*fixed* | Consultations hero is section 2 (`HomeScreen.tsx:68-102`); both CTAs work (احجز استشارة → Consultations, تعرف على الاستشارات → ServicesBrowse) | ~~D-10~~ **fixed** — `adjustsFontSizeToFit` (a no-op on web) replaced with a two-line label; full text renders at 320/360/390/430 px | — |
-| 7 | Governorates moved to About | **PASS** | Section titled exactly **"نطاق عملنا في المحافظات"** with helper text; no governorate chips remain on Home. `tab-About.png` | 12 governorates listed + "وفي توسع مستمر…". The unverified "22 محافظة" claim is **not** rendered anywhere (verified by grep) — good | — |
-| 8 | Governorate interaction | **PASS** | Chips are pressable; both أسوان and القاهرة open `GovernorateActivity`; page shows services, cases, initiative and consultations, all name-interpolated; back works; no overflow with long names. `governorate-detail.png` | Content is **templated** — identical for every governorate (`cases.slice(0,2)`, `serviceCategories.slice(0,3)`). Empty state is unreachable by construction | Don't present as real per-governorate data |
-| 9 | Provider dashboard exists | **PASS** | Reachable from drawer (**لوحة مقدم الاستشارة**) and `ProfileScreen`; 4 working tabs; demo banner present. Overview shows all 5 required counts: upcoming 2, today 2, new 1, completed 1, cancelled 0. `prov-overview.png` | Provider dashboard is a mobile screen, not a web portal | — |
-| 10 | Provider availability | **PASS** ✅*fixed* | Availability toggle ✓; 7 weekday chips toggle ✓; add slot (`05:30 م`) ✓; remove slot ✓; add exception date (`2026-09-09`) ✓; remove exception ✓; **start/end range now editable via `تعديل نطاق اليوم`, empty input rejected** ✓. `prov-availability*.png`, `FIXED-prov-workinghours.png` | ~~D-04~~ **fixed**. `slotDurationMinutes` still read-only (not requested). Persistence still absent — now accurately labelled (~~D-03~~ copy fixed) | Persistence post-demo |
-| 11 | Provider bookings | **PASS** ✅*fixed* | 5 filters (الكل/جديد/مؤكد/مكتمل/ملغي) ✓; search by name/email/phone/ref/governorate ✓; empty state "لا توجد حجوزات مطابقة للبحث" ✓; expand details ✓; Confirm/Complete/Cancel ✓; **Reschedule now present — inline date/time editor, status deliberately preserved, and the Overview "today" counter follows the move (2→1)** ✓. `prov-bookings.png`, `FIXED-prov-reschedule-*.png` | ~~D-05~~ **fixed**. No separate "Upcoming" filter (exists as an Overview stat). Status changes still reset on reload (~~D-03~~ copy fixed) | Persistence post-demo |
-| 12 | Provider form answers | **PASS** | Expanded booking shows reference, email, phone, whatsapp, age, governorate, preferred contact, submission date, free-text description, specialised Q&A pairs, and attachment placeholder. Missing optional field (booking `pb-103` has no whatsapp) renders cleanly. Long text wraps. `prov-booking-detail.png` | Provider list is a fixed seed — consultations submitted in the app do **not** appear here (separate stores) | Note as a demo limitation |
-| 13 | Guest public browsing | **PASS** | 14 public screens all open for a guest with no block: UrgentCases, Sponsorship, About, Projects, NewsFeed, ServicesBrowse, Consultations, ConsultationRequest, CaseDetail, ZakatCalculator, Faq, ContactUs, Volunteer, PrivacyPolicy | None | — |
-| 14 | Guest personal-history restrictions | **PASS** ✅*fixed* | **6 of 6 gated**: DonationHistory, Receipts, MyBookings, Favorites, Notifications, AccountSettings — all verified `gated / loginBtn / continueAsGuest = true`, `formLeak = false`. Logged-in users still get the real form | ~~D-02~~ **fixed** — wrapped in `LoginGate` | — |
-| 15 | Friendly login gate | **PASS** | Bottom sheet with icon, title, explanatory line, benefit bullets with green checks, **تسجيل الدخول** button and **متابعة كزائر** escape. No hard block. `gate-*.png` | None | — |
-| 16 | Guest consultation submission | **PASS** ✅*fixed* | Full form submitted as guest end-to-end; confirmation with reference (`AS-455572`), status timeline, and demo disclaimer. `consult-confirm-1.png` | ~~D-09~~ **fixed** — email now required on every form; defensive fallback is per-submission, never shared | — |
-| 17 | Same-email deduplication | **PASS** | Submitted with `Test@Example.COM` then `test@example.com` → single identity, no duplicate user. `normalizeEmail` (trim + lowercase), `findOrCreateDemoUserByEmail`, `attachConsultationToDemoUser`, `loginDemoUserByEmail` all present and exercised | None | — |
-| 18 | Login links prior requests | **PASS** | Logged in with `"   TEST@EXAMPLE.com   "` → normalised to `test@example.com`, `loggedIn: true`, **both** prior references linked (`AS-455572, AS-455586`), no duplicate record created | Session still lost on reload — behaviour unchanged, now honestly disclosed (~~D-03~~ copy fixed) | Add persistence post-demo |
-| 19 | RTL | **PASS** | Tab bar `row-reverse` with correct right→left order; Arabic right-aligned throughout; chevrons point left (correct for RTL); OTP boxes correctly forced LTR; email input forced LTR; `I18nManager` locked to LTR with the double-flip rationale documented in `App.tsx:4-9`. No horizontal page overflow at any width | None | — |
-| 20 | Responsive behaviour | **PASS** ✅*fixed* | No horizontal overflow at 320/390/430/768; tab bar flush to bottom at every width; safe-area padding via `useSafeAreaInsets`. **All three 320 px blemishes fixed and retested at 320/360/390/430**: CTA renders in full, the four plain tab items are exactly one line tall (`[45,45,45,45]`), About footer buttons equal height. `low-severity.mjs`, `FIXED-w320-*.png` | ~~D-10~~ ~~D-11~~ ~~D-15~~ all fixed. Keyboard, OS font scaling and the gesture bar remain **not testable on web** — unchanged coverage gap, not a defect | Re-verify the three on a device when one is available |
-| 21 | Demo safety | **PASS** ✅*fixed* | Zero network calls in mobile (static + runtime verified); no secrets; no localhost; no user-visible TODO/Mock; payment never shown complete; consultation correctly says "ولم يُرسل لأي جهة"; disclaimers on consultation, provider dashboard, file upload | ~~D-06~~ and ~~D-03~~ **fixed** — both false claims corrected; re-verified 0 non-localhost requests across a full session post-fix. Still open: **D-07** unverified stats (client decision), **D-16** dashboard Google Fonts (informational) | Client decision on D-07 |
-| 22 | Build success | **PASS** ✅*fixed* | Typecheck clean (3 workspaces); **32/32** unit tests; dashboard build; web export; **Android debug + release builds SUCCEED** from a local APFS disk; release APK installed and ran on an emulator with 0 fatal exceptions | The build fails only from the **exFAT** project volume — no hard-link support, which AGP's transforms require. Build from a local disk (or CI/EAS). ~~D-13~~ APK rebuilt from HEAD; ~~D-19~~ native version synced to app.json | Keep the repo on APFS for native builds, or build in CI |
-| 23 | No dead buttons | **PASS** ✅*fixed* | **69 of 69** navigation actions verified working, incl. 16/16 drawer items | ~~D-01~~ **fixed** at 4 layers — data, `MainTab` type (makes recurrence a compile error), runtime legacy remap for already-persisted CMS state, and dashboard authoring dropdowns | — |
-| 24 | Client walkthrough document | **PASS** | `CLIENT_DEMO_WALKTHROUGH.md` (137 lines) accurately documents the 5-tab bar, why it hides on internal screens, governorates moved to About, donation-first/consultations-second ordering, and the returning-guest email flow | Header still reads "Demo v1.3" while `app.json` is `1.4.0`; it does not mention the dead drawer items | Bump version label |
+| 1 | Five-item bottom navigation | **PASS** | `qa2-nav.mjs` 39/39 at 320/390/430. Exactly 5 labels; `Home` is registered but renders `null` in `TabBar`. | — | none |
+| 2 | Bottom bar hidden on inner screens | **PASS** | Hidden on `CaseDetail`, `ConsultationRequest`, `EmailAuth` — verified by computed style + bounding rect (`height:0`), not DOM presence | Not every pushed screen was enumerated | spot-check remaining pushes |
+| 3 | Email OTP demo | **PASS** | `qa2-flows.mjs` OTP-1…OTP-9. Empty / no-`@` / trailing-dot rejected with «أدخل بريداً إلكترونياً صحيحاً»; clean and `"  Guest@Ahla.TEST  "` both proceed; input `maxLength:6`, `inputMode:numeric`; resend present | — | none |
+| 4 | Home statistics removed | **PASS** | Runtime Home text contains no `1.2M` and no «مستفيد» | — | none |
+| 5 | Donation first | **PASS** | Home section 1 = «ساهم في دعم الأسر الكريمة» + «تبرع الآن» | — | none |
+| 6 | Consultations second | **PASS** | Home section 2 = «خدمة الاستشارات المجانية» + «احجز استشارة» | — | none |
+| 7 | Governorates moved to About | **PASS** | «نطاق عملنا في المحافظات» present on About; no governorate chips on Home | — | none |
+| 8 | Governorate interaction | **PASS** | Tapped «📍 القاهرة» → route `GovernorateActivity`, 920 chars of content | Empty-governorate state not exercised | add a fixture with no activity |
+| 9 | Provider dashboard | **PASS** | 4 tabs: نظرة عامة / مواعيدي والأنصبة / الحجوزات والطلبات / الملف الشخصي. Overview counters 2 / 2 / 1 / 1 / 0 | — | none |
+| 10 | Provider availability | **PASS** | Accepting toggle, 7 weekday chips, «تعديل نطاق اليوم» من/إلى/حفظ, slot list + «إضافة موعد», «تواريخ الاستثناءات» + «إضافة استثناء» | Changes were not asserted to survive a tab switch | — |
+| 11 | Provider bookings | **PASS** | Filters الكل/جديد/مؤكد/مكتمل/ملغي; actions تأكيد, إعادة جدولة, إكمال, إلغاء | — | none |
+| 12 | Provider form answers | **PASS** | «📋 بيانات نموذج المتقدم المرفوع» — 7/7 fields incl. رقم المرجعية, البريد, الهاتف, واتساب, العمر, المحافظة, وسيلة التواصل, «إجابات النموذج المتخصص», «مرفق الحالة» | — | none |
+| 13 | Guest public browsing | **PASS** | 7 screens open ungated: Cases, UrgentCases, Sponsorship, Projects, NewsFeed, ServicesBrowse, Consultations | — | none |
+| 14 | Guest personal-history restrictions | **PASS** | 6 screens gated: DonationHistory, Receipts, MyBookings, AccountSettings, Favorites, Notifications | — | none |
+| 15 | Friendly login gate | **PASS** | Each gate explains the benefit («تبرعاتك في حسابك», «حجوزاتك في حسابك», …) and offers login | — | none |
+| 16 | Guest consultation submission | **PASS** | Full 11-field نفسية form submitted end-to-end → «تم استلام الطلب بنجاح», ref `AS-999534`, status ladder جديد → قيد المراجعة | — | none |
+| 17 | Same-email deduplication | **PASS** | `qa2-identity.ts` 16/16. `  Guest@Ahla.TEST ` and `guest@ahla.test` resolve to one user; 2 consultations, 1 identity; repeat reference does not duplicate | — | none |
+| 18 | Login links prior requests | **PASS** | After `loginDemoUserByEmail`, session email normalised and prior requests visible (0 → 2); logging in twice does not duplicate | — | none |
+| 19 | RTL | **PASS** | Tab order right→left is الأسر ‹ الحالات العاجلة ‹ تبرع ‹ الاستشارات ‹ اعرف عنا at all three widths; `flexDirection: row-reverse` | — | none |
+| 20 | Responsive behaviour | **PARTIAL** | Verified at 320 / 390 / 430. Labels stay single-line via width-aware sizing | **Tablet width, keyboard-open state, and font scaling were not tested** | test if these matter for the demo |
+| 21 | Demo safety | **PASS** | 0 external network requests observed; 0 user-visible TODO/FIXME/Mock; 10 TODOs all in code comments as `TODO(backend)`/`TODO(production)` | — | none |
+| 22 | Build success | **PASS** | typecheck, 32 unit tests, web export, Android release APK all succeed | — | none |
+| 23 | No dead buttons | **PARTIAL** | All 5 tabs, Home CTAs, governorate chips, gate CTAs, provider tabs and consultation submit verified live | **Not every button in all 42 screens was exercised** | full sweep if required |
+| 24 | Client walkthrough document | **PASS** | `CLIENT_DEMO_WALKTHROUGH.md`, 196 lines | Last updated 2026-07-28 — predates this change set | refresh for the new tab set |
 
-## Tally
-
-| Status | Initial audit | **After fixes** |
-|---|---|---|
-| **PASS** | 14 | **24** (23 PASS + #4 PASS-literal) |
-| **PARTIAL** | 8 | **0** |
-| **FAIL** | 1 | **0** |
-| **BLOCKED** | 0 standalone | **0** — the Android build blockage in #22 is resolved |
-| **NOT APPLICABLE** | 0 | 0 (lint has no config — recorded in build results) |
-
-**Weighted completion: ~79% → 100%** (24/24 PASS).
-
-**All 24 requirements now PASS.** Three defects remain open and none blocks any requirement: D-07 (unverified impact figures — a client decision, now editable from the dashboard), D-14's sibling items having been closed, and the standing gap that **no physical-device testing was performed** (emulator only).
+**Totals — 22 PASS · 2 PARTIAL · 0 FAIL · 0 BLOCKED.**
