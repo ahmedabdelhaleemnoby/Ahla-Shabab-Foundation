@@ -1,6 +1,6 @@
 # Missing from the backend
 
-**Re-checked 2026‑08‑01, after PR #4 merged.** What still stands between the current
+**Re-checked 2026‑08‑01, after PR #4 deployed.** What still stands between the current
 backend and a fully API‑backed app + dashboard.
 
 Every item was verified against the live API at
@@ -39,32 +39,20 @@ now work. That was the most serious item.
 
 ---
 
-## 0b. Fixed in PR #4 — merged, **awaiting deploy**
+## 0b. Now verified working live
 
-| | Item |
-| --- | --- |
-| 🔴 | **Payment webhook failed open.** HMAC ran only `if (secret)` and no secret is set in production, so it was effectively public. Now fails closed in production, validates the body (400 not 500), and compares signatures in constant time. `WEBHOOK_SECRET` documented in `.env.example` — **it must be set before the next deploy or the route will start rejecting**. |
-| 🟡 | **`settings.milestones` was `[]`.** 6 → 7 created the key but left it empty; migrations only run when `current < N` and the deployment was already on 7, so it needed a 7 → 8 step. |
-| 🟡 | **`GET /governorates` shipped `createdAt` + nested `workAreas`** on all 27 rows. Now `id` and `name` only. |
+PR #4 is deployed, and the backend developer has closed most of the rest.
 
-Also confirmed already fixed directly on `main` by the backend developer: the
-`@UsePipes`/`@CurrentUser` bug, the non-uuid id constraints, `GET /governorates`
-itself, and the InstaPay manual-payment correction. **§20 option A was also
-implemented** — `ConsultationRequest` now has `providerId`, `date` and `timeSlot`,
-and `consultations.service.schedule()` exists.
-
----
-
-## 0c. ⚠️ PR #3 was lost
-
-`gh` reports PR #3 (Swagger documentation for all 141 routes) as **MERGED**, but
-its merge commit `0c03057` is **not an ancestor of current `main`** — it was
-discarded by a force-push or reset. `src/common/swagger/zod-to-openapi.ts`,
-`api-zod-body.decorator.ts` and `api-pagination-query.decorator.ts` are gone, and
-only **2 of 39** controllers still carry `@ApiTags`.
-
-The commits still exist on GitHub, so this is recoverable. Not restored here
-because it is unrelated to the fixes in PR #4.
+| | Item | Evidence |
+| --- | --- | --- |
+| ✅ | **Payment webhook is secured** | `POST /webhooks/payment` with a valid body and no signature → **401 "Missing webhook signature"**. `WEBHOOK_SECRET` is set and enforced. This was the 🔴 security item. |
+| ✅ | Webhook validates its body | malformed payload → **400**, was 500 |
+| ✅ | `GET /governorates` trimmed | 27 rows, keys `id, name` only — no more `createdAt` + nested `workAreas` |
+| ✅ | Consultation types carry a `disclaimer` | 5 / 5 |
+| ✅ | `paymentMethods` use the Arabic ids | `بطاقة بنكية`, `فوري`, `إنستاباي`, … |
+| ✅ | Swagger largely restored after the PR #3 loss | 143 operations, 124 summaries, 45/67 write bodies, 25 tags |
+| ✅ | Provider columns added | `type`, `sessions`, `featured` now exist on `/providers` |
+| ✅ | §20 option A implemented | `ConsultationRequest` has `providerId` / `date` / `timeSlot` |
 
 ---
 
@@ -72,10 +60,11 @@ because it is unrelated to the fixes in PR #4.
 
 | | Item | Detail |
 | --- | --- | --- |
-| 🔴 | **Consultation types still not seeded** | The backend serves `psychological` / `legal` / `family` with **no `disclaimer`, no `consent` field, and no `options`** on choice fields. The app does not break — the mapper merges them onto the bundled forms and keeps those — but the API is not driving the consultation forms, and the consent checkbox exists only because the app supplies it. Compliance point, `BACKEND.md` §18.6. **Needs a bearer token:** `scripts/seed-consultation-types.mjs --apply --prune` |
-| 🟡 | **`paymentMethods` still use latin ids** (`card`, `fawry`, `instapay`, `vodafone`, `bank`) | Harmless for the app — the mapper translates them to the Arabic union — but the dashboard will show latin ids. Migration 5→6 renames settings keys and does not touch these. |
-| 🟡 | **`PATCH /admin/cms/settings` accepts any key** | Schema is `z.record(z.string(), z.any())`, so a misspelled key is stored and silently ignored — a quiet way to lose an edit. |
-| 🟡 | **Five routes take `@Body() any`** | `PUT /admin/cms`, both `admin/cms/pages` writes, both generic `admin/portfolio` writes. |
+| 🔴 | **Consultation forms are unusable from the API** | 5 types (`psychological`, `legal`, `family`, `social`, `educational`), but **0 / 5 have a consent field** and **5 choice fields have no `options`**. A radio with no options is an unanswerable question, and the missing consent checkbox is the compliance point (`BACKEND.md` §18.6). The app is not broken only because the mapper keeps its bundled forms. Keys are also still English, while the app's are Arabic route params. |
+| 🟠 | **Four settings fields are `null`** — `splashText`, `milestones`, `donationReassurance`, `website` | All four have backfill migrations, none of which can reach the row: it sits at `schemaVersion 10`, past every gate. `donationReassurance` is the legal reassurance text on the donation screen. The app falls back to bundled values, so nothing looks broken — but none of it is CMS-controlled. **Diagnosed and fixed in PR #5** (open). |
+| 🟡 | **Provider columns are empty** | `type = null`, `sessions = 0`, `featured = false` on every provider. The columns exist; nothing populates them, so the app still infers `type` from the specialization text. |
+| 🟡 | **19 operations still have no summary**, 22 write ops no body schema | Swagger came back but not to the 141/141 PR #3 had. |
+| 🟡 | `PATCH /admin/cms/settings` accepts any key | `z.record(z.string(), z.any())` — a misspelled key is stored and silently ignored. Also the enabler for the row above: `PUT /admin/cms` trusts the payload's `schemaVersion`. |
 | 🟡 | `FCM_SERVER_KEY` empty | Push notifications will not send. Config, not code. |
 
 ---
@@ -84,21 +73,8 @@ because it is unrelated to the fixes in PR #4.
 
 | | Item |
 | --- | --- |
-| ❓ | **Does the admin API actually work now?** `/admin/*` answers 401 with no token and 401 with a garbage token — which is correct but uninformative, because `JwtAuthGuard` rejects before `RolesGuard` ever runs. The only way to tell a working admin API from the old blanket-403 one is a **valid** token. 93 routes ride on this. |
+| ❓ | **Does the admin API work?** `/admin/*` answers 401 with no token and 401 with a garbage token — correct but uninformative, since `JwtAuthGuard` rejects before `RolesGuard` runs. Only a **valid** token distinguishes a working admin API from the old blanket-403. 93 routes ride on this. |
 | ❓ | **Do the 18 `/me` routes resolve a user?** Same reason. |
-
-The auth fix is merged and the deploy clearly happened, so both are *likely*
-fine — but "likely" is not verified, and this is the whole dashboard.
-
----
-
-## 3. Endpoints that still do not exist
-
-| | Endpoint | Why |
-| --- | --- | --- |
-| 🟡 | Columns for `Consultant.type`, `sessions`, `featured` | None exist on `Provider`. The app infers `type` from the specialization text and defaults `featured` to false. Cosmetic. |
-
-`PATCH /admin/consultations/{id}/schedule` **now exists** — §20 option A was implemented.
 
 ---
 
@@ -114,11 +90,11 @@ fine — but "likely" is not verified, and this is the whole dashboard.
 
 ## 5. Shortest path to done
 
-1. **Set `WEBHOOK_SECRET`, then deploy.** PR #4 makes the payment webhook fail
-   closed in production — without the secret set, that route returns 503.
-   Everything else in PR #4 is inert until deployed.
-2. **Get a bearer token.** It closes both ❓ items *and* unblocks seeding.
-3. **Seed the consultation types** — the last item with real user impact.
-4. **Restore PR #3** (§0c) if the API documentation is wanted back.
+1. **Get a bearer token.** It closes both ❓ items *and* unblocks seeding — the
+   single highest-value thing outstanding.
+2. **Seed the consultation types** so the API's forms carry a consent field and
+   options. This is the last item with real user impact.
+3. **Merge and deploy PR #5** to restore the four `null` settings fields.
+4. Populate the new provider `type` / `sessions` / `featured` columns.
 
 Everything else is cosmetic or a product decision.
