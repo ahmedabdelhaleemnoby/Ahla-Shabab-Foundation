@@ -7,8 +7,6 @@ import { Card, Button, Segmented, ProgressBar } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, row, rowBetween } from '../theme';
 import {
-  cases,
-  projects,
   makeBookingRef,
   initialDonationStatus,
   isMethodUsable,
@@ -17,6 +15,7 @@ import {
   egp,
   type PaymentMethod,
 } from '@ahla/shared';
+import { getCases, getProjects } from '../store/content';
 import { getPaymentMethods } from '../store/cms';
 import { appState } from '../store/appState';
 
@@ -73,8 +72,8 @@ export default function DonateScreen() {
   }, [route.params?.caseId, route.params?.projectId, route.params?.sponsor]);
 
   const destMeta = DESTINATIONS.find((d) => d.id === dest)!;
-  const chosenCase = cases.find((c) => c.id === caseId);
-  const chosenProject = projects.find((p) => p.id === projectId);
+  const chosenCase = getCases().find((c) => c.id === caseId);
+  const chosenProject = getProjects().find((p) => p.id === projectId);
   const causeLabel =
     dest === 'cases' ? chosenCase?.code ?? 'حالة إنسانية' : dest === 'projects' ? chosenProject?.title ?? 'مشروع خيري' : destMeta.label;
 
@@ -204,7 +203,7 @@ export default function DonateScreen() {
         <>
           <Label text="اختر الحالة" />
           <View style={{ gap: 10 }}>
-            {cases.map((c) => (
+            {getCases().map((c) => (
               <PickCard
                 key={c.id}
                 on={caseId === c.id}
@@ -223,7 +222,7 @@ export default function DonateScreen() {
         <>
           <Label text="اختر المشروع" />
           <View style={{ gap: 10 }}>
-            {projects.map((p) => (
+            {getProjects().map((p) => (
               <PickCard
                 key={p.id}
                 on={projectId === p.id}

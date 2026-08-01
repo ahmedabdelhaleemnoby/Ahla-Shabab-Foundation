@@ -2,7 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { foundationValues, foundationInitiatives, articles, workGovernorates } from '@ahla/shared';
+import {
+  foundationValues,
+  foundationInitiatives,
+  workGovernorates,
+} from '@ahla/shared';
+import { getArticles } from '../store/content';
 
 /* Fallbacks only — the dashboard (إعدادات التطبيق) is the source of truth for
    both of these. Every figure on this screen is unverified (QA D-07), so it must
@@ -122,7 +127,7 @@ export default function NewsScreen() {
         </Pressable>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, flexDirection: 'row-reverse', paddingHorizontal: 2 }}>
-        {articles.slice(0, 4).map((a) => (
+        {getArticles().slice(0, 4).map((a) => (
           <Pressable key={a.id} onPress={() => nav.navigate('ArticleDetail', { id: a.id })}>
             <Card style={{ width: 190, padding: 0, overflow: 'hidden' }}>
               <LinearGradient colors={a.gradient} style={{ height: 84 }} />

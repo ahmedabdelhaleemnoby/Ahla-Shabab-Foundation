@@ -16,6 +16,9 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { configureApi } from '@ahla/shared';
+import { hydrateCms } from './src/store/cms';
+import { hydrateContent } from './src/store/content';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
@@ -107,6 +110,23 @@ function Tabs() {
   );
 }
 
+/**
+ * Point the shared API client at the backend.
+ *
+ * Done here rather than inside the client because Metro exposes
+ * `process.env.EXPO_PUBLIC_*` while Vite exposes `import.meta.env` — referencing
+ * either inside `@ahla/shared` breaks the other bundler. Override the host with
+ * EXPO_PUBLIC_API_BASE; the client's own default is used when it is unset.
+ */
+configureApi({
+  baseUrl: process.env.EXPO_PUBLIC_API_BASE,
+  onError: (info) => {
+    // Visible in dev, silent in release. A fallback is not an error the user
+    // should see, but it must not vanish either.
+    if (__DEV__) console.warn(`[api] ${info.endpoint}: ${info.message}${info.fellBack ? ' (used bundled content)' : ''}`);
+  },
+});
+
 export default function App() {
   const [loaded] = useFonts({
     Cairo_400Regular,
@@ -116,7 +136,29 @@ export default function App() {
     Cairo_800ExtraBold,
   });
 
-  if (!loaded) {
+  /*
+   * Load the CMS and the public content BEFORE the first screen renders.
+   *
+   * Every store getter is synchronous because the screens call them during
+   * render; hydrating behind the existing font gate means they return API data
+   * from the first frame, so no screen needed a loading state or an async
+   * rewrite. Neither hydrate call rejects — each degrades to the bundled
+   * content — so a backend outage costs a slower boot, never a blank app.
+   */
+  const [hydrated, setHydrated] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.all([hydrateCms(), hydrateContent()])
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!loaded || !hydrated) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.navy700} />

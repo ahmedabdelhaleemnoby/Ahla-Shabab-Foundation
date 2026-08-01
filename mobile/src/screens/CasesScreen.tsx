@@ -2,7 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { cases, pct, egp, type CaseTag } from '@ahla/shared';
+import {
+  pct,
+  egp,
+  type CaseTag,
+} from '@ahla/shared';
+import { getCases } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Pill, Chip } from '../components/ui';
@@ -31,14 +36,14 @@ export default function CasesScreen() {
 
   const list = useMemo(() => {
     const q = query.trim();
-    return cases.filter(
+    return getCases().filter(
       (c) =>
         (filter === 'الكل' || (filter === 'كفالة شهرية' ? !!c.sponsorable : c.tag === filter)) &&
         (q === '' || c.code.includes(q) || c.title.includes(q) || c.summary.includes(q) || c.location.includes(q))
     );
   }, [filter, query]);
 
-  const sponsorableCount = cases.filter((c) => c.sponsorable).length;
+  const sponsorableCount = getCases().filter((c) => c.sponsorable).length;
 
   return (
     <Screen

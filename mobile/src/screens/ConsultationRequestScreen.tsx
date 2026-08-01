@@ -20,6 +20,7 @@ import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, radius, row } from '../theme';
 import { appState } from '../store/appState';
 import { attachConsultationToDemoUser } from '../store/demoUsers';
+import { submitConsultation, type ApiError } from '@ahla/shared';
 import { getConsultationType } from '../store/cms';
 import type { RootProps } from '../navigation/types';
 
@@ -68,6 +69,7 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
   const [values, setValues] = useState<Record<string, Val>>({});
   const [err, setErr] = useState<string | null>(null);
   const [doneRef, setDoneRef] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   const set = (k: string, v: Val) => setValues((prev) => ({ ...prev, [k]: v }));
   const visible = (f: FormField) => !f.showIfKey || values[f.showIfKey] === f.showIfValue;
@@ -93,10 +95,11 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
     return null;
   };
 
-  const submit = () => {
+  const submit = async () => {
     const e = validate();
     setErr(e);
     if (e) return;
+    setSending(true);
     const reference = makeBookingRef(Math.floor(Date.now() / 1000));
     const name = String(values['name'] ?? '').trim() || 'مستخدم';
     // Email is required by default, but the CMS form builder can un-require or
@@ -108,9 +111,43 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
       appState.get().email ||
       `anon-${reference.toLowerCase()}@demo.local`;
     
-    // Attach consultation to local demo user identity using normalized email
+    /*
+     * Send to the backend first. A write never falls back to local-only: telling
+     * someone their request was submitted when it was not is worse than an
+     * error, so a failure surfaces here and the confirmation screen is not shown.
+     * `ApiError.message` is already Arabic, and `fields` maps per input.
+     */
+    try {
+      await submitConsultation({
+        type: config.key,
+        name,
+        email: emailVal,
+        phone: String(values['phone'] ?? '').trim(),
+        whatsapp: String(values['whatsapp'] ?? '').trim() || undefined,
+        age: Number(values['age']) || undefined,
+        governorate: String(values['governorate'] ?? '').trim() || undefined,
+        preferredChannel: String(values['contactMethod'] ?? '').trim() || undefined,
+        preferredTime: String(values['preferredTime'] ?? '').trim() || undefined,
+        summary: String(values['summary'] ?? '').trim() || undefined,
+        // Everything the base schema has no column for — the per-type answers.
+        extraFields: Object.fromEntries(
+          Object.entries(values).filter(
+            ([k]) => !['name', 'email', 'phone', 'whatsapp', 'age', 'governorate', 'contactMethod', 'preferredTime', 'summary'].includes(k)
+          )
+        ),
+      });
+    } catch (err) {
+      const ae = err as ApiError;
+      setSending(false);
+      setErr(ae?.message || 'تعذّر إرسال الطلب. حاول مرة أخرى.');
+      return;
+    }
+
+    // Local identity link. The backend has no equivalent of the returning-guest
+    // lookup yet, so this stays until /me exposes consultations by email.
     const reqData = { reference, type: `استشارة ${config.key}`, name, date: new Date().toISOString().slice(0, 10), status: 'جديد' as const };
     attachConsultationToDemoUser(emailVal, reqData);
+    setSending(false);
     setDoneRef(reference);
   };
 
@@ -164,7 +201,7 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
       header={<AppBar title={`استشارة ${config.key}`} onBack={() => nav.goBack()} onBell={undefined} />}
       footer={
         <StickyFooter>
-          <Button label="إرسال الطلب" icon="send" style={{ flex: 1 }} onPress={submit} />
+          <Button label={sending ? 'جارٍ الإرسال…' : 'إرسال الطلب'} icon="send" style={{ flex: 1 }} onPress={sending ? undefined : submit} />
         </StickyFooter>
       }
     >

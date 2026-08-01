@@ -2,7 +2,10 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { cases, projects, serviceCategories } from '@ahla/shared';
+import {
+  serviceCategories,
+} from '@ahla/shared';
+import { getCases, getProjects } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Pill, SectionHeader } from '../components/ui';
@@ -14,8 +17,8 @@ export default function GovernorateActivityScreen({ route }: RootProps<'Governor
   const nav = useNavigation<any>();
   const governorate = route.params?.governorate ?? 'القاهرة';
 
-  // Local mock filter for cases in or near this governorate
-  const govCases = cases.slice(0, 2);
+  // Local mock filter for getCases() in or near this governorate
+  const govCases = getCases().slice(0, 2);
 
   return (
     <Screen header={<AppBar title={`محافظة ${governorate}`} onBack={() => nav.goBack()} />}>

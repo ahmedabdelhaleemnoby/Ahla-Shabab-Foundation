@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, Switch } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { cases, pct, egp } from '@ahla/shared';
+import {
+  pct,
+  egp,
+} from '@ahla/shared';
+import { getCases } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Segmented } from '../components/ui';
@@ -22,7 +26,7 @@ function SectionTitle({ label, icon }: { label: string; icon: IconName }) {
 
 export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
   const nav = useNavigation<any>();
-  const item = cases.find((c) => c.id === route.params.id) ?? cases[0];
+  const item = getCases().find((c) => c.id === route.params.id) ?? getCases()[0];
   const p = pct(item.raisedAmount, item.targetAmount);
   const remaining = item.targetAmount - item.raisedAmount;
 

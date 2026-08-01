@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { fetchCmsTagged } from '@ahla/shared';
 import {
   makeDefaultCmsState,
   CMS_STORAGE_KEY,
@@ -26,7 +27,33 @@ import {
  * On native there is no shared storage at all: use the dashboard's Tools page to
  * export CMS JSON and import it on the device.
  */
+/**
+ * Filled once by `hydrateCms()` at boot, before the first screen renders.
+ *
+ * Every getter below is synchronous because the screens call them during render.
+ * Rather than convert 37 files to async, the API result is cached here and the
+ * boot gate in App.tsx waits for it — so from the first frame these getters
+ * return API data, and the compiled defaults are only ever a fallback.
+ */
+let apiState: CmsState | null = null;
+
+/**
+ * Fetch the CMS from the API and cache it. Never throws: `fetchCmsTagged`
+ * already merges the payload over the bundled defaults and reports which source
+ * it used, so a failure here degrades to those defaults rather than a blank app.
+ */
+export async function hydrateCms(): Promise<'api' | 'bundled'> {
+  const { data, source } = await fetchCmsTagged();
+  apiState = data;
+  return source;
+}
+
+/** True once the API has been consulted, whatever the outcome. */
+export const isCmsHydrated = (): boolean => apiState !== null;
+
 function readCms(): CmsState {
+  if (apiState) return apiState;
+
   if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
     try {
       const raw = localStorage.getItem(CMS_STORAGE_KEY);

@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { projects, pct, egp } from '@ahla/shared';
+import {
+  pct,
+  egp,
+} from '@ahla/shared';
+import { getProjects } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Pill } from '../components/ui';
@@ -20,7 +24,7 @@ const IMPACT: { label: string; icon: IconName }[] = [
 
 export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'>) {
   const nav = useNavigation<any>();
-  const project = projects.find((p) => p.id === route.params.id) ?? projects[0];
+  const project = getProjects().find((p) => p.id === route.params.id) ?? getProjects()[0];
   const p = pct(project.raisedAmount, project.targetAmount);
 
   return (

@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { cases, pct, egp } from '@ahla/shared';
+import {
+  pct,
+  egp,
+} from '@ahla/shared';
+import { getCases } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Pill, ProgressBar } from '../components/ui';
@@ -20,7 +24,7 @@ const POLICY = [
 
 export default function SponsorshipScreen() {
   const nav = useNavigation<any>();
-  const families = cases.filter((c) => c.sponsorable);
+  const families = getCases().filter((c) => c.sponsorable);
 
   return (
     <Screen header={<AppBar title="اكفل أسرة" onBack={() => nav.goBack()} onBell={undefined} />}>

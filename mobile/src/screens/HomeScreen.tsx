@@ -1,4 +1,9 @@
-import { cases, egp, pct, projects } from '@ahla/shared';
+import {
+  egp,
+  pct,
+  type HumanitarianCase,
+} from '@ahla/shared';
+import { getCases, getProjects } from '../store/content';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
@@ -25,8 +30,8 @@ const serviceIcon: Record<string, IconName> = {
    the About screen (اعرف عنا). */
 export default function HomeScreen() {
   const nav = useNavigation<any>();
-  const urgent = cases.find((c) => c.tag === 'عاجل')!;
-  const featured = projects[0];
+  const urgent = getCases().find((c) => c.tag === 'عاجل')!;
+  const featured = getProjects()[0];
 
   return (
     <Screen header={<AppBar />}>
@@ -195,7 +200,7 @@ export default function HomeScreen() {
   );
 }
 
-export function CaseRow({ item, onPress }: { item: (typeof cases)[number]; onPress?: () => void }) {
+export function CaseRow({ item, onPress }: { item: HumanitarianCase; onPress?: () => void }) {
   const p = pct(item.raisedAmount, item.targetAmount);
   return (
     <Card style={{ flexDirection: 'row-reverse', gap: 11, padding: 11 }}>

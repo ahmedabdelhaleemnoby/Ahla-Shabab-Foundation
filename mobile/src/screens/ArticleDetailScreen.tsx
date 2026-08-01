@@ -1,8 +1,9 @@
 import React from 'react';
+import { getArticles } from '../store/content';
 import { View, Text, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { articles } from '@ahla/shared';
+
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Pill } from '../components/ui';
@@ -16,7 +17,7 @@ const catTone = (c: string) =>
 
 export default function ArticleDetailScreen({ route }: RootProps<'ArticleDetail'>) {
   const nav = useNavigation<any>();
-  const article = articles.find((a) => a.id === route.params.id) ?? articles[0];
+  const article = getArticles().find((a) => a.id === route.params.id) ?? getArticles()[0];
 
   return (
     <Screen

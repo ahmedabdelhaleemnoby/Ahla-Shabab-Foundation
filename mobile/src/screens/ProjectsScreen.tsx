@@ -2,7 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { projects, pct, egp, type ProjectStatus } from '@ahla/shared';
+import {
+  pct,
+  egp,
+  type ProjectStatus,
+} from '@ahla/shared';
+import { getProjects } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar, Pill, Chip } from '../components/ui';
@@ -15,7 +20,7 @@ export default function ProjectsScreen() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
 
   const list = useMemo(
-    () => (filter === 'الكل' ? projects : projects.filter((p) => p.status === filter)),
+    () => (filter === 'الكل' ? getProjects() : getProjects().filter((p) => p.status === filter)),
     [filter]
   );
 

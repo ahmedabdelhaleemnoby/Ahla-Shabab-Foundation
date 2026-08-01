@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { getConsultants } from '../store/content';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { consultants } from '@ahla/shared';
+
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Segmented } from '../components/ui';
@@ -35,7 +36,7 @@ function SectionTitle({ label, icon }: { label: string; icon: IconName }) {
 
 export default function BookingScreen() {
   const nav = useNavigation<any>();
-  const consultant = consultants.find((c) => !c.featured) ?? consultants[1];
+  const consultant = getConsultants().find((c) => !c.featured) ?? getConsultants()[1];
   const [day, setDay] = useState('22');
   const [time, setTime] = useState('11:00 ص');
   const [mode, setMode] = useState('مكالمة صوتية');

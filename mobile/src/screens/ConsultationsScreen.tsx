@@ -2,7 +2,10 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { consultants, makeDefaultCmsState } from '@ahla/shared';
+import {
+  makeDefaultCmsState,
+} from '@ahla/shared';
+import { getConsultants } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -14,7 +17,7 @@ import { getConsultationTypes } from '../store/cms';
    The list is CMS-authored (Form Builder) with a safe default fallback. */
 export default function ConsultationsScreen() {
   const nav = useNavigation<any>();
-  const featured = consultants.find((c) => c.featured)!;
+  const featured = getConsultants().find((c) => c.featured)!;
   const cmsTypes = getConsultationTypes();
   const types = (cmsTypes.length > 0 ? cmsTypes : makeDefaultCmsState().consultations).map((c) => ({
     type: c.key,

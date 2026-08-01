@@ -2,7 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { articles, type ArticleCategory } from '@ahla/shared';
+import {
+  type ArticleCategory,
+} from '@ahla/shared';
+import { getArticles } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill, Chip } from '../components/ui';
@@ -18,7 +21,7 @@ export default function NewsFeedScreen() {
   const nav = useNavigation<any>();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
   const list = useMemo(
-    () => (filter === 'الكل' ? articles : articles.filter((a) => a.category === filter)),
+    () => (filter === 'الكل' ? getArticles() : getArticles().filter((a) => a.category === filter)),
     [filter]
   );
 

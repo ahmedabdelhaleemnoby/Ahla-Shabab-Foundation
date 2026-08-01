@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { cases, pct, egp } from '@ahla/shared';
+import {
+  pct,
+  egp,
+} from '@ahla/shared';
+import { getCases } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, ProgressBar } from '../components/ui';
@@ -14,7 +18,7 @@ import { colors, font, num, row, rowBetween } from '../theme';
 
 export default function UrgentCasesScreen() {
   const nav = useNavigation<any>();
-  const urgent = cases.filter((c) => c.tag === 'عاجل');
+  const urgent = getCases().filter((c) => c.tag === 'عاجل');
 
   return (
     <Screen header={<AppBar title="حالات عاجلة" onBack={() => nav.navigate('Home')} onBell={undefined} />}>
@@ -91,7 +95,7 @@ export default function UrgentCasesScreen() {
         );
       })}
 
-      {/* All-cases browser (search + filters) */}
+      {/* All-getCases() browser (search + filters) */}
       <Button label="تصفح كل الحالات الإنسانية" variant="outline" icon="search" onPress={() => nav.navigate('Cases')} />
       <View style={{ height: 12 }} />
     </Screen>
