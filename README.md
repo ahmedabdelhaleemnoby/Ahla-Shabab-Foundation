@@ -1,6 +1,8 @@
 # جمعية خواطر أحلى شباب — Ahla Shabab
 
-Mobile app **(React Native / Expo)** + Admin dashboard **(React + Vite)**, both written in **TypeScript** and sharing one design system. Arabic-first, fully **RTL**.
+Mobile app **(React Native / Expo)** and the shared design system, in **TypeScript**. Arabic-first, fully **RTL**.
+
+The admin dashboard used to live here as a third workspace; it now has its own repository at [ahla-shabab-dashboard](https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard) and carries a vendored copy of `shared/`.
 
 Built from the approved `Ahla-Shabab-App-Design.html` spec and refined against the official brand identity at [ahlashabab.com](https://ahlashabab.com) — the same royal-blue palette, Cairo type scale, spacing, and components drive both apps.
 
@@ -10,12 +12,13 @@ Built from the approved `Ahla-Shabab-App-Design.html` spec and refined against t
 
 ```
 .
-├── shared/        @ahla/shared — design tokens, TS types, mock data + business rules (single source of truth)
-├── mobile/        Expo + React Native app (39 screens, RTL, sidebar navigation)
-└── dashboard/     Vite + React + Tailwind admin dashboard (12 modules, RTL)
+├── shared/        @ahla/shared — design tokens, TS types, mock data, business rules, API client
+└── mobile/        Expo + React Native app (39 screens, RTL, sidebar navigation)
 ```
 
-Both apps import tokens/data from `@ahla/shared`, so the palette and content stay in sync.
+The mobile app imports tokens/data from `@ahla/shared`. The dashboard repo holds a
+**copy** of `shared/` rather than a workspace link, so changes here do not reach it
+automatically — see [ahla-shabab-dashboard](https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard).
 
 > 📐 **Full project map:** see [STRUCTURE.md](STRUCTURE.md) — every file, screen, page, rule, and the APK build pipeline.
 
@@ -59,14 +62,25 @@ Catalog, providers, schedules, governorates, and the form schema live in `shared
 
 Navigation: sidebar drawer (☰ in the app bar, slides from the right) + a native stack for detail and booking screens. The five main sections (Home/Discover/Donate/News/Profile) live in a hidden tab navigator so deep links keep working.
 
-## Run the dashboard (Vite)
+## Run the dashboard
+
+It lives in its own repository now:
 
 ```bash
-npm run dashboard
-# or:  npm run dev --workspace dashboard
+git clone https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard
+cd ahla-shabab-dashboard && npm install && npm run dev
 ```
 
 Open http://localhost:5173.
+
+To run both on **one origin** — which is what makes a CMS edit in the dashboard
+visible in the app, since browsers partition localStorage per origin:
+
+```bash
+cd ../ahla-shabab-dashboard && DEMO_BASE=/admin/ npm run build
+cd -  && npm run demo:build
+ADMIN_DIR=../ahla-shabab-dashboard/dist npm run demo
+```
 
 Built with **React + Vite + TypeScript + Tailwind CSS** (RTL). The Tailwind palette maps to the CSS variables injected from `@ahla/shared`, so it stays identical to the mobile app. It is the CMS + booking-operations tool from Technical Offer §5:
 
@@ -97,10 +111,10 @@ npm run typecheck          # runs across all workspaces
 - **Radius** — 12 (inputs) / 16 (cards) / 24 = pill (buttons) / full (chips).
 - **Elevation** — one soft navy-tinted shadow (no hard drop shadows).
 
-The dashboard injects these colors as CSS custom properties at runtime (`--navy700`, `--green`, …) so its stylesheet and the mobile app never drift.
+The dashboard injects these colors as CSS custom properties at runtime (`--navy700`, `--green`, …) so its stylesheet and the mobile app never drift — as long as its copy of `shared/` is kept in step.
 
 ## Notes
 
 - **Data is mock** (`shared/src/data.ts`) — realistic Arabic sample cases, projects, donations, consultants, and appointments. Swap this module for real API calls when a backend is ready; the UI already reads everything through it.
 - **RTL** is done explicitly (row-reverse + right-aligned text with `writingDirection: 'rtl'`) rather than relying on `I18nManager.forceRTL`, so screens render correctly on first launch in Expo Go with no reload.
-- **Fonts** — Cairo (Google Fonts) loads via `@expo-google-fonts/cairo` on mobile and a `<link>` in `dashboard/index.html`.
+- **Fonts** — Cairo loads via `@expo-google-fonts/cairo` on mobile; the dashboard repo copies the same weights out of that package into its own `public/fonts/`.

@@ -90,3 +90,21 @@ All three produced false failures at some point in this work; the harness-accura
 ## Scripts deliberately not committed
 
 One-off DOM probes (`probe.mjs`, `t0.mjs`) and superseded buggy versions (`navmatrix.mjs`, `tabbar.mjs`, `consult.mjs` — the substring-matching and DOM-presence variants described above) were left out. Shipping known-broken harnesses next to their corrected replacements would invite someone to run the wrong one.
+
+
+## Note — the dashboard moved
+
+`dash.mjs`, `settings-dashboard.mjs`, `settings-all.mjs`, `persist.mjs` and
+`shared-origin.mjs` drive the admin dashboard, which now lives in its own
+repository: https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard
+
+They still work, but the build they point at has to come from there:
+
+```bash
+cd ../ahla-shabab-dashboard && DEMO_BASE=/admin/ npm run build
+cd -  && npm run demo:build
+ADMIN_DIR=../ahla-shabab-dashboard/dist npm run demo
+```
+
+The reports in `qa/*.md` are point-in-time records of the audit and describe the
+layout as it was then; they have deliberately not been rewritten.

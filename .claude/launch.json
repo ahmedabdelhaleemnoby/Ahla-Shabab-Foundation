@@ -2,19 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dashboard",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev",
-        "--workspace",
-        "dashboard",
-        "--",
-        "--host"
-      ],
-      "port": 5173
-    },
-    {
       "name": "mobile-web",
       "runtimeExecutable": "/Users/ahmedabuzyad/.nvm/versions/node/v22.22.2/bin/node",
       "runtimeArgs": [

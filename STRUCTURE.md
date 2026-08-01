@@ -1,6 +1,6 @@
 # بنية المشروع — Project Structure
 
-Full map of the **جمعية خواطر أحلى شباب** platform: an npm-workspaces monorepo with a React Native mobile app, a React admin dashboard, and one shared package that keeps them in sync. Arabic-first, fully RTL, official brand identity from [ahlashabab.com](https://ahlashabab.com).
+Full map of the **جمعية خواطر أحلى شباب** platform: an npm-workspaces monorepo with a React Native mobile app and one shared package. The admin dashboard now lives in its own repository, [ahla-shabab-dashboard](https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard), with a vendored copy of `shared/`. Arabic-first, fully RTL, official brand identity from [ahlashabab.com](https://ahlashabab.com).
 
 > Current release: **v1.2.1** (versionCode 6) · demo on mock data — the backend is specced in [BACKEND.md](BACKEND.md) but not built yet. Every donation/consultation flow is a **presentation demo**: no real payment, server, or database runs.
 
@@ -32,22 +32,13 @@ Ahla Shabab Foundation/
 │       ├── store/                appState.ts (session+receipts+consultations) · drawer.ts · notifications.ts
 │       └── theme.ts              RN styles bridge over shared tokens
 │
-├── dashboard/            Vite + React + Tailwind admin panel (12 modules)
-│   ├── public/logo.png           Official logo
-│   └── src/
-│       ├── App.tsx               React-router routes
-│       ├── components/           Layout (sidebar+header), ui (Card/Modal/Table/…), Charts (SVG)
-│       ├── lib/csv.ts            CSV export helper
-│       ├── pages/                12 pages (see §4)
-│       └── theme.css             Tailwind layers (pill buttons, fields, table cells)
-│
 ├── BACKEND.md            Full backend spec (architecture, DB model, REST API, security)
 ├── README.md             Quick start (install / run)
 ├── STRUCTURE.md          ← this file
-└── .claude/launch.json   Dev-server launch configs (dashboard :5173, mobile-web :8087)
+└── .claude/launch.json   Dev-server launch config (mobile-web :8087)
 ```
 
-**Dependency rule:** `mobile` and `dashboard` import **only** from `@ahla/shared` (never from each other). Editing shared data/tokens updates both apps.
+**Dependency rule:** `mobile` imports **only** from `@ahla/shared`. The dashboard repo holds a *copy* of `shared/`, so editing tokens or data here reaches the app immediately but the dashboard only when its copy is updated.
 
 ---
 
@@ -115,33 +106,31 @@ NavigationContainer (navRef)
 
 ---
 
-## 4. Admin dashboard — `dashboard/` (Vite · React 18 · Tailwind 3)
+## 4. Admin dashboard — separate repository
 
-Everything the app shows is manageable here. Sidebar (navy gradient, official logo) + responsive layout (tables become stacked cards under `md`, drawer menu on mobile).
+Moved to [ahla-shabab-dashboard](https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard) (private). Vite · React 18 · Tailwind 3,
+twelve modules covering bookings, donations approval, services, providers,
+content, users, notifications, inbox, reports, settings, roles and the CMS.
 
-| Route | Page | What it controls |
-|---|---|---|
-| `/` | `Overview` | App-style hero with live pending counters, KPIs, weekly chart, latest bookings |
-| `/bookings` | `Bookings` | Confirm / reschedule / cancel bookings, filters, CSV export |
-| `/donations` | `Donations` | **Approvals module** — اعتماد/رفض for manual transfers (the only path to `مكتمل`), KPIs, CSV |
-| `/services` | `Services` | Category tree (add main/sub, toggle active) + add/edit/delete services |
-| `/providers` | `Providers` | Add/edit provider (working-day + time-slot chip pickers), assign services |
-| `/content` | `Content` | 3 tabs editing the real app entities: **المشروعات** (+updates timeline), **الحالات** (tags, كفالة/موثقة, governorate-only privacy), **المقالات** (excerpt + body) |
-| `/users` | `Users` | Beneficiaries list, block/unblock, CSV |
-| `/notifications` | `Notifications` | Broadcast composer (type + audience) + send history |
-| `/inbox` | `Inbox` | Volunteer applications + contact messages from the app, status actions |
-| `/reports` | `Reports` | Donations analytics (totals, by method, top causes), funding progress per case/project, bookings analytics, notification performance |
-| `/settings` | `Settings` | **إعدادات التطبيق** — impact numbers, hero texts, contact info, socials, payment-method availability, zakat nisab |
-| `/roles` | `Roles` | Role × permission matrix + activity log |
+It carries a vendored copy of `shared/` at `src/shared`, aliased to `@ahla/shared`
+so its imports read exactly as they did here. That copy is the thing to watch: it
+does not track this repo automatically.
 
-Shared UI in `components/ui.tsx` (Card, Kpi, Badge, Toggle, Modal, TableWrap, MobileRow, ProgressCell) and dependency-free SVG charts in `components/Charts.tsx`.
+To run the app and dashboard on **one origin**, which is what makes a CMS edit
+visible in the app (browsers partition localStorage per origin):
+
+```bash
+cd ../ahla-shabab-dashboard && DEMO_BASE=/admin/ npm run build
+cd -  && npm run demo:build
+ADMIN_DIR=../ahla-shabab-dashboard/dist npm run demo
+```
 
 ---
 
 ## 5. Design system
 
-- **Brand:** primary `#18489F`, gold `#E9AF31` (from ahlashabab.com), white surfaces on `paper` background; official calligraphic logo at `mobile/assets/logo.png` + `dashboard/public/logo.png` (1600², also drives the app icon/splash).
-- **Typography:** Cairo (Google Fonts) — expo-google-fonts on mobile, `<link>` on dashboard.
+- **Brand:** primary `#18489F`, gold `#E9AF31` (from ahlashabab.com), white surfaces on `paper` background; official calligraphic logo at `mobile/assets/logo.png` (1600², also drives the app icon/splash); the dashboard repo carries the same file at `public/logo.png`.
+- **Typography:** Cairo — expo-google-fonts on mobile; the dashboard repo copies the same weights out of that package into its own `public/fonts/`.
 - **RTL:** explicit `row-reverse` / `textAlign:'right'` everywhere (not `I18nManager`); Latin digits kept LTR via the `num` style/class.
 - **Radius language:** cards 16, inputs 12, buttons pill (24 / rounded-full) — identical in both apps.
 - **Demo watermarks:** every donation/receipt/consultation surface carries «نسخة عرض» / «إيصال تجريبي لغرض العرض فقط» so nothing reads as a real transaction.
@@ -151,18 +140,16 @@ Shared UI in `components/ui.tsx` (Card, Kpi, Badge, Toggle, Modal, TableWrap, Mo
 ## 6. Commands & dev workflow
 
 ```bash
-npm install                 # once, at repo root (installs all 3 workspaces)
+npm install                 # once, at repo root (shared + mobile)
 
 npm run mobile              # Expo dev server (Expo Go / emulator / w = web)
-npm run dashboard           # Vite dev server → http://localhost:5173
 npm run typecheck           # all workspaces
 
-cd shared && npx vitest run # 18 business-rule tests
-cd dashboard && npm run build
+cd shared && npx vitest run # business-rule tests
 ```
 
 - **Node ≥ 20 required for Metro** (mobile). `.claude/launch.json` pins the mobile-web server to Node 22.
-- Mobile typecheck uses `mobile/tsconfig.typecheck.json` (isolates @types/react 19 from the dashboard's React 18 types). Never add the `react` path mapping to `mobile/tsconfig.json` — Metro reads it and breaks the bundle.
+- Mobile typecheck uses `mobile/tsconfig.typecheck.json`. It isolates @types/react 19 from the React 18 types the dashboard workspace used to hoist to the root; with the dashboard gone that clash should be gone too, but the config is harmless and still pins the intended version. Never add the `react` path mapping to `mobile/tsconfig.json` — Metro reads it and breaks the bundle.
 
 ## 7. Android APK pipeline
 
@@ -187,6 +174,6 @@ Android 12+ gotcha: the system splash shows the **adaptive icon cropped to a cir
 
 ## 9. What's intentionally not built yet
 
-- `backend/` — everything runs on `@ahla/shared` mock data; dashboard edits, app receipts, and consultation requests live in session/on-device memory only.
+- `backend/` — the app still runs on `@ahla/shared` mock data by default; dashboard edits, app receipts, and consultation requests live in session/on-device memory only. See `BACKEND.md` §22 for the API client that replaces this.
 - Real payments · email OTP delivery · push notifications — all demo-only, clearly labeled «نسخة عرض» in the app.
 - ESLint config (known gap; TypeScript strict + vitest cover the current QA).
