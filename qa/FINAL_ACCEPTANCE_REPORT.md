@@ -12,10 +12,11 @@ provider-dashboard / guest-identity change set.
 |---|---|---|
 | Code inspection | ✅ | 42 screens, stores, navigator, tab bar |
 | **Browser testing** | ✅ | Expo **web** dev server, headless Chrome via puppeteer-core at **320×700, 390×844, 430×932**. Assertions read React Navigation's own root state, not pixels. |
-| Android **emulator** | ❌ | not run |
-| **Real device** | ❌ | not run. The release APK was **built** (60 MB, exit 0) but never installed or launched. |
+| Android **emulator** | ✅ | `QA_API36`, Android 16, 1080×2400. APK rebuilt after the D2-01 fix, installed and driven with real `adb` taps. 0 crashes, 0 app ANRs. |
+| **Real device** | ❌ | still not run |
 
-**No claim in this report is based on device behaviour.**
+**No claim in this report is based on *physical-device* behaviour.** Emulator
+results are labelled as such in `BUILD_AND_TEST_RESULTS.md`.
 
 **Backend:** none. A typed API client exists at `shared/src/api`, but **no mobile
 screen imports it** (0 call sites) and **zero external network requests** were
@@ -103,8 +104,10 @@ two false FAILs on login linking (a second module instance under ESM).
    starts the dashboard now that it lives in its own repository.
 4. Get the client's decision on the «+650» / «+10,000» impact figures, still
    unapproved from pass 1.
-5. If the demo will be shown on a phone, run an emulator or device pass first —
-   this report cannot speak to on-device behaviour.
+5. ~~Run an emulator pass~~ — **done.** Five tabs, tab-bar hiding, the Android
+   back button, the safe area and the D2-01 fix all verified on Android 16.
+   A **physical-device** check is still worth doing before the session,
+   particularly for the keyboard and system bars.
 6. Before any production claim, add real persistence (`AsyncStorage`) and wire
    the existing API client.
 
@@ -129,5 +132,6 @@ breakage: two requirements remain PARTIAL because tablet width, keyboard-open
 state and font scaling were not exercised, and not every control across all 42
 screens was pressed.
 
-**This approval covers browser-verified behaviour only.** It does not cover
-device behaviour, and it does not cover anything backend-dependent.
+**This approval covers browser- and emulator-verified behaviour.** It does not
+cover physical-device behaviour, and it does not cover anything
+backend-dependent.

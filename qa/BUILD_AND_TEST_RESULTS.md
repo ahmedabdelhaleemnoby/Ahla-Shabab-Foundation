@@ -27,6 +27,49 @@
 | Android release APK | `cd mobile/android && ./gradlew assembleRelease` | **PASS** — exit 0 | `app-release.apk` **60 MB**, written 2026-08-01 18:41 |
 | Dashboard build | — | **NOT APPLICABLE** | `dashboard/` was removed from this repo in `9afd39f`; it now lives in `ahla-shabab-dashboard`. The provider-facing surface tested here is the **in-app** `ConsultantDashboard` screen. |
 
+
+## Android emulator run — 2026-08-01
+
+**This section is emulator evidence.** Physical-device testing still has **not**
+happened.
+
+| | |
+|---|---|
+| AVD | `QA_API36` — Android **16**, 1080×2400, `-gpu auto` |
+| APK | `app-release.apk`, 62.7 MB, rebuilt **after** the D2-01 fix |
+| Package | `tech.saasfarm.ahlashabab`, versionName 1.4.0, versionCode 8, minSdk 24, targetSdk 36 |
+| Install | `adb install -r` → Success |
+| Crashes | **0** FATAL exceptions, **0** app ANRs across the whole run |
+
+| Check | Result | Evidence |
+|---|---|---|
+| Cold launch | **PASS** — `MainActivity` resumed, renders Home | `and-01-launch.png` |
+| Launcher icon | **PASS** — foundation logo, not the Android default | `and-inner-card-title.png` (dock) |
+| Five tabs, real taps | **PASS** — 5/5 navigate, **5 distinct screens** by checksum, app keeps focus throughout | `and-tab-*.png` |
+| Tab bar contents | **PASS** — 5 items, RTL order right→left, raised «تبرع» | `and-02-home.png` |
+| **D2-01 fix on device** | **PASS** — the green «اكفل أسرة» CTA clears the raised circle | `and-fix-cases.png` |
+| Tab bar hidden on a pushed screen | **PASS** — CaseDetail shows only its own sticky footer, no tab bar | `and-04-inner.png` |
+| Android back button | **PASS** — returns to the exact Cases screen (identical checksum); back from a root tab exits to the launcher, which is correct | `and-05-back.png` |
+| Bottom safe area / gesture bar | **PASS** — sticky footers and the tab bar clear the gesture pill | `and-04-inner.png` |
+| About screen on device | **PASS** — governorate chips render; impact figures (12, 1.2M+) present | `and-tab-about.png` |
+
+### One emulator artifact, not an app defect
+
+The first boot used the software renderer (`-gpu swiftshader_indirect`) and
+`com.android.systemui` repeatedly raised **"System UI isn't responding"**. That
+dialog stole window focus, so taps went to the dialog instead of the app and
+every tab appeared not to respond. The app itself was fine throughout —
+`topResumedActivity` stayed on `MainActivity` and no app ANR was ever recorded.
+Relaunching with `-gpu auto` removed it entirely. **This is an emulator/host
+graphics limitation and says nothing about the app.**
+
+### Also worth recording
+
+The first APK tested was built *before* the D2-01 fix. It was discarded and the
+APK rebuilt so that every result above reflects current `main`.
+
+---
+
 ## Environment
 
 | | |

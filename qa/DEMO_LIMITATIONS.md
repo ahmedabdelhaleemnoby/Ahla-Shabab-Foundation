@@ -28,4 +28,4 @@ What a viewer must not be told is production behaviour.
 | Provider dashboard | In-app demo portal. Edits last for the session; the header states this. |
 | Social links | All four point at `https://ahlashabab.com` — placeholders, not real profiles. |
 | Impact figures | «+650 مبادرة» / «+10,000 متطوع» on the About screen remain **client-unapproved** (QA D-07 from pass 1). |
-| Device coverage | **Browser only.** No emulator run and no physical-device run. The release APK was built but never installed or launched. |
+| Device coverage | Browser **and Android 16 emulator** (`QA_API36`). The release APK was rebuilt after the D2-01 fix, installed and driven with real taps: 0 crashes, 0 app ANRs. **No physical-device run.** |
