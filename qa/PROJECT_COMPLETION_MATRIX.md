@@ -32,7 +32,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 10 | Guest flow | Browse all public content without login | PASS | PASS | — | — | PASS | PASS | **PASS** | — |
 | 11 | Validation | Invalid bodies → 400 + per-field Arabic errors | PASS | PASS | — | — | PASS | PASS | **PASS** | — |
 | 12 | Error hygiene | 401/404 clean, no stack traces | PASS | — | — | — | PASS | PASS | **PASS** | — |
-| 13 | Admin reads | All dashboard lists read the live API | PASS | — | PASS | — | PASS | PARTIAL | **PASS** | remove silent seed fallback |
+| 13 | Admin reads | All dashboard lists read the live API | PASS | — | PASS | — | PASS | PASS | **PASS** ✅ | T-16: fallback removed; failure shows an explicit error, verified in-browser |
 | 14 | Admin CMS write | `PUT /admin/cms` persists CMS edits | PASS | — | PASS | — | PASS | PARTIAL | **PASS** | — |
 | 15 | Auth | Email OTP request/verify endpoints | PASS | PASS | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | wired; live delivery still BLOCKED |
 | 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | BLOCKED | **PARTIAL** | live 3-case test |

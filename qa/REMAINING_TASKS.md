@@ -156,9 +156,31 @@ mid/senior full-stack engineer familiar with this codebase.
 - Module Receipts · Backend+Mobile · High · Depends T-05 · Effort 1.5d
 - **Acceptance** Receipt exists only after confirmed/approved payment; unique reference; **User A requesting B's receipt id → 403/404**.
 
-### T-16 · Remove silent seed fallback in dashboard reads
+### T-16 · Remove silent seed fallback in dashboard reads — ✅ DONE & VERIFIED IN A BROWSER
 - Module Admin · Dashboard · High · Effort 0.75d · File `store/useAdminRows.ts`
-- **Acceptance** On API failure the page shows an explicit error/offline state — never mock rows presented as live data.
+- `useAdminData` **discarded `error` entirely**, so Overview/Reports/Roles computed totals from
+  fabricated rows and presented them as live figures on a failed load.
+- **Removing the fallback exposed worse fabrications that lied even on a SUCCESSFUL load:** a
+  hardcoded weekly chart (`[4,7,5,9,6,8]`), invented ▲12%/▲8% trend arrows, a provider count read
+  from the bundled seed (reported **10** on an empty database), and a sidebar showing
+  `donorProfile.name` ("أحمد محمد") as the signed-in admin. All four are fixed.
+- **Done** seed parameter **removed** from the hook (not ignored) across all 20 call sites;
+  `useAdminData` returns state so `error` cannot be dropped; banners added to Overview/Reports/Roles;
+  weekly chart derived from real bookings; provider data from `fetchAdminProviders`; sidebar uses
+  `auth.getAdmin()`; failure copy reworded from «تُعرض بيانات تجريبية» to «لم تُعرض أي بيانات»;
+  10 dead seed imports pruned. Bundle 419.27 → **405.95 kB**.
+- **Acceptance** On API failure the page shows an explicit error/offline state — never mock rows
+  presented as live data — **MET**, verified in a browser with a failing API: banner shown, all
+  counts 0, «لا توجد حجوزات مطابقة», and **0 bundle hits** for every fabricated row id/name.
+  Evidence `final-delivery-audit/reports/T-16-no-silent-seed-fallback.md`.
+
+### T-18 · Filter dropdowns still populated from bundled lists — NEW (found during T-16)
+- Module Admin · Dashboard · **P2** · Effort 0.5d · Files `pages/Bookings.tsx`, `pages/Services.tsx`
+- Provider/category/governorate filter options come from bundled reference arrays, so a filter can
+  offer an option that does not exist server-side. They are options rather than rows presented as
+  live records, so they sit outside T-16's acceptance — but they are the last bundled data visible
+  in an admin view.
+- **Acceptance** Filter options are sourced from the API.
 
 ---
 

@@ -466,6 +466,50 @@ exist. To push updated defaults deliberately, run one deploy with `SEED_OVERWRIT
 
 ---
 
+## T-16 — Dashboard reads stop falling back to demo rows ✅ DONE, verified in a browser
+
+**Before.** `useAdminRows(fetcher, seed)` kept a bundled demo array on screen when the request
+failed. The read-only variant was worse — `useAdminData` returned only `rows`, **discarding
+`error`** — and Overview, Reports and Roles used it. A failed load therefore left them computing
+totals from fabricated rows and presenting them as live figures. An operator could have made
+decisions on numbers that were never real. 20 call sites across 9 pages passed a seed.
+
+**Removing the fallback exposed three worse fabrications** — ones that lied even on a *successful*
+load, which is a stronger failure than the fallback ever was:
+
+- a hardcoded weekly bookings chart, `value: [4, 7, 5, 9, 6, 8][i]`, showing the same invented week
+  no matter what the server returned;
+- invented trend arrows, `delta={{ text: '12%', up: true }}` and `'8%'`, never computed from anything;
+- «مقدمو الخدمة» read from the bundled `providers` seed, reporting **10** on an empty database;
+- and in the sidebar, `donorProfile.name` — "أحمد محمد" — displayed as the **signed-in admin**,
+  with a hardcoded «مدير عام», for whoever was actually logged in.
+
+**Files.** `store/useAdminRows.ts` (seed parameter **removed**, not ignored, so no page can pass one;
+`useAdminData` now returns state so `error` cannot be dropped; added `reload()`); all 9 pages;
+`components/Layout.tsx` (real admin from `auth.getAdmin()`); failure copy reworded from
+«تُعرض بيانات تجريبية» to «لم تُعرض أي بيانات», tone warning → error; 10 dead seed imports pruned.
+
+**Retest.** `tsc` and build clean. **0 of 20** call sites still pass a seed. Bundle **419.27 →
+405.95 kB** (gzip 120.25 → 116.02) — demo rows leaving the build. Every fabricated row marker
+(`d-1`, `a-1`, `AS-482910`, `أحمد محمد`, `منى إبراهيم`, `كفالة أسرة محتاجة`, `أكّد حجزاً`) returns
+**0 hits** in `dist`.
+
+Verified **in a browser**, not by inspection: with an invalid token so every admin read fails,
+Bookings shows the error banner with all counts `0` and «لا توجد حجوزات مطابقة»; Overview shows its
+banner with مقدمو الخدمة **10 → 0**, the weekly chart **4·7·5·9·6·8 → 0 across all seven days**, and
+the ▲12%/▲8% arrows gone. The test session was cleared from `localStorage` afterwards.
+
+**Result.** Acceptance met. Row 13 keeps its **PASS** and now has evidence behind the T column
+rather than a caveat, so the tally is unchanged at 67% — this hardened existing work rather than
+adding surface.
+
+**Honest remainder → T-18 (P2).** Filter dropdowns (providers, categories, governorates) are still
+populated from bundled reference lists, so a filter can offer an option that does not exist
+server-side. They are options rather than rows presented as live records, so they fall outside this
+acceptance — but they are the last bundled data visible in an admin view.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:
