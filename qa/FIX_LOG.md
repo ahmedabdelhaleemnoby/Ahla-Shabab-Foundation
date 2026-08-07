@@ -827,6 +827,51 @@ pile permanently.
 
 ---
 
+## CMS + Portfolio integration coverage ✅ DONE — one defect fixed, one gap recorded
+
+**Before.** Both services sat at **0% coverage** — `cms.service.ts` (128 statements) is the document
+the whole mobile app renders from; `portfolio.service.ts` (87) owns the published cases and projects.
+
+**⚠️ Defect found: the public detail route served unpublished items.**
+`GET /portfolio/cases/:id` and `/projects/:id` are `@Public()`. The **list** routes pass
+`published: true`; the **detail** routes passed nothing, so an unpublished case or project was fully
+readable by anyone holding its id — **including one that had been published and then taken down**.
+Ids are UUIDs so it was not enumerable, but unpublishing is how a case comes down when a family
+withdraws consent or a detail proves wrong, and it did not remove access at the old link. This client
+treats beneficiary privacy as a design constraint — images are labelled "privacy-vetted" and only a
+governorate is stored, «بدون عنوان تفصيلي — خصوصية المستفيد» — so "unpublish" must be a takedown,
+not a label. Fixed with `findPublishedCaseById` / `findPublishedProjectById`; admin routes keep the
+unscoped finders so drafts stay editable.
+
+**Second finding — and it corrects one of my own earlier decisions.** Nothing derives `raisedAmount`
+from donations: `donation.completed` feeds only notifications, and a `Donation` carries a free-text
+`cause` with no `caseId`. A completed donation leaves the case total at 0, now proven by a test.
+**In T-02 I stopped the dashboard sending `raisedAmount`, reasoning it was "derived server-side".
+That was false, and the change removed the only way to set it** — the dashboard currently cannot
+update a fundraising total at all. Two ways forward (restore manual editing, or link donations to
+cases with a schema change and backfill); it changes how the charity reports its numbers, so it is
+recorded as a decision rather than chosen unilaterally.
+
+**Retest — 19 tests.** Portfolio: drafts absent from public lists, **not readable via the public
+detail path**, admin still able to read them, and unpublishing removing access from both paths. CMS:
+draft pages absent from the snapshot, unpublishing removing a page, **a document stored at v9 coming
+back at `CMS_SCHEMA_VERSION`** with T-07's Arabic consultation keys and consent fields (the
+backfill-on-read contract verified, not assumed), only the three approved payment methods offered,
+and a settings edit persisting **without silently dropping** menu or consultations.
+
+**Mutation-checked**: removing either draft filter failed **4 tests**, and nothing else.
+
+**Result.** **81 integration / 7 suites** (was 62 / 5) and 101 unit; CI green (`31218275272`).
+Coverage of the two services **0% → ~37–40%** statements.
+
+**An honest note on the headline number.** `npm run test:cov` now reports **20.67%**, marginally
+*below* the 20.71% before this work. That is not a regression: the new published-scoped finders are
+source lines covered by *integration* tests, which the unit coverage run does not measure. The two
+numbers count different things, and the ratchet governs the unit run only. A merged coverage report
+would fix the confusion — noted as a follow-up rather than papered over.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:
