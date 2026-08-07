@@ -1,0 +1,85 @@
+npm warn exec The following package was not found and will be installed: tsx@4.23.11
+target: https://portfolio.27lashabab.com/api/v1
+
+## GET /cms  (mapped onto CmsState)
+  ok   served from the API (not the bundled fallback)
+  ok   settings.hotline resolved
+  ok   settings.email resolved
+  ok   settings.socials is an object with 4 keys
+  ok   zakatNisabEgp is a number
+  ok   splashText kept from bundled defaults
+  ok   donationReassurance kept from bundled defaults
+  ok   stats.governorates present
+  ok   version reported as the app schema version
+
+## payment methods (latin ids -> Arabic union)
+  ok   every method has an Arabic id
+  ok   every group is one of the three display values
+  ok   manual flag is boolean everywhere
+
+## consultation types (the consent/disclaimer guarantee)
+  keys: نفسية, دينية, طبية, أسرية, أعمال
+  ok   every type has a disclaimer
+  ok   every type ends with a consent field
+  ok   no choice field is missing its options
+  ok   the app keys survived (route params intact)
+
+## GET /cases -> HumanitarianCase[]
+  ok   returned rows
+  ok   tag is a valid CaseTag
+  ok   gradient synthesised as a 2-tuple
+  ok   gradient is stable for the same id
+  ok   amounts are numbers
+
+## GET /projects -> Project[]
+  ok   returned rows
+  ok   status is a valid ProjectStatus
+  ok   stages is always an array
+
+## GET /articles -> Article[]
+  ok   returned rows
+  ok   category is a valid ArticleCategory
+  ok   readMinutes is a number
+
+## GET /providers -> Consultant[]
+  ok   returned rows
+  ok   type inferred into the ConsultationType union
+  ok   rating is a number
+
+## GET /services (paginated envelope)
+  ok   items unwrapped from { data: { data, meta } }
+  ok   meta.total present
+  ok   POST /bookings accepts the ids GET /services returns (svc-6)
+
+## GET /home (stats list -> object)
+  ok   stats flattened by key
+
+## raw GET /cms — the backend's own state, before mapping
+  wire version: 10   keys: psychological, legal, family, social, educational
+  KNOWN consultation types are seeded with the app's five Arabic keys — backend has: psychological, legal, family, social, educational
+  ok   every backend consultation type carries a disclaimer  (previously a known issue — now fixed)
+  KNOWN every backend consultation type carries a consent field
+  ok   settings.milestones is populated  (previously a known issue — now fixed)
+  ok   paymentMethods use the app's Arabic ids  (previously a known issue — now fixed)
+
+## POST /consultations with a deliberately invalid body (creates nothing)
+  ok   rejected with 400
+  ok   Arabic message surfaced
+  ok   per-field errors mapped
+  ok   writes do not fall back (the error reached us)
+
+## fallback when the API is unreachable
+  ok   reads serve bundled content instead of throwing
+  ok   CMS reports source=bundled
+  ok   bundled CMS still has consent fields
+  ok   writes still refuse to fall back
+
+45/47 checks passed
+
+reported through onError (expected during the offline section):
+  - GET /cases: تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى. (HTTP 0) [fell back]
+  - GET /cms: تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى. (HTTP 0) [fell back]
+
+known backend defects (do not fail the run):
+  - consultation types are seeded with the app's five Arabic keys — backend has: psychological, legal, family, social, educational
+  - every backend consultation type carries a consent field

@@ -1,0 +1,17 @@
+::ffff:127.0.0.1 - - [26/Jul/2026 09:07:34] "GET / HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:34] "GET / HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:42] "GET / HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:42] "GET / HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:42] "GET / HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:43] "GET /_expo/static/js/web/index-6fe65d3efd1028d92569e0175a038e89.js HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:48] "GET / HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:49] "GET /_expo/static/js/web/index-6fe65d3efd1028d92569e0175a038e89.js HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:49] code 404, message File not found
+::1 - - [26/Jul/2026 09:07:49] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [26/Jul/2026 09:07:50] "GET /assets/_node_modules/@expo-google-fonts/cairo/Cairo_500Medium.76f957349a6defbef1b6980bc4c8892a.ttf HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:50] "GET /assets/_node_modules/@expo-google-fonts/cairo/Cairo_600SemiBold.a29aa6689e17cc4920f865b1e2f206fd.ttf HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:50] "GET /assets/_node_modules/@expo-google-fonts/cairo/Cairo_400Regular.94c4feb516a9bd22a5ee417f6e099c93.ttf HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:50] "GET /assets/_node_modules/@expo-google-fonts/cairo/Cairo_800ExtraBold.461a6eeaed7944175bd3b03209b6015a.ttf HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:50] "GET /assets/_node_modules/@expo-google-fonts/cairo/Cairo_700Bold.19a30f18e32cf8dbb9d0cfcee9e2c01e.ttf HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:51] "GET /assets/assets/logo.9b05c36853413f92630ff2b5658fd3b7.png HTTP/1.1" 200 -
+::1 - - [26/Jul/2026 09:07:51] "GET /assets/_node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf HTTP/1.1" 200 -

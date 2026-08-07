@@ -1,0 +1,60 @@
+===================== USER-VISIBLE / DEBT TOKENS =====================
+### [TODO] -> 17
+shared/src/types.ts:165: * dashboard settings page. TODO(backend): GET/PUT /admin/config.
+shared/src/data.ts:17: * TODO(backend): serve from GET /config so the admin can toggle availability.
+shared/src/data.ts:27:/** Editable from the dashboard (إعدادات التطبيق). TODO(backend): GET /config. */
+mobile/src/screens/FavoritesScreen.tsx:13:/** Mock favorites: first two projects + first sponsorable case. TODO(backend): GET /me/favorites. */
+mobile/src/screens/OtpScreen.tsx:34:    // TODO(production): send and verify OTP through backend email service
+mobile/src/screens/EmailAuthScreen.tsx:20:    // TODO(production): send and verify OTP through backend email service
+mobile/src/screens/BookAppointmentScreen.tsx:48:  // TODO(backend): GET /services/:id/availability — booked slots come from the server.
+dashboard/src/pages/Inbox.tsx:14:   TODO(backend): GET /admin/volunteers, GET /admin/messages + status PATCH. */
+dashboard/src/pages/Settings.tsx:14:   TODO(backend): GET/PUT /admin/config + PATCH /admin/payment-methods/:id. */
+dashboard/src/pages/Reports.tsx:163:      {/* Notification performance (stub — TODO(backend): real delivery metrics) */}
+dashboard/src/pages/Notifications.tsx:7:   TODO(backend): POST /admin/notifications/broadcast (FCM + in-app feed). */
+dashboard/src/pages/Services.tsx:13:   TODO(backend): /admin/categories + /admin/services endpoints. */
+dashboard/src/pages/Content.tsx:23:   TODO(backend): CRUD endpoints /admin/projects, /admin/cases, /admin/articles. */
+dashboard/src/pages/Donations.tsx:33:    // TODO(backend): PATCH /admin/donations/:id/status + activity-log entry.
+mobile/src/components/RemoteImage.tsx:10: * - `uri` comes from the admin panel (TODO(backend): media upload URLs).
+mobile/src/store/demoUsers.ts:97:  // TODO(production): send and verify OTP through backend email service
+mobile/src/store/appState.ts:6: * TODO(backend): replace with real auth (JWT) + GET /me/donations. Receipt
+### [FIXME] -> 0
+### [HARDCODED] -> 0
+### [MOCK] -> 0
+### [mock] -> 5
+shared/src/services.ts:4: * All mock data for now; shapes mirror what the backend/dashboard will manage.
+shared/src/admin.ts:2: * Admin / management mock data (Technical Offer §5).
+dashboard/src/pages/Overview.tsx:16:// bookings over the week (mock distribution)
+mobile/src/screens/GovernorateActivityScreen.tsx:17:  // Local mock filter for cases in or near this governorate
+mobile/src/screens/MyBookingsScreen.tsx:23:// Treat these mock appointments as "mine" for the demo.
+### [test data] -> 0
+### [Lorem] -> 0
+### [console\.log] -> 0
+### [@ts-ignore] -> 0
+### [@ts-expect-error] -> 1
+shared/src/__tests__/rules.test.ts:33:    // @ts-expect-error — 'مكتمل' is not assignable to ClientDonationStatus
+### [eslint-disable] -> 0
+===================== NETWORK / BACKEND TOKENS =====================
+### [localhost] -> 0
+### [127\.0\.0\.1] -> 0
+### [fetch\(] -> 0
+### [axios] -> 0
+### [XMLHttpRequest] -> 0
+### [new WebSocket] -> 0
+### [process\.env] -> 0
+### [API_KEY|api_key|apikey|secret|password|token] -> 3
+dashboard/src/main.tsx:8:// Inject the shared design tokens as CSS custom properties so the stylesheet
+shared/src/index.ts:1:export * from './tokens';
+dashboard/src/components/Charts.tsx:3:/** Dependency-free SVG charts, themed with shared tokens. */
+----- ALL http(s):// literals -----
+shared/src/data.ts:33:  website: 'https://ahlashabab.com',
+shared/src/data.ts:35:    facebook: 'https://ahlashabab.com',
+shared/src/data.ts:36:    instagram: 'https://ahlashabab.com',
+shared/src/data.ts:37:    youtube: 'https://ahlashabab.com',
+shared/src/data.ts:38:    twitter: 'https://ahlashabab.com',
+dashboard/src/pages/CmsMenu.tsx:152:                  const nt: NavTarget = kind === 'tab' ? { kind: 'tab', tab: 'Home' } : kind === 'route' ? { kind: 'route', route: 'About' } : kind === 'external' ? { kind: 'external', url: 'https://ahlashabab.com' } : { kind: 'cmsPage', slug: '' };
+shared/src/cms/cmsDefaults.ts:200:    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">` +
+mobile/src/screens/CmsPageScreen.tsx:71:  if (kind === 'whatsapp') return `https://wa.me/${value.replace(/[^0-9]/g, '')}`;
+mobile/src/screens/CmsPageScreen.tsx:72:  return value.startsWith('http') ? value : `https://${value}`;
+dashboard/src/components/RichContentEditor.tsx:147:              patch({ ctaTarget: kind === 'tab' ? { kind: 'tab', tab: 'Donate' } : kind === 'route' ? { kind: 'route', route: 'ContactUs' } : { kind: 'external', url: 'https://ahlashabab.com' } });
+===== 'any' type usage count (debt) =====
+      55

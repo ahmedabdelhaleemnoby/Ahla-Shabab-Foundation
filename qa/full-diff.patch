@@ -1,0 +1,3554 @@
+diff --git a/.claude/launch.json b/.claude/launch.json
+index 2e6f146..be42b83 100644
+--- a/.claude/launch.json
++++ b/.claude/launch.json
+@@ -4,8 +4,28 @@
+     {
+       "name": "dashboard",
+       "runtimeExecutable": "npm",
+-      "runtimeArgs": ["run", "dev", "--workspace", "dashboard", "--", "--host"],
++      "runtimeArgs": [
++        "run",
++        "dev",
++        "--workspace",
++        "dashboard",
++        "--",
++        "--host"
++      ],
+       "port": 5173
++    },
++    {
++      "name": "mobile-web",
++      "runtimeExecutable": "npx",
++      "runtimeArgs": [
++        "expo",
++        "start",
++        "--web",
++        "--port",
++        "8087"
++      ],
++      "cwd": "mobile",
++      "port": 8087
+     }
+   ]
+-}
++}
+\ No newline at end of file
+diff --git a/BACKEND.md b/BACKEND.md
+index d550679..539287a 100644
+--- a/BACKEND.md
++++ b/BACKEND.md
+@@ -347,3 +347,35 @@ Seed the DB directly from the existing mocks in `@ahla/shared` so the apps look
+ - **Payment gateways**: which of Fawry / InstaPay / Vodafone Cash / card go live vs sandbox first.
+ - **Hosting/DB**: managed Postgres? where is media stored long-term (local vs S3)?
+ - **Auth for donors**: required accounts or fully guest-first?
++
++---
++
++## 16. Security acceptance criteria (production sign-off — added by QA pass v2)
++
++These MUST be implemented and tested server-side before launch. The mobile app already enforces the client half (statuses `قيد التأكيد`/`قيد المراجعة` only — see `shared/src/rules.ts` + unit tests in `shared/src/__tests__/rules.test.ts`).
++
++**Donations**
++1. `POST /donations` accepts NO `status` field from clients — the server sets it (`قيد التأكيد` gateway / `قيد المراجعة` manual). Reject any payload containing `status`.
++2. Only two paths may set `مكتمل`: (a) the payment-gateway webhook after signature verification; (b) `PATCH /admin/donations/:id/status` by an admin holding the `donations` permission.
++3. Webhooks are **idempotent**: store the gateway transaction id with a unique constraint; replays return 200 without state change; out-of-order events cannot regress a final state.
++4. Amount + destination are re-validated server-side against the gateway's charged amount — mismatch → flag `قيد المراجعة`, never auto-complete.
++5. Receipts: `GET /me/donations/:ref` returns only the requester's own receipts (401/403 otherwise); receipts contain no beneficiary personal data.
++6. Rate-limit donation creation per phone/IP.
++
++**Bookings**
++7. `POST /bookings` re-validates the slot server-side (transactional unique `(provider, date, slot)`); a client submitting a booked/blocked slot gets 409 — frontend state is never trusted.
++8. Duplicate booking (same phone + service + date) → 409.
++9. Confirmation status returned by the server; app shows «قيد تأكيد الإدارة» until an admin confirms.
++10. All times stored UTC, rendered Africa/Cairo.
++
++**Authorization (403 matrix)**
++11. Every admin endpoint checks role permissions; write an integration test per module (donations/content/cases/bookings/reports/roles) asserting each unauthorized role gets **403** for: approve/reject donation, edit case, edit project, edit impact numbers, read reports, read audit log.
++
++**Audit log**
++12. Every mutation writes: actor id, action, entity type, entity id, **previous value, new value**, timestamp, request IP + user-agent. Required for: donation approve/reject, case create/update, project create/update, booking status change, impact-number change, role/permission change. Audit entries are append-only.
++
++**Notifications**
++13. User push on donation approval/failure and booking confirmation; admin WhatsApp/notification on new manual transfer + new booking (integration credentials are the association's responsibility).
++
++**Media (§9 of the UX spec)**
++14. Admin uploads are the only image source (cases/projects/consultants/news/events). Server strips EXIF, resizes to max 1280px, re-encodes ~80% JPEG, and serves via CDN paths stored in `imageUrl`. The app renders them through `RemoteImage` (loading + broken-image + privacy-safe fallback already implemented).
+diff --git a/dashboard/src/App.tsx b/dashboard/src/App.tsx
+index 0694bc3..d85256f 100644
+--- a/dashboard/src/App.tsx
++++ b/dashboard/src/App.tsx
+@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
+ import { Layout } from './components/Layout';
+ import Overview from './pages/Overview';
+ import Bookings from './pages/Bookings';
++import Donations from './pages/Donations';
+ import Services from './pages/Services';
+ import Providers from './pages/Providers';
+ import Content from './pages/Content';
+@@ -15,6 +16,7 @@ export default function App() {
+       <Route element={<Layout />}>
+         <Route path="/" element={<Overview />} />
+         <Route path="/bookings" element={<Bookings />} />
++        <Route path="/donations" element={<Donations />} />
+         <Route path="/services" element={<Services />} />
+         <Route path="/providers" element={<Providers />} />
+         <Route path="/content" element={<Content />} />
+diff --git a/dashboard/src/components/Layout.tsx b/dashboard/src/components/Layout.tsx
+index bb11037..45625e7 100644
+--- a/dashboard/src/components/Layout.tsx
++++ b/dashboard/src/components/Layout.tsx
+@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
+ import {
+   LayoutDashboard,
+   CalendarCheck,
++  Wallet,
+   ListTree,
+   Stethoscope,
+   FolderKanban,
+@@ -28,6 +29,7 @@ interface NavItem {
+ export const NAV: NavItem[] = [
+   { to: '/', label: 'لوحة المعلومات', icon: LayoutDashboard, title: 'لوحة المعلومات', sub: 'ملخص أداء المنصة والحجوزات' },
+   { to: '/bookings', label: 'الحجوزات', icon: CalendarCheck, title: 'إدارة الحجوزات', sub: 'متابعة وتأكيد وإعادة جدولة المواعيد' },
++  { to: '/donations', label: 'التبرعات والإيصالات', icon: Wallet, title: 'التبرعات والإيصالات', sub: 'اعتماد التحويلات اليدوية ومتابعة تأكيدات الدفع' },
+   { to: '/services', label: 'الخدمات والفئات', icon: ListTree, title: 'الخدمات والفئات', sub: 'فئات متعددة المستويات وخدمات قابلة للحجز' },
+   { to: '/providers', label: 'مقدمو الخدمة', icon: Stethoscope, title: 'مقدمو الخدمة', sub: 'الأطباء والمستشارون وجداول المواعيد' },
+   { to: '/content', label: 'إدارة المحتوى', icon: FolderKanban, title: 'إدارة المحتوى', sub: 'المشروعات والحالات والقوافل والمقالات' },
+diff --git a/dashboard/src/pages/Content.tsx b/dashboard/src/pages/Content.tsx
+index 2d138eb..feab71c 100644
+--- a/dashboard/src/pages/Content.tsx
++++ b/dashboard/src/pages/Content.tsx
+@@ -1,7 +1,7 @@
+ import { useMemo, useState, type ReactNode } from 'react';
+ import { Plus, Pencil, Trash2 } from 'lucide-react';
+-import { portfolioItems as seed, governorates, type PortfolioItem, type PortfolioType } from '@ahla/shared';
+-import { Card, Badge, Toggle, Modal, TableWrap, MobileRow } from '../components/ui';
++import { portfolioItems as seed, governorates, foundationStats, type PortfolioItem, type PortfolioType } from '@ahla/shared';
++import { Card, Badge, Toggle, Modal, TableWrap, MobileRow, SectionHead } from '../components/ui';
+ 
+ const TYPES: (PortfolioType | 'الكل')[] = ['الكل', 'مشروع', 'حالة', 'قافلة', 'برنامج', 'رحلة', 'مقال'];
+ const typeTone = (t: PortfolioType) =>
+@@ -14,6 +14,8 @@ export default function Content() {
+   const [type, setType] = useState<(typeof TYPES)[number]>('الكل');
+   const [editing, setEditing] = useState<PortfolioItem | null>(null);
+   const [isNew, setIsNew] = useState(false);
++  const [impact, setImpact] = useState<Record<string, string | number>>({ ...foundationStats });
++  const [impactSaved, setImpactSaved] = useState(true);
+ 
+   const filtered = useMemo(() => (type === 'الكل' ? rows : rows.filter((r) => r.type === type)), [rows, type]);
+ 
+@@ -31,6 +33,21 @@ export default function Content() {
+ 
+   return (
+     <div className="flex flex-col gap-5">
++
++      {/* Impact numbers editor — feeds the mobile home/about stats.
++          TODO(backend): PUT /admin/config/impact. */}
++      <Card>
++        <SectionHead title="أرقام الأثر (الصفحة الرئيسية للتطبيق)" action={impactSaved ? <Badge tone="green">تم الحفظ</Badge> : <button className="btn btn-sm" onClick={() => setImpactSaved(true)}>حفظ</button>} />
++        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
++          {([['governorates', 'عدد المحافظات'], ['beneficiaries', 'عدد المستفيدين'], ['yearsOfService', 'سنوات العطاء']] as const).map(([k, label]) => (
++            <div key={k}>
++              <label className="text-[13px] font-bold text-navy-700 block mb-2 text-right">{label}</label>
++              <input className="field num" value={String(impact[k])} onChange={(e) => { setImpact({ ...impact, [k]: e.target.value }); setImpactSaved(false); }} />
++            </div>
++          ))}
++        </div>
++      </Card>
++
+       <div className="flex flex-wrap items-center justify-between gap-3">
+         <div className="flex flex-wrap gap-2">
+           {TYPES.map((t) => (
+diff --git a/dashboard/src/pages/Donations.tsx b/dashboard/src/pages/Donations.tsx
+new file mode 100644
+index 0000000..8ae3b58
+--- /dev/null
++++ b/dashboard/src/pages/Donations.tsx
+@@ -0,0 +1,146 @@
++import { useMemo, useState } from 'react';
++import { Check, X, Download, Wallet, Clock, FileSearch, BadgeCheck } from 'lucide-react';
++import { donations as seed, paymentMethods, type Donation, type DonationStatus } from '@ahla/shared';
++import { Card, Badge, Kpi, TableWrap, MobileRow } from '../components/ui';
++import { exportCsv } from '../lib/csv';
++
++/**
++ * Donations & receipts module. Gateway donations stay «قيد التأكيد/قيد المعالجة»
++ * until the payment server confirms; manual methods (bank transfer / InstaPay)
++ * stay «قيد المراجعة» until an admin approves them HERE. The mobile app never
++ * marks a donation successful on its own.
++ */
++const STATUSES: (DonationStatus | 'الكل')[] = ['الكل', 'قيد المراجعة', 'قيد المعالجة', 'مكتمل', 'فشل'];
++
++const tone = (s: DonationStatus) => (s === 'مكتمل' ? 'green' : s === 'فشل' ? 'danger' : 'gold') as 'green' | 'danger' | 'gold';
++
++export default function Donations() {
++  const [rows, setRows] = useState<Donation[]>(seed);
++  const [status, setStatus] = useState<(typeof STATUSES)[number]>('الكل');
++  const [q, setQ] = useState('');
++
++  const filtered = useMemo(
++    () =>
++      rows.filter(
++        (d) =>
++          (status === 'الكل' || d.status === status) &&
++          (q === '' || d.donorName.includes(q) || d.cause.includes(q))
++      ),
++    [rows, status, q]
++  );
++
++  const setStatusFor = (id: string, s: DonationStatus) => {
++    // TODO(backend): PATCH /admin/donations/:id/status + activity-log entry.
++    setRows((prev) => prev.map((d) => (d.id === id ? { ...d, status: s } : d)));
++  };
++
++  const confirmedTotal = rows.filter((d) => d.status === 'مكتمل').reduce((s, d) => s + d.amount, 0);
++  const pendingReview = rows.filter((d) => d.status === 'قيد المراجعة').length;
++  const pendingGateway = rows.filter((d) => d.status === 'قيد المعالجة' || d.status === 'قيد التأكيد').length;
++
++  const doExport = () =>
++    exportCsv(
++      'donations.csv',
++      ['المتبرع', 'الوجهة', 'المبلغ', 'الطريقة', 'التاريخ', 'شهري', 'الحالة'],
++      filtered.map((d) => [d.donorName, d.cause, d.amount, d.method, d.date, d.recurring ? 'نعم' : 'لا', d.status])
++    );
++
++  return (
++    <div className="flex flex-col gap-5">
++      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
++        <Kpi icon={BadgeCheck} tone="green" value={`${confirmedTotal.toLocaleString('en-US')} ج.م`} label="إجمالي التبرعات المعتمدة" />
++        <Kpi icon={FileSearch} tone="gold" value={String(pendingReview)} label="بانتظار مراجعة الإدارة" />
++        <Kpi icon={Clock} value={String(pendingGateway)} label="بانتظار تأكيد بوابة الدفع" />
++        <Kpi icon={Wallet} value={String(paymentMethods.filter((m) => m.availability === 'متاحة').length)} label="وسائل دفع مفعّلة" />
++      </div>
++
++      {pendingReview > 0 && (
++        <div className="rounded-2xl border border-line bg-gold-soft/60 px-4 py-3 text-[13.5px] text-[#7a5210]">
++          يوجد <b className="num">{pendingReview}</b> تبرع تحويل بنكي/إنستاباي بانتظار الاعتماد — لا يُحتسب أي تبرع في الإجماليات قبل اعتماده.
++        </div>
++      )}
++
++      <div className="flex flex-wrap gap-2">
++        {STATUSES.map((s) => (
++          <button key={s} className={`chip ${status === s ? 'chip-on' : ''}`} onClick={() => setStatus(s)}>
++            {s} {s !== 'الكل' && <span className="num">({rows.filter((d) => d.status === s).length})</span>}
++          </button>
++        ))}
++      </div>
++
++      <Card className="!p-0">
++        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-line-2">
++          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالمتبرع أو الوجهة..." className="field !w-auto flex-1 min-w-[200px]" />
++          <button className="btn btn-sm" onClick={doExport}><Download size={15} /> تصدير CSV</button>
++        </div>
++
++        <div className="p-1 hidden md:block">
++          <TableWrap>
++            <thead>
++              <tr>
++                <th className="th">المتبرع</th>
++                <th className="th">الوجهة</th>
++                <th className="th">المبلغ</th>
++                <th className="th">الطريقة</th>
++                <th className="th">التاريخ</th>
++                <th className="th">النوع</th>
++                <th className="th">الحالة</th>
++                <th className="th">إجراء</th>
++              </tr>
++            </thead>
++            <tbody>
++              {filtered.map((d) => (
++                <tr key={d.id} className="hover:bg-paper-2">
++                  <td className="td font-semibold">{d.donorName}</td>
++                  <td className="td text-slate">{d.cause}</td>
++                  <td className="td num font-bold text-navy-700">{d.amount.toLocaleString('en-US')} ج.م</td>
++                  <td className="td text-slate">{d.method}</td>
++                  <td className="td num text-slate">{d.date}</td>
++                  <td className="td"><Badge tone={d.recurring ? 'navy' : 'muted'}>{d.recurring ? 'شهري' : 'مرة واحدة'}</Badge></td>
++                  <td className="td"><Badge tone={tone(d.status)}>{d.status}</Badge></td>
++                  <td className="td">
++                    {d.status === 'قيد المراجعة' ? (
++                      <div className="flex gap-1.5">
++                        <button onClick={() => setStatusFor(d.id, 'مكتمل')} className="btn btn-sm !bg-green">اعتماد <Check size={14} /></button>
++                        <button onClick={() => setStatusFor(d.id, 'فشل')} className="btn btn-outline btn-sm !text-danger !border-danger">رفض <X size={14} /></button>
++                      </div>
++                    ) : (
++                      <span className="text-[12px] text-muted">{d.status === 'مكتمل' ? 'معتمد' : d.status === 'فشل' ? 'مرفوض/فاشل' : 'بانتظار البوابة'}</span>
++                    )}
++                  </td>
++                </tr>
++              ))}
++              {filtered.length === 0 && <tr><td className="td text-center text-muted py-8" colSpan={8}>لا توجد تبرعات مطابقة</td></tr>}
++            </tbody>
++          </TableWrap>
++        </div>
++
++        {/* Cards (mobile) */}
++        <div className="md:hidden p-3 flex flex-col gap-2.5">
++          {filtered.map((d) => (
++            <MobileRow
++              key={d.id}
++              title={d.donorName}
++              subtitle={`${d.date} · ${d.method}`}
++              status={<Badge tone={tone(d.status)}>{d.status}</Badge>}
++              rows={[
++                { label: 'الوجهة', value: d.cause },
++                { label: 'المبلغ', value: <span className="num font-bold">{d.amount.toLocaleString('en-US')} ج.م</span> },
++                { label: 'النوع', value: d.recurring ? 'شهري' : 'مرة واحدة' },
++              ]}
++              actions={
++                d.status === 'قيد المراجعة' ? (
++                  <>
++                    <button onClick={() => setStatusFor(d.id, 'مكتمل')} className="btn btn-sm !bg-green">اعتماد <Check size={14} /></button>
++                    <button onClick={() => setStatusFor(d.id, 'فشل')} className="btn btn-outline btn-sm !text-danger !border-danger">رفض <X size={14} /></button>
++                  </>
++                ) : undefined
++              }
++            />
++          ))}
++          {filtered.length === 0 && <div className="text-center text-muted py-8">لا توجد تبرعات مطابقة</div>}
++        </div>
++      </Card>
++    </div>
++  );
++}
+diff --git a/dashboard/src/pages/Reports.tsx b/dashboard/src/pages/Reports.tsx
+index 7ae03e6..fe36582 100644
+--- a/dashboard/src/pages/Reports.tsx
++++ b/dashboard/src/pages/Reports.tsx
+@@ -88,6 +88,19 @@ export default function Reports() {
+           أعلى فئة طلباً <b className="text-navy-700">{byCategory[0]?.label}</b> بعدد <b className="text-navy-700 num">{byCategory[0]?.value}</b> حجز.
+         </div>
+       </Card>
++
++      {/* Notification performance (stub — TODO(backend): real delivery metrics) */}
++      <Card>
++        <SectionHead title="أداء الإشعارات" />
++        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
++          {[['3,420', 'إشعار مُرسل'], ['78%', 'نسبة الفتح'], ['1,120', 'نقرة إلى التطبيق'], ['2.1%', 'إلغاء الاشتراك']].map(([v, l]) => (
++            <div key={l} className="rounded-2xl border border-line bg-paper-2/50 py-4">
++              <div className="num text-[22px] font-extrabold text-navy-700">{v}</div>
++              <div className="text-[12.5px] text-slate mt-1">{l}</div>
++            </div>
++          ))}
++        </div>
++      </Card>
+     </div>
+   );
+ }
+diff --git a/mobile/App.tsx b/mobile/App.tsx
+index baf10e8..a47119d 100644
+--- a/mobile/App.tsx
++++ b/mobile/App.tsx
+@@ -1,8 +1,13 @@
+ import React from 'react';
+-import { View, ActivityIndicator } from 'react-native';
++import { View, ActivityIndicator, Platform } from 'react-native';
++import { enableScreens } from 'react-native-screens';
++
++// react-native-screens renders stacked routes incorrectly on web — use the JS fallback there.
++if (Platform.OS === 'web') enableScreens(false);
+ import { StatusBar } from 'expo-status-bar';
+-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
++import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+ import { createNativeStackNavigator } from '@react-navigation/native-stack';
++import { createStackNavigator } from '@react-navigation/stack';
+ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+ import { SafeAreaProvider } from 'react-native-safe-area-context';
+ import {
+@@ -44,13 +49,21 @@ import DonationHistoryScreen from './src/screens/DonationHistoryScreen';
+ import ZakatCalculatorScreen from './src/screens/ZakatCalculatorScreen';
+ import OnboardingScreen from './src/screens/OnboardingScreen';
+ import FaqScreen from './src/screens/FaqScreen';
++import ReceiptsScreen from './src/screens/ReceiptsScreen';
++import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
++import FavoritesScreen from './src/screens/FavoritesScreen';
+ import ServicesBrowseScreen from './src/screens/ServicesBrowseScreen';
+ import ProviderDetailScreen from './src/screens/ProviderDetailScreen';
+ import ServiceDetailScreen from './src/screens/ServiceDetailScreen';
+ import BookAppointmentScreen from './src/screens/BookAppointmentScreen';
+ import BookingConfirmationScreen from './src/screens/BookingConfirmationScreen';
+ 
+-const Stack = createNativeStackNavigator<RootStackParamList>();
++// Native stack renders stacked routes incorrectly on react-native-web — use the JS stack there.
++const Stack = (Platform.OS === 'web' ? createStackNavigator : createNativeStackNavigator)<RootStackParamList>();
++
++// Test/dev-only navigation hook (no-op in release builds where __DEV__ is false).
++export const navRef = createNavigationContainerRef<RootStackParamList>();
++if (__DEV__) (globalThis as unknown as { __nav?: typeof navRef }).__nav = navRef;
+ const Tab = createBottomTabNavigator<TabParamList>();
+ 
+ const navTheme = {
+@@ -94,7 +107,7 @@ export default function App() {
+   return (
+     <SafeAreaProvider>
+       <StatusBar style="dark" />
+-      <NavigationContainer theme={navTheme}>
++      <NavigationContainer ref={navRef} theme={navTheme}>
+         <Stack.Navigator screenOptions={{ headerShown: false }}>
+           <Stack.Screen name="Main" component={Tabs} />
+           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
+@@ -118,6 +131,9 @@ export default function App() {
+           <Stack.Screen name="ZakatCalculator" component={ZakatCalculatorScreen} />
+           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+           <Stack.Screen name="Faq" component={FaqScreen} />
++          <Stack.Screen name="Receipts" component={ReceiptsScreen} />
++          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
++          <Stack.Screen name="Favorites" component={FavoritesScreen} />
+           <Stack.Screen name="ServicesBrowse" component={ServicesBrowseScreen} />
+           <Stack.Screen name="ProviderDetail" component={ProviderDetailScreen} />
+           <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />
+diff --git a/mobile/app.json b/mobile/app.json
+index 023e9d8..964cba7 100644
+--- a/mobile/app.json
++++ b/mobile/app.json
+@@ -2,12 +2,15 @@
+   "expo": {
+     "name": "خواطر أحلى شباب",
+     "slug": "ahla-shabab",
+-    "version": "1.0.0",
++    "version": "1.1.0",
+     "orientation": "portrait",
+     "userInterfaceStyle": "light",
+     "scheme": "ahlashabab",
++    "icon": "./assets/icon.png",
+     "splash": {
+-      "backgroundColor": "#14284A"
++      "image": "./assets/splash.png",
++      "resizeMode": "contain",
++      "backgroundColor": "#FFFFFF"
+     },
+     "assetBundlePatterns": ["**/*"],
+     "ios": {
+@@ -16,8 +19,9 @@
+     },
+     "android": {
+       "package": "tech.saasfarm.ahlashabab",
+-      "versionCode": 1,
++      "versionCode": 2,
+       "adaptiveIcon": {
++        "foregroundImage": "./assets/adaptive-icon.png",
+         "backgroundColor": "#14284A"
+       }
+     },
+diff --git a/mobile/package.json b/mobile/package.json
+index 764fbce..c667a07 100644
+--- a/mobile/package.json
++++ b/mobile/package.json
+@@ -17,6 +17,7 @@
+     "@react-navigation/bottom-tabs": "^7.3.0",
+     "@react-navigation/native": "^7.1.0",
+     "@react-navigation/native-stack": "^7.3.0",
++    "@react-navigation/stack": "^7.10.11",
+     "babel-preset-expo": "~54.0.11",
+     "expo": "54.0.35",
+     "expo-font": "~14.0.12",
+diff --git a/mobile/src/components/RemoteImage.tsx b/mobile/src/components/RemoteImage.tsx
+new file mode 100644
+index 0000000..b0cf540
+--- /dev/null
++++ b/mobile/src/components/RemoteImage.tsx
+@@ -0,0 +1,63 @@
++import React, { useState } from 'react';
++import { View, Image, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
++import { LinearGradient } from 'expo-linear-gradient';
++import { colors } from '../theme';
++import { Icon, IconName } from './Icon';
++
++/**
++ * Admin-managed image slot (cases / projects / consultants / news / events).
++ *
++ * - `uri` comes from the admin panel (TODO(backend): media upload URLs).
++ * - While loading → dimmed placeholder + spinner.
++ * - On error, or when no uri is provided yet → privacy-safe branded fallback
++ *   (gradient + icon). NEVER a random public photo: beneficiary imagery must
++ *   be approved by the association before it reaches the app.
++ * - `resizeMode: cover` + fixed container = aspect-ratio safe.
++ *   Server-side rule (BACKEND.md §media): resize to max 1280px, ~80% JPEG.
++ */
++export function RemoteImage({
++  uri,
++  gradient = [colors.navy300, colors.navy700],
++  icon = 'image',
++  style,
++}: {
++  uri?: string;
++  gradient?: [string, string];
++  icon?: IconName;
++  style?: StyleProp<ViewStyle>;
++}) {
++  const [loading, setLoading] = useState(!!uri);
++  const [failed, setFailed] = useState(false);
++
++  const showFallback = !uri || failed;
++
++  return (
++    <View style={[{ overflow: 'hidden', backgroundColor: colors.paper2 }, style]}>
++      {showFallback ? (
++        <LinearGradient colors={gradient} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
++          <Icon name={icon} size={22} color="rgba(255,255,255,.75)" />
++        </LinearGradient>
++      ) : (
++        <>
++          <Image
++            source={{ uri }}
++            resizeMode="cover"
++            style={{ width: '100%', height: '100%' }}
++            onLoadEnd={() => setLoading(false)}
++            onError={() => {
++              setFailed(true);
++              setLoading(false);
++            }}
++            accessible
++            accessibilityRole="image"
++          />
++          {loading && (
++            <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper2 }}>
++              <ActivityIndicator color={colors.navy500} />
++            </View>
++          )}
++        </>
++      )}
++    </View>
++  );
++}
+diff --git a/mobile/src/components/ui.tsx b/mobile/src/components/ui.tsx
+index 233efe3..65fb471 100644
+--- a/mobile/src/components/ui.tsx
++++ b/mobile/src/components/ui.tsx
+@@ -212,6 +212,29 @@ export function Segmented({
+   );
+ }
+ 
++/* ---------------- Empty state ---------------- */
++export function EmptyState({
++  icon = 'inbox',
++  title,
++  hint,
++}: {
++  icon?: IconName;
++  title: string;
++  hint?: string;
++}) {
++  return (
++    <View style={{ alignItems: 'center', paddingVertical: 44 }}>
++      <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
++        <Icon name={icon} size={28} color={colors.muted} />
++      </View>
++      <Text style={[font('700'), { fontSize: 14, color: colors.slate, marginTop: 12 }]}>{title}</Text>
++      {hint ? (
++        <Text style={[font('400'), { fontSize: 11.5, color: colors.muted, marginTop: 4, textAlign: 'center' }]}>{hint}</Text>
++      ) : null}
++    </View>
++  );
++}
++
+ /* ---------------- Filter chip ---------------- */
+ export function Chip({
+   label,
+@@ -237,14 +260,14 @@ export function Chip({
+ const styles = StyleSheet.create({
+   card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.s4 },
+   btn: {
+-    borderRadius: radius.md,
+-    paddingVertical: 13,
+-    paddingHorizontal: 16,
++    borderRadius: radius.btn,
++    paddingVertical: 14,
++    paddingHorizontal: 18,
+     justifyContent: 'center',
+     gap: 7,
+   },
+   btnOutline: { borderWidth: 1.5, borderColor: colors.navy700 },
+-  btnSmall: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 11 },
++  btnSmall: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.sm },
+   pill: {
+     paddingVertical: 4,
+     paddingHorizontal: 10,
+diff --git a/mobile/src/navigation/types.ts b/mobile/src/navigation/types.ts
+index d8a300d..d4a6e6b 100644
+--- a/mobile/src/navigation/types.ts
++++ b/mobile/src/navigation/types.ts
+@@ -28,7 +28,13 @@ export type RootStackParamList = {
+     method: string;
+     recurring: boolean;
+     reference: string;
++    date: string;
++    /** Pending by default — 'مكتمل' only after backend/admin confirmation. */
++    status: 'قيد التأكيد' | 'قيد المراجعة' | 'مكتمل' | 'فشل';
+   };
++  Receipts: undefined;
++  PrivacyPolicy: undefined;
++  Favorites: undefined;
+   // Free Services Booking flow (Technical Offer §4)
+   ServicesBrowse: { parentId: string | null } | undefined;
+   ProviderDetail: { providerId: string };
+@@ -40,12 +46,14 @@ export type RootStackParamList = {
+     providerId: string;
+     date: string;
+     time: string;
++    /** Preferred communication channel chosen in the wizard. */
++    mode?: string;
+   };
+ };
+ 
+ export type TabParamList = {
+   Home: undefined;
+-  Discover: undefined;
++  Discover: { initialFilter?: string } | undefined;
+   Donate: { caseId?: string; projectId?: string } | undefined;
+   News: undefined;
+   Profile: undefined;
+diff --git a/mobile/src/screens/BookAppointmentScreen.tsx b/mobile/src/screens/BookAppointmentScreen.tsx
+index 5c05dba..82afc0a 100644
+--- a/mobile/src/screens/BookAppointmentScreen.tsx
++++ b/mobile/src/screens/BookAppointmentScreen.tsx
+@@ -1,28 +1,39 @@
+ import React, { useMemo, useState } from 'react';
+-import { View, Text, Pressable, ScrollView, TextInput, Modal, FlatList } from 'react-native';
++import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
++import { LinearGradient } from 'expo-linear-gradient';
+ import { useNavigation } from '@react-navigation/native';
+-import {
+-  serviceById,
+-  providerById,
+-  buildAvailableDays,
+-  bookingFormSchema,
+-  makeBookingRef,
+-  type FormFieldConfig,
+-} from '@ahla/shared';
++import { serviceById, providerById, categoryById, buildAvailableDays, makeBookingRef, isEgPhone, isEmail } from '@ahla/shared';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+-import { Card, Button } from '../components/ui';
++import { Card, Button, Pill } from '../components/ui';
+ import { StickyFooter } from './DonateScreen';
+ import { Icon, IconName } from '../components/Icon';
+-import { colors, font, radius, row } from '../theme';
++import { colors, font, num, radius, row, rowBetween } from '../theme';
+ import type { RootProps } from '../navigation/types';
+ 
+-function StepTitle({ label, icon }: { label: string; icon: IconName }) {
++/* Multi-step booking wizard (UX v2): specialty → consultant → date/time → contact → confirm. */
++const STEPS = ['التخصص', 'المختص', 'الموعد', 'بياناتك', 'التأكيد'] as const;
++const COMM_TYPES = ['واتساب', 'مكالمة هاتفية', 'بريد إلكتروني'] as const;
++
++const inputStyle = (error?: boolean) => ({
++  fontFamily: font('600').fontFamily,
++  borderWidth: 1,
++  borderColor: error ? colors.red : colors.line,
++  borderRadius: radius.sm,
++  paddingVertical: 12,
++  paddingHorizontal: 14,
++  fontSize: 13,
++  color: colors.ink,
++  textAlign: 'right' as const,
++  writingDirection: 'rtl' as const,
++  backgroundColor: '#fff',
++});
++
++function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+   return (
+-    <View style={[row, { gap: 7, marginTop: 18, marginBottom: 8, marginHorizontal: 2 }]}>
+-      <Icon name={icon} size={16} color={colors.navy700} />
+-      <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700 }]}>{label}</Text>
+-    </View>
++    <Text style={[font('700'), { fontSize: 12, color: colors.navy700, textAlign: 'right', marginBottom: 6 }]}>
++      {label} {required ? <Text style={{ color: colors.red }}>*</Text> : <Text style={{ color: colors.muted, fontSize: 10 }}>(اختياري)</Text>}
++    </Text>
+   );
+ }
+ 
+@@ -30,15 +41,23 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
+   const nav = useNavigation<any>();
+   const service = serviceById(route.params.serviceId);
+   const provider = service ? providerById(service.providerId) : undefined;
++  const category = service ? categoryById(service.categoryId) : undefined;
+ 
+   const days = useMemo(() => (provider ? buildAvailableDays(provider, new Date(), 14) : []), [provider]);
+   const firstAvailable = days.find((d) => d.available);
++  // TODO(backend): GET /services/:id/availability — booked slots come from the server.
++  const bookedSlots = useMemo(() => (provider ? provider.slots.filter((_, i) => i % 3 === 1) : []), [provider]);
+ 
++  const [step, setStep] = useState(0);
+   const [dateIso, setDateIso] = useState<string | undefined>(firstAvailable?.iso);
+-  const [time, setTime] = useState<string | undefined>(provider?.slots[0]);
+-  const [form, setForm] = useState<Record<string, string>>({});
+-  const [errors, setErrors] = useState<Record<string, boolean>>({});
+-  const [picker, setPicker] = useState<FormFieldConfig | null>(null);
++  const [time, setTime] = useState<string | undefined>();
++  const [name, setName] = useState('');
++  const [phone, setPhone] = useState('');
++  const [whatsapp, setWhatsapp] = useState('');
++  const [email, setEmail] = useState('');
++  const [comm, setComm] = useState('');
++  const [notes, setNotes] = useState('');
++  const [err, setErr] = useState<string | null>(null);
+ 
+   if (!service || !provider) {
+     return (
+@@ -48,259 +67,228 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
+     );
+   }
+ 
+-  // National ID becomes required for services that ask for it.
+-  const schema: FormFieldConfig[] = bookingFormSchema.map((f) =>
+-    f.key === 'nationalId' && service.requireNationalId ? { ...f, required: true } : f
+-  );
+-
+-  const setField = (key: string, value: string) => {
+-    setForm((prev) => ({ ...prev, [key]: value }));
+-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: false }));
++  const validateStep = (): string | null => {
++    if (step === 2) {
++      if (!dateIso) return 'اختر يوماً متاحاً';
++      if (!time) return 'اختر وقتاً متاحاً';
++    }
++    if (step === 3) {
++      if (name.trim().length < 3) return 'اكتب اسمك بالكامل (3 أحرف على الأقل)';
++      if (!isEgPhone(phone)) return 'أدخل رقم هاتف مصري صحيح (11 رقماً يبدأ بـ 01)';
++      if (whatsapp && !isEgPhone(whatsapp)) return 'رقم الواتساب غير صحيح';
++      if (email && !isEmail(email)) return 'البريد الإلكتروني غير صحيح';
++      if (!comm) return 'اختر وسيلة التواصل المفضلة';
++    }
++    return null;
+   };
+ 
+-  const submit = () => {
+-    const nextErrors: Record<string, boolean> = {};
+-    schema.forEach((f) => {
+-      if (f.required && !form[f.key]?.trim()) nextErrors[f.key] = true;
+-    });
+-    if (!dateIso) nextErrors._date = true;
+-    if (!time) nextErrors._time = true;
+-    setErrors(nextErrors);
+-    if (Object.keys(nextErrors).length > 0) return;
+-
+-    const reference = makeBookingRef(Math.floor(Date.now() / 1000));
+-    nav.navigate('BookingConfirmation', {
+-      reference,
+-      serviceId: service.id,
+-      providerId: provider.id,
+-      date: dateIso!,
+-      time: time!,
+-    });
++  const next = () => {
++    const e = validateStep();
++    setErr(e);
++    if (e) return;
++    if (step < STEPS.length - 1) setStep(step + 1);
++    else {
++      // Booking is created PENDING — the admin team confirms it (dashboard).
++      nav.navigate('BookingConfirmation', {
++        reference: makeBookingRef(Math.floor(Date.now() / 1000)),
++        serviceId: service.id,
++        providerId: provider.id,
++        date: dateIso!,
++        time: time!,
++        mode: comm,
++      });
++    }
+   };
+ 
++  const back = () => (step > 0 ? (setErr(null), setStep(step - 1)) : nav.goBack());
++
+   return (
+     <Screen
+-      scroll
+-      header={<AppBar title="حجز موعد" onBack={() => nav.goBack()} />}
++      header={<AppBar title="حجز موعد" onBack={back} onBell={undefined} />}
+       footer={
+         <StickyFooter>
+-          <Button label="تأكيد الحجز" icon="check" style={{ flex: 1 }} onPress={submit} />
++          {step > 0 && <Button label="السابق" variant="outline" style={{ width: 104 }} onPress={back} />}
++          <Button label={step === STEPS.length - 1 ? 'تأكيد الحجز' : 'التالي'} icon={step === STEPS.length - 1 ? 'check' : undefined} style={{ flex: 1 }} onPress={next} />
+         </StickyFooter>
+       }
+     >
+-      {/* Summary */}
+-      <Card style={{ marginTop: 4 }}>
+-        <View style={{ alignItems: 'flex-end' }}>
+-          <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>{service.name}</Text>
+-          <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 2 }]}>
+-            مع {provider.name} · {provider.specialization}
++      {/* Progress */}
++      <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 4, marginBottom: 14 }}>
++        {STEPS.map((s, i) => (
++          <View key={s} style={{ alignItems: 'center', flex: 1 }}>
++            <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: i < step ? colors.green : i === step ? colors.navy700 : colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
++              {i < step ? <Icon name="check" size={13} color="#fff" /> : <Text style={[font('800'), num, { fontSize: 11, color: i === step ? '#fff' : colors.muted }]}>{i + 1}</Text>}
++            </View>
++            <Text style={[font(i === step ? '800' : '400'), { fontSize: 9, color: i === step ? colors.navy700 : colors.muted, marginTop: 4 }]}>{s}</Text>
++          </View>
++        ))}
++      </View>
++
++      {/* Step 0 — specialty/service */}
++      {step === 0 && (
++        <Card>
++          <View style={[row, { gap: 7, justifyContent: 'flex-end' }]}>
++            <Text style={[font('800'), { fontSize: 14, color: colors.navy700 }]}>التخصص المختار</Text>
++            <Icon name="grid" size={16} color={colors.navy700} />
++          </View>
++          <Text style={[font('800'), { fontSize: 16, color: colors.navy700, textAlign: 'right', marginTop: 10 }]}>{service.name}</Text>
++          {category ? <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', marginTop: 3 }]}>{category.name}</Text> : null}
++          <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', lineHeight: 18, marginTop: 8 }]}>{service.description}</Text>
++          <Pressable onPress={() => nav.goBack()} style={{ marginTop: 10, alignSelf: 'flex-end' }}>
++            <Text style={[font('700'), { fontSize: 12, color: colors.navy500 }]}>تغيير الخدمة ‹</Text>
++          </Pressable>
++        </Card>
++      )}
++
++      {/* Step 1 — consultant */}
++      {step === 1 && (
++        <Card>
++          <View style={[row, { gap: 12, alignItems: 'flex-start' }]}>
++            <LinearGradient colors={provider.gradient} style={{ width: 72, height: 88, borderRadius: 13 }} />
++            <View style={{ flex: 1, alignItems: 'flex-end' }}>
++              <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>{provider.name}</Text>
++              <Text style={[font('400'), { fontSize: 11.5, color: colors.slate, marginTop: 2 }]}>{provider.specialization}</Text>
++              <View style={[row, { gap: 8, marginTop: 6 }]}>
++                <Text style={[font('700'), { fontSize: 11, color: colors.gold }]}>★ {provider.rating}</Text>
++                <Text style={[font('400'), { fontSize: 10.5, color: colors.slate }]}>خبرة {provider.yearsExperience} سنة · {provider.reviews} تقييم</Text>
++              </View>
++              <Pill label="جلسة أونلاين" tone="navy" />
++            </View>
++          </View>
++          <Text style={[font('400'), { fontSize: 11.5, color: colors.slate, marginTop: 10, textAlign: 'right', lineHeight: 18 }]}>{provider.bio}</Text>
++          <View style={{ height: 1, backgroundColor: colors.line2, marginVertical: 10 }} />
++          <Text style={[font('600'), { fontSize: 11, color: colors.slate, textAlign: 'right' }]}>
++            المواعيد المتاحة: {provider.slots.join(' · ')}
+           </Text>
+-        </View>
+-      </Card>
++        </Card>
++      )}
+ 
+-      {/* Date */}
+-      <StepTitle label="اختر التاريخ" icon="calendar" />
+-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: 'row-reverse' }}>
+-        {days.map((d) => {
+-          const on = d.iso === dateIso;
+-          return (
+-            <Pressable
+-              key={d.iso}
+-              disabled={!d.available}
+-              onPress={() => setDateIso(d.iso)}
+-              style={{
+-                width: 60,
+-                alignItems: 'center',
+-                borderRadius: 12,
+-                paddingVertical: 10,
+-                borderWidth: on ? 0 : 1,
+-                borderColor: colors.line,
+-                backgroundColor: on ? colors.navy700 : d.available ? '#fff' : colors.paper2,
+-                opacity: d.available ? 1 : 0.5,
+-              }}
+-            >
+-              <Text style={[font('400'), { fontSize: 9, color: on ? '#fff' : colors.slate }]}>{d.weekday}</Text>
+-              <Text style={[font('800'), { fontSize: 17, color: on ? '#fff' : d.available ? colors.navy700 : colors.muted }]}>{d.day}</Text>
+-              <Text style={[font('400'), { fontSize: 8, color: on ? '#fff' : colors.slate }]}>{d.month}</Text>
+-            </Pressable>
+-          );
+-        })}
+-      </ScrollView>
+-      {errors._date ? <ErrorText text="اختر تاريخاً متاحاً" /> : null}
++      {/* Step 2 — date & time */}
++      {step === 2 && (
++        <>
++          <SectionTitle label="اختر اليوم" icon="calendar" />
++          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: 'row-reverse' }}>
++            {days.map((d) => {
++              const on = d.iso === dateIso;
++              return (
++                <Pressable key={d.iso} disabled={!d.available} onPress={() => setDateIso(d.iso)}
++                  style={{ width: 60, alignItems: 'center', borderRadius: 12, paddingVertical: 10, borderWidth: on ? 0 : 1, borderColor: colors.line, backgroundColor: on ? colors.navy700 : d.available ? '#fff' : colors.paper2, opacity: d.available ? 1 : 0.5 }}>
++                  <Text style={[font('400'), { fontSize: 9, color: on ? '#fff' : colors.slate }]}>{d.weekday}</Text>
++                  <Text style={[font('800'), num, { fontSize: 17, color: on ? '#fff' : d.available ? colors.navy700 : colors.muted }]}>{d.day}</Text>
++                  <Text style={[font('400'), { fontSize: 8, color: on ? '#fff' : colors.slate }]}>{d.available ? d.month : 'غير متاح'}</Text>
++                </Pressable>
++              );
++            })}
++          </ScrollView>
+ 
+-      {/* Time */}
+-      <StepTitle label="اختر الوقت المتاح" icon="clock" />
+-      <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+-        {provider.slots.map((s) => {
+-          const on = s === time;
+-          return (
+-            <Pressable
+-              key={s}
+-              onPress={() => setTime(s)}
+-              style={{
+-                borderRadius: 12,
+-                paddingVertical: 10,
+-                paddingHorizontal: 16,
+-                borderWidth: 1,
+-                borderColor: on ? colors.navy700 : colors.line,
+-                backgroundColor: on ? colors.navy700 : '#fff',
+-              }}
+-            >
+-              <Text style={[font('700'), { fontSize: 12.5, color: on ? '#fff' : colors.slate }]}>{s}</Text>
+-            </Pressable>
+-          );
+-        })}
+-      </View>
+-      {errors._time ? <ErrorText text="اختر وقتاً" /> : null}
++          <SectionTitle label="اختر الوقت" icon="clock" />
++          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
++            {provider.slots.map((s) => {
++              const booked = bookedSlots.includes(s);
++              const on = s === time;
++              return (
++                <Pressable key={s} disabled={booked} onPress={() => setTime(s)}
++                  style={{ borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, backgroundColor: booked ? colors.paper2 : on ? colors.navy700 : '#fff', opacity: booked ? 0.6 : 1 }}>
++                  <Text style={[font('700'), { fontSize: 12.5, color: on ? '#fff' : booked ? colors.muted : colors.slate, textDecorationLine: booked ? 'line-through' : 'none' }]}>
++                    {s}{booked ? ' · محجوز' : ''}
++                  </Text>
++                </Pressable>
++              );
++            })}
++          </View>
++          <Text style={[font('400'), { fontSize: 10, color: colors.muted, textAlign: 'right', marginTop: 8 }]}>
++            المواعيد المشطوبة محجوزة بالفعل ولا يمكن اختيارها.
++          </Text>
++        </>
++      )}
+ 
+-      {/* Form */}
+-      <StepTitle label="بيانات الحجز" icon="edit-3" />
+-      <Card style={{ gap: 12 }}>
+-        {schema.map((f) => (
+-          <Field
+-            key={f.key}
+-            field={f}
+-            value={form[f.key] ?? ''}
+-            error={!!errors[f.key]}
+-            onChange={(v) => setField(f.key, v)}
+-            onOpenPicker={() => setPicker(f)}
+-          />
+-        ))}
+-      </Card>
++      {/* Step 3 — contact info */}
++      {step === 3 && (
++        <Card style={{ gap: 12 }}>
++          <View>
++            <FieldLabel label="الاسم بالكامل" required />
++            <TextInput value={name} onChangeText={setName} placeholder="اكتب اسمك الكامل" placeholderTextColor={colors.muted} style={inputStyle()} />
++          </View>
++          <View>
++            <FieldLabel label="رقم الهاتف" required />
++            <TextInput value={phone} onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="01xxxxxxxxx" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={inputStyle()} />
++          </View>
++          <View>
++            <FieldLabel label="رقم الواتساب" />
++            <TextInput value={whatsapp} onChangeText={(t) => setWhatsapp(t.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="إن كان مختلفاً عن الهاتف" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={inputStyle()} />
++          </View>
++          <View>
++            <FieldLabel label="البريد الإلكتروني" />
++            <TextInput value={email} onChangeText={setEmail} placeholder="example@email.com" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" style={[inputStyle(), { textAlign: 'left' as const }]} />
++          </View>
++          <View>
++            <FieldLabel label="وسيلة التواصل المفضلة" required />
++            <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
++              {COMM_TYPES.map((c) => {
++                const on = comm === c;
++                return (
++                  <Pressable key={c} onPress={() => setComm(c)} style={{ borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, backgroundColor: on ? colors.navy700 : '#fff', borderRadius: 100, paddingVertical: 8, paddingHorizontal: 15 }}>
++                    <Text style={[font('700'), { fontSize: 12, color: on ? '#fff' : colors.slate }]}>{c}</Text>
++                  </Pressable>
++                );
++              })}
++            </View>
++          </View>
++          <View>
++            <FieldLabel label="سبب الحجز / ملاحظات" />
++            <TextInput value={notes} onChangeText={setNotes} placeholder="أضف أي تفاصيل تساعد المختص" placeholderTextColor={colors.muted} multiline style={[inputStyle(), { minHeight: 76, textAlignVertical: 'top' as const }]} />
++          </View>
++        </Card>
++      )}
+ 
+-      {/* Guest note */}
+-      <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
+-        <Icon name="info" size={16} color={colors.navy700} />
+-        <Text style={[font('400'), { flex: 1, fontSize: 10.5, color: colors.slate, textAlign: 'right', lineHeight: 16 }]}>
+-          يمكنك الحجز كزائر برقم هاتفك دون إنشاء حساب. ستصلك رسالة تأكيد بموعدك.
+-        </Text>
+-      </Card>
+-      <View style={{ height: 12 }} />
++      {/* Step 4 — confirm */}
++      {step === 4 && (
++        <>
++          <Card style={{ gap: 10 }}>
++            <SumRow icon="grid" label="الخدمة" value={service.name} />
++            <SumRow icon="user" label="المختص" value={provider.name} />
++            <SumRow icon="calendar" label="اليوم" value={dateIso ?? '—'} mono />
++            <SumRow icon="clock" label="الوقت" value={time ?? '—'} />
++            <SumRow icon="message-square" label="وسيلة التواصل" value={comm || '—'} />
++            <SumRow icon="phone" label="الهاتف" value={phone} mono />
++          </Card>
++          <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
++            <Icon name="info" size={16} color={colors.navy700} />
++            <Text style={[font('400'), { flex: 1, fontSize: 10.5, color: colors.slate, textAlign: 'right', lineHeight: 16 }]}>
++              بعد التأكيد سيتواصل معك فريق الإدارة لتثبيت الموعد. جميع الجلسات أونلاين وسرية.
++            </Text>
++          </Card>
++        </>
++      )}
+ 
+-      {/* Select picker modal */}
+-      <SelectModal
+-        field={picker}
+-        onClose={() => setPicker(null)}
+-        onSelect={(v) => {
+-          if (picker) setField(picker.key, v);
+-          setPicker(null);
+-        }}
+-      />
++      {err ? (
++        <View style={[row, { gap: 7, backgroundColor: colors.redSoft, borderRadius: 12, padding: 11, marginTop: 12 }]}>
++          <Icon name="alert-circle" size={15} color={colors.red} />
++          <Text style={[font('700'), { flex: 1, fontSize: 11.5, color: colors.red, textAlign: 'right' }]}>{err}</Text>
++        </View>
++      ) : null}
++      <View style={{ height: 12 }} />
+     </Screen>
+   );
+ }
+ 
+-/* ---------------- Field renderer ---------------- */
+-function Field({
+-  field,
+-  value,
+-  error,
+-  onChange,
+-  onOpenPicker,
+-}: {
+-  field: FormFieldConfig;
+-  value: string;
+-  error: boolean;
+-  onChange: (v: string) => void;
+-  onOpenPicker: () => void;
+-}) {
+-  const borderColor = error ? colors.red : colors.line;
+-  const label = (
+-    <Text style={[font('700'), { fontSize: 12, color: colors.navy700, textAlign: 'right', marginBottom: 6 }]}>
+-      {field.label} {field.required ? <Text style={{ color: colors.red }}>*</Text> : <Text style={{ color: colors.muted, fontSize: 10 }}>(اختياري)</Text>}
+-    </Text>
+-  );
+-
+-  if (field.type === 'select') {
+-    return (
+-      <View>
+-        {label}
+-        <Pressable
+-          onPress={onOpenPicker}
+-          style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor, borderRadius: radius.sm, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: '#fff' }}
+-        >
+-          <Text style={[font(value ? '700' : '400'), { fontSize: 13, color: value ? colors.navy700 : colors.muted }]}>
+-            {value || field.placeholder || 'اختر...'}
+-          </Text>
+-          <Icon name="chevron-down" size={16} color={colors.muted} />
+-        </Pressable>
+-      </View>
+-    );
+-  }
+-
+-  const multiline = field.type === 'textarea';
+-  const keyboardType =
+-    field.type === 'phone' ? 'phone-pad' : field.type === 'number' ? 'number-pad' : 'default';
+-
++function SectionTitle({ label, icon }: { label: string; icon: IconName }) {
+   return (
+-    <View>
+-      {label}
+-      <TextInput
+-        value={value}
+-        onChangeText={onChange}
+-        placeholder={field.placeholder}
+-        placeholderTextColor={colors.muted}
+-        keyboardType={keyboardType as any}
+-        multiline={multiline}
+-        style={[
+-          font('600'),
+-          {
+-            borderWidth: 1,
+-            borderColor,
+-            borderRadius: radius.sm,
+-            paddingVertical: multiline ? 12 : 12,
+-            paddingHorizontal: 14,
+-            fontSize: 13,
+-            color: colors.ink,
+-            textAlign: 'right',
+-            writingDirection: 'rtl',
+-            minHeight: multiline ? 76 : undefined,
+-            textAlignVertical: multiline ? 'top' : 'center',
+-            backgroundColor: '#fff',
+-          },
+-        ]}
+-      />
++    <View style={[row, { gap: 7, marginTop: 14, marginBottom: 8, marginHorizontal: 2 }]}>
++      <Icon name={icon} size={16} color={colors.navy700} />
++      <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700 }]}>{label}</Text>
+     </View>
+   );
+ }
+ 
+-function ErrorText({ text }: { text: string }) {
+-  return <Text style={[font('600'), { fontSize: 10.5, color: colors.red, textAlign: 'right', marginTop: 6 }]}>{text}</Text>;
+-}
+-
+-/* ---------------- Select modal ---------------- */
+-function SelectModal({
+-  field,
+-  onClose,
+-  onSelect,
+-}: {
+-  field: FormFieldConfig | null;
+-  onClose: () => void;
+-  onSelect: (v: string) => void;
+-}) {
++function SumRow({ icon, label, value, mono }: { icon: IconName; label: string; value: string; mono?: boolean }) {
+   return (
+-    <Modal visible={!!field} transparent animationType="slide" onRequestClose={onClose}>
+-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(20,40,74,.35)' }} onPress={onClose} />
+-      <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '65%', paddingTop: 8 }}>
+-        <View style={{ alignItems: 'center', paddingVertical: 6 }}>
+-          <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line }} />
+-        </View>
+-        <Text style={[font('800'), { fontSize: 15, color: colors.navy700, textAlign: 'center', marginVertical: 8 }]}>
+-          {field?.label}
+-        </Text>
+-        <FlatList
+-          data={field?.options ?? []}
+-          keyExtractor={(item) => item}
+-          renderItem={({ item }) => (
+-            <Pressable
+-              onPress={() => onSelect(item)}
+-              style={{ paddingVertical: 14, paddingHorizontal: 22, borderBottomWidth: 1, borderBottomColor: colors.line2 }}
+-            >
+-              <Text style={[font('600'), { fontSize: 14, color: colors.ink, textAlign: 'right' }]}>{item}</Text>
+-            </Pressable>
+-          )}
+-        />
++    <View style={rowBetween}>
++      <Text style={[font('700'), mono ? num : undefined, { fontSize: 12.5, color: colors.navy700 }]}>{value}</Text>
++      <View style={[row, { gap: 7 }]}>
++        <Text style={[font('400'), { fontSize: 12, color: colors.slate }]}>{label}</Text>
++        <Icon name={icon} size={14} color={colors.navy500} />
+       </View>
+-    </Modal>
++    </View>
+   );
+ }
+diff --git a/mobile/src/screens/BookingConfirmationScreen.tsx b/mobile/src/screens/BookingConfirmationScreen.tsx
+index fe26aa0..737116b 100644
+--- a/mobile/src/screens/BookingConfirmationScreen.tsx
++++ b/mobile/src/screens/BookingConfirmationScreen.tsx
+@@ -23,7 +23,7 @@ function Line({ icon, label, value }: { icon: IconName; label: string; value: st
+ 
+ export default function BookingConfirmationScreen({ route }: RootProps<'BookingConfirmation'>) {
+   const nav = useNavigation<any>();
+-  const { reference, serviceId, providerId, date, time } = route.params;
++  const { reference, serviceId, providerId, date, time, mode } = route.params;
+   const service = serviceById(serviceId);
+   const provider = providerById(providerId);
+ 
+@@ -48,9 +48,10 @@ export default function BookingConfirmationScreen({ route }: RootProps<'BookingC
+             <Icon name="check" size={30} color="#fff" />
+           </View>
+         </View>
+-        <Text style={[font('800'), { fontSize: 20, color: colors.navy700, marginTop: 16 }]}>تم تأكيد حجزك</Text>
+-        <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center' }]}>
+-          سنتواصل معك لتأكيد الموعد. احتفظ برقم الحجز للمراجعة.
++        <Text style={[font('800'), { fontSize: 20, color: colors.navy700, marginTop: 16 }]}>تم استلام طلب الحجز</Text>
++        <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
++          سيتواصل معك فريق الإدارة لتثبيت الموعد{mode ? ` عبر ${mode}` : ''}.{'\n'}
++          وصلك إشعار بالطلب، وتم إخطار فريق الإدارة. احتفظ برقم الحجز للمراجعة.
+         </Text>
+       </View>
+ 
+@@ -73,6 +74,14 @@ export default function BookingConfirmationScreen({ route }: RootProps<'BookingC
+         <Line icon="calendar" label="التاريخ" value={date} />
+         <View style={{ height: 1, backgroundColor: colors.line2 }} />
+         <Line icon="clock" label="الوقت" value={time} />
++        {mode ? (
++          <>
++            <View style={{ height: 1, backgroundColor: colors.line2 }} />
++            <Line icon="message-square" label="وسيلة التواصل" value={mode} />
++          </>
++        ) : null}
++        <View style={{ height: 1, backgroundColor: colors.line2 }} />
++        <Line icon="clock" label="حالة الحجز" value="قيد تأكيد الإدارة" />
+       </Card>
+     </Screen>
+   );
+diff --git a/mobile/src/screens/CaseDetailScreen.tsx b/mobile/src/screens/CaseDetailScreen.tsx
+index 30a31e6..ce0fad3 100644
+--- a/mobile/src/screens/CaseDetailScreen.tsx
++++ b/mobile/src/screens/CaseDetailScreen.tsx
+@@ -35,8 +35,8 @@ export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
+       header={<AppBar onBack={() => nav.goBack()} />}
+       footer={
+         <StickyFooter>
+-          <Button label="أضف للمفضلة" variant="outline" icon="heart" style={{ width: 130 }} />
+-          <Button label="اكفل الحالة شهرياً" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
++          <Button label="تبرع مرة واحدة" variant="outline" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
++          <Button label="كفالة شهرية" variant="green" icon="users" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+         </StickyFooter>
+       }
+     >
+@@ -99,8 +99,8 @@ export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
+         <SectionTitle label="آخر التحديثات" icon="file-text" />
+         <View style={[row, { gap: 10, marginTop: 10, justifyContent: 'flex-end', alignItems: 'flex-start' }]}>
+           <View style={{ flex: 1, alignItems: 'flex-end' }}>
+-            <Text style={[font('700'), { fontSize: 12, color: colors.navy700 }]}>تم توثيق الحالة</Text>
+-            <Text style={[font('400'), { fontSize: 10, color: colors.muted, marginTop: 2 }]}>منذ يومين</Text>
++            <Text style={[font('700'), { fontSize: 12, color: colors.navy700 }]}>{item.lastUpdate ?? 'تم توثيق الحالة'}</Text>
++            <Text style={[font('400'), { fontSize: 10, color: colors.muted, marginTop: 2 }]}>أحدث تحديث</Text>
+           </View>
+           <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }}>
+             <Icon name="check" size={13} color="#fff" />
+diff --git a/mobile/src/screens/CasesScreen.tsx b/mobile/src/screens/CasesScreen.tsx
+index 6de1e13..1b1c1ce 100644
+--- a/mobile/src/screens/CasesScreen.tsx
++++ b/mobile/src/screens/CasesScreen.tsx
+@@ -1,15 +1,16 @@
+-import React, { useMemo, useState } from 'react';
++import React, { useEffect, useMemo, useState } from 'react';
+ import { View, Text, TextInput } from 'react-native';
+ import { LinearGradient } from 'expo-linear-gradient';
+-import { useNavigation } from '@react-navigation/native';
+-import { cases, pct, type CaseTag } from '@ahla/shared';
++import { useNavigation, useRoute } from '@react-navigation/native';
++import { cases, pct, egp, type CaseTag } from '@ahla/shared';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+ import { Card, Button, ProgressBar, Pill, Chip } from '../components/ui';
++import { RemoteImage } from '../components/RemoteImage';
+ import { Icon } from '../components/Icon';
+-import { colors, font, row, rowBetween } from '../theme';
++import { colors, font, num, row, rowBetween } from '../theme';
+ 
+-const FILTERS: (CaseTag | 'الكل')[] = ['عاجل', 'علاج', 'تعليم', 'سكن', 'الكل'];
++const FILTERS: (CaseTag | 'الكل' | 'كفالة شهرية')[] = ['الكل', 'عاجل', 'علاج', 'تعليم', 'سكن', 'كفالة شهرية'];
+ 
+ const tagTone = (tag: CaseTag) =>
+   tag === 'عاجل' ? 'red' : tag === 'تعليم' ? 'gold' : 'green';
+@@ -18,19 +19,38 @@ const tagColor = (tag: CaseTag) =>
+ 
+ export default function CasesScreen() {
+   const nav = useNavigation<any>();
++  const route = useRoute<any>();
+   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
+   const [query, setQuery] = useState('');
++
++  // Allow deep-links like أكفل حالة → Discover with the sponsorship filter on.
++  useEffect(() => {
++    const f = route.params?.initialFilter;
++    if (f && (FILTERS as string[]).includes(f)) setFilter(f as (typeof FILTERS)[number]);
++  }, [route.params?.initialFilter]);
++
+   const list = useMemo(() => {
+     const q = query.trim();
+     return cases.filter(
+       (c) =>
+-        (filter === 'الكل' || c.tag === filter) &&
++        (filter === 'الكل' || (filter === 'كفالة شهرية' ? !!c.sponsorable : c.tag === filter)) &&
+         (q === '' || c.code.includes(q) || c.title.includes(q) || c.summary.includes(q) || c.location.includes(q))
+     );
+   }, [filter, query]);
+ 
++  const sponsorableCount = cases.filter((c) => c.sponsorable).length;
++
+   return (
+-    <Screen header={<AppBar />}>
++    <Screen
++      header={<AppBar />}
++      footer={
++        filter !== 'كفالة شهرية' ? (
++          <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: colors.line }}>
++            <Button label={`أكفل حالة (${sponsorableCount} حالة متاحة للكفالة)`} variant="green" icon="users" onPress={() => setFilter('كفالة شهرية')} />
++          </View>
++        ) : undefined
++      }
++    >
+       <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 12 }}>
+         <Text style={[font('800'), { fontSize: 21, color: colors.navy700 }]}>الحالات المستحقة</Text>
+         <Text style={[font('400'), { fontSize: 11, color: colors.slate, marginTop: 3 }]}>
+@@ -74,7 +94,7 @@ export default function CasesScreen() {
+         const c = tagColor(item.tag);
+         return (
+           <Card key={item.id} style={{ flexDirection: 'row-reverse', gap: 11, marginTop: 12, padding: 11 }}>
+-            <LinearGradient colors={item.gradient} style={{ width: 80, height: 96, borderRadius: 12 }} />
++            <RemoteImage uri={item.imageUrl} gradient={item.gradient} icon="users" style={{ width: 80, height: 96, borderRadius: 12 }} />
+             <View style={{ flex: 1 }}>
+               <View style={{ flexDirection: 'row-reverse' }}>
+                 <Pill label={item.tag === 'عاجل' ? '⚡ عاجل' : item.tag} tone={tagTone(item.tag)} />
+@@ -82,10 +102,17 @@ export default function CasesScreen() {
+               <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700, textAlign: 'right', marginTop: 5 }]}>
+                 {item.code}
+               </Text>
++              <View style={[row, { gap: 4, justifyContent: 'flex-end', marginTop: 2 }]}>
++                <Text style={[font('600'), { fontSize: 9.5, color: colors.slate }]}>{item.location}</Text>
++                <Icon name="map-pin" size={11} color={colors.muted} />
++              </View>
+               <Text style={[font('400'), { fontSize: 10, color: colors.slate, textAlign: 'right', lineHeight: 14, marginVertical: 3 }]}>
+                 {item.summary}
+               </Text>
+               <ProgressBar percent={p} color={c} />
++              <Text style={[font('600'), num, { fontSize: 9.5, color: colors.slate, textAlign: 'right', marginTop: 4 }]}>
++                المطلوب {egp(item.targetAmount)} · المتبقي {egp(item.targetAmount - item.raisedAmount)}
++              </Text>
+               <View style={[rowBetween, { marginTop: 6 }]}>
+                 <Button
+                   label={item.tag === 'تعليم' ? 'اكفل شهرياً' : 'ساهم الآن'}
+diff --git a/mobile/src/screens/DonateScreen.tsx b/mobile/src/screens/DonateScreen.tsx
+index bf09d52..6a66915 100644
+--- a/mobile/src/screens/DonateScreen.tsx
++++ b/mobile/src/screens/DonateScreen.tsx
+@@ -6,7 +6,9 @@ import { AppBar } from '../components/AppBar';
+ import { Card, Button, Tile, Segmented } from '../components/ui';
+ import { Icon } from '../components/Icon';
+ import { colors, font, num, row, rowBetween } from '../theme';
+-import { makeBookingRef, type PaymentMethod } from '@ahla/shared';
++import { makeBookingRef, paymentMethods, initialDonationStatus, isMethodUsable, isValidDonationAmount, type PaymentMethod } from '@ahla/shared';
++import { appState } from '../store/appState';
++import { TextInput } from 'react-native';
+ 
+ const DESTINATIONS = [
+   { id: 'cases', label: 'الحالات', icon: 'users' as const },
+@@ -18,32 +20,45 @@ const DESTINATIONS = [
+ 
+ const AMOUNTS = ['مبلغ آخر', '250', '500', '1000'];
+ 
+-const METHODS: { id: PaymentMethod; brand?: string; brandColor?: string; icon?: 'credit-card' | 'smartphone' | 'home' }[] = [
+-  { id: 'بطاقة بنكية', icon: 'credit-card' },
+-  { id: 'فوري', brand: 'fawry', brandColor: colors.fawryNavy },
+-  { id: 'إنستاباي', brand: 'instaPAY', brandColor: colors.instapay },
+-  { id: 'فودافون كاش', brand: 'Vodafone', brandColor: colors.vodafone },
+-  { id: 'تحويل بنكي', icon: 'home' },
+-];
++/** Brand visuals per method — availability/behavior comes from shared paymentMethods. */
++const BRAND: Record<PaymentMethod, { brand?: string; brandColor?: string; icon?: 'credit-card' | 'smartphone' | 'home' }> = {
++  'بطاقة بنكية': { icon: 'credit-card' },
++  فوري: { brand: 'fawry', brandColor: colors.fawryNavy },
++  إنستاباي: { brand: 'instaPAY', brandColor: colors.instapay },
++  'فودافون كاش': { brand: 'Vodafone', brandColor: colors.vodafone },
++  'تحويل بنكي': { icon: 'home' },
++};
+ 
+ export default function DonateScreen() {
+   const nav = useNavigation<any>();
+   const [dest, setDest] = useState('cases');
+   const [amount, setAmount] = useState('500');
++  const [custom, setCustom] = useState('');
+   const [recurring, setRecurring] = useState(false);
+   const [method, setMethod] = useState<PaymentMethod>('بطاقة بنكية');
+ 
+   const destLabel = DESTINATIONS.find((d) => d.id === dest)?.label ?? '';
+-  const total = amount === 'مبلغ آخر' ? '—' : `${amount} ج.م`;
++  const effective = amount === 'مبلغ آخر' ? custom : amount;
++  const total = effective ? `${effective} ج.م` : '—';
++  const methodInfo = paymentMethods.find((m) => m.id === method);
++  const canConfirm = isValidDonationAmount(effective) && isMethodUsable(method);
+ 
+   const confirm = () => {
+-    nav.navigate('DonationSuccess', {
++    if (!canConfirm || !methodInfo) return;
++    // Donation is recorded PENDING only. 'مكتمل' can come solely from the
++    // payment-gateway server callback, or admin approval for manual methods.
++    const receipt = {
++      reference: makeBookingRef(Math.floor(Date.now() / 1000)),
++      date: new Date().toISOString().slice(0, 10),
+       amount: total,
+       cause: destLabel,
+       method,
+       recurring,
+-      reference: makeBookingRef(Math.floor(Date.now() / 1000)),
+-    });
++      status: initialDonationStatus(method), // rule lives in @ahla/shared (unit-tested)
++    };
++    appState.addReceipt(receipt);
++    // TODO(backend): POST /donations → navigate with the server's reference/status.
++    nav.navigate('DonationSuccess', receipt);
+   };
+ 
+   return (
+@@ -51,7 +66,7 @@ export default function DonateScreen() {
+       header={<AppBar title="طرق التبرع" />}
+       footer={
+         <StickyFooter>
+-          <Button label="تأكيد التبرع" onPress={confirm} style={{ flex: 1 }} />
++          <Button label="تأكيد التبرع" onPress={confirm} style={{ flex: 1, opacity: canConfirm ? 1 : 0.55 }} />
+         </StickyFooter>
+       }
+     >
+@@ -79,8 +94,19 @@ export default function DonateScreen() {
+ 
+       <Label text="اختر مبلغ التبرع" />
+       <Segmented options={AMOUNTS} value={amount} onChange={setAmount} />
+-      <View style={[rowBetween, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, marginTop: 9 }]}>
+-        <Text style={[font('700'), num, { color: colors.navy700 }]}>{amount === 'مبلغ آخر' ? '0' : amount}</Text>
++      <View style={[rowBetween, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 14, marginTop: 9 }]}>
++        {amount === 'مبلغ آخر' ? (
++          <TextInput
++            value={custom}
++            onChangeText={(t) => setCustom(t.replace(/[^0-9]/g, '').slice(0, 7))}
++            placeholder="اكتب المبلغ"
++            placeholderTextColor={colors.muted}
++            keyboardType="number-pad"
++            style={[font('700'), num, { flex: 1, color: colors.navy700, fontSize: 15, paddingVertical: 12, textAlign: 'left' }]}
++          />
++        ) : (
++          <Text style={[font('700'), num, { color: colors.navy700, paddingVertical: 12 }]}>{amount}</Text>
++        )}
+         <Text style={[font('400'), { color: colors.muted }]}>ج.م</Text>
+       </View>
+ 
+@@ -100,28 +126,48 @@ export default function DonateScreen() {
+ 
+       <Label text="اختر طريقة الدفع" />
+       <View style={{ gap: 8 }}>
+-        {METHODS.map((m) => {
++        {paymentMethods.map((m) => {
+           const on = method === m.id;
++          const available = m.availability === 'متاحة';
++          const b = BRAND[m.id];
+           return (
+             <Pressable
+               key={m.id}
++              disabled={!available}
+               onPress={() => setMethod(m.id)}
+-              style={[row, { gap: 10, borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#fff' }]}
++              style={[row, { gap: 10, borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#fff', alignItems: 'flex-start', opacity: available ? 1 : 0.55 }]}
+             >
+-              <View style={[styles_rd, on && { borderColor: colors.navy700 }]}>
++              <View style={[styles_rd, { marginTop: 3 }, on && { borderColor: colors.navy700 }]}>
+                 {on && <View style={styles_rdDot} />}
+               </View>
+-              <Text style={[font('700'), { flex: 1, fontSize: 12.5, color: colors.ink, textAlign: 'right' }]}>{m.id}</Text>
+-              {m.brand ? (
+-                <Text style={[font('800'), { color: m.brandColor, fontSize: 11 }]}>{m.brand}</Text>
++              <View style={{ flex: 1, alignItems: 'flex-end' }}>
++                <View style={[row, { gap: 6 }]}>
++                  <Text style={[font('700'), { fontSize: 13, color: colors.ink }]}>{m.id}</Text>
++                  <Text style={[font('600'), { fontSize: 9.5, color: colors.muted }]}>· {m.group}</Text>
++                  <View style={{ backgroundColor: available ? colors.greenSoft : colors.goldSoft, borderRadius: 100, paddingVertical: 2, paddingHorizontal: 8 }}>
++                    <Text style={[font('700'), { fontSize: 9, color: available ? colors.greenDark : '#B9791A' }]}>{m.availability}</Text>
++                  </View>
++                </View>
++                <Text style={[font('400'), { fontSize: 10, color: colors.slate, marginTop: 3, textAlign: 'right', lineHeight: 14 }]}>{m.description}</Text>
++              </View>
++              {b.brand ? (
++                <Text style={[font('800'), { color: b.brandColor, fontSize: 11, marginTop: 4 }]}>{b.brand}</Text>
+               ) : (
+-                <Icon name={m.icon ?? 'credit-card'} size={16} color={colors.navy700} />
++                <Icon name={b.icon ?? 'credit-card'} size={16} color={colors.navy700} />
+               )}
+             </Pressable>
+           );
+         })}
+       </View>
+ 
++      {/* Security reassurance */}
++      <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: colors.greenSoft }]}>
++        <Icon name="lock" size={16} color={colors.greenDark} />
++        <Text style={[font('600'), { flex: 1, fontSize: 10.5, color: colors.greenDark, textAlign: 'right', lineHeight: 16 }]}>
++          الدفع آمن ومشفّر بالكامل. لن يُعتمد تبرعك إلا بعد تأكيد العملية من بوابة الدفع أو مراجعة الإدارة.
++        </Text>
++      </Card>
++
+       {/* Summary */}
+       <Card style={{ marginTop: 12, backgroundColor: '#F6F9FD' }}>
+         <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700, textAlign: 'right', marginBottom: 8 }]}>ملخص التبرع</Text>
+diff --git a/mobile/src/screens/DonationHistoryScreen.tsx b/mobile/src/screens/DonationHistoryScreen.tsx
+index 232996f..f48a13d 100644
+--- a/mobile/src/screens/DonationHistoryScreen.tsx
++++ b/mobile/src/screens/DonationHistoryScreen.tsx
+@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
+ import { LinearGradient } from 'expo-linear-gradient';
+ import { useNavigation } from '@react-navigation/native';
+ import { donations, egp } from '@ahla/shared';
++import { useAppState } from '../store/appState';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+ import { Card, Pill, Chip } from '../components/ui';
+@@ -18,16 +19,36 @@ const FILTERS = ['الكل', 'مكتمل', 'قيد المعالجة', 'شهري'
+ export default function DonationHistoryScreen() {
+   const nav = useNavigation<any>();
+   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
++  const { receipts } = useAppState();
++
++  // Session donations (pending until backend/admin confirms) shown on top.
++  const combined = useMemo(
++    () => [
++      ...receipts.map((r, i) => ({
++        id: `rc-${i}`,
++        donorName: '',
++        cause: r.cause,
++        amount: parseInt(r.amount.replace(/\D/g, ''), 10) || 0,
++        method: r.method,
++        date: r.date,
++        recurring: r.recurring,
++        status: r.status as (typeof mine)[number]['status'],
++      })),
++      ...mine,
++    ],
++    [receipts]
++  );
+ 
+   const list = useMemo(
+     () =>
+-      mine.filter((d) =>
++      combined.filter((d) =>
+         filter === 'الكل' ? true : filter === 'شهري' ? d.recurring : d.status === filter
+       ),
+-    [filter]
++    [combined, filter]
+   );
+ 
+-  const total = mine.filter((d) => d.status === 'مكتمل').reduce((s, d) => s + d.amount, 0);
++  // Only backend/admin-confirmed donations count toward the total.
++  const total = combined.filter((d) => d.status === 'مكتمل').reduce((s, d) => s + d.amount, 0);
+ 
+   return (
+     <Screen header={<AppBar title="سجل التبرعات" onBack={() => nav.goBack()} onBell={undefined} />}>
+@@ -43,8 +64,8 @@ export default function DonationHistoryScreen() {
+           </View>
+         </View>
+         <View style={[row, { gap: 20, marginTop: 14 }]}>
+-          <SummaryStat value={String(mine.length)} label="عملية" />
+-          <SummaryStat value={String(mine.filter((d) => d.recurring).length)} label="كفالة شهرية" />
++          <SummaryStat value={String(combined.length)} label="عملية" />
++          <SummaryStat value={String(combined.filter((d) => d.recurring).length)} label="كفالة شهرية" />
+         </View>
+       </LinearGradient>
+ 
+diff --git a/mobile/src/screens/DonationSuccessScreen.tsx b/mobile/src/screens/DonationSuccessScreen.tsx
+index a44e726..c0156ba 100644
+--- a/mobile/src/screens/DonationSuccessScreen.tsx
++++ b/mobile/src/screens/DonationSuccessScreen.tsx
+@@ -1,61 +1,103 @@
+ import React from 'react';
+-import { View, Text } from 'react-native';
++import { View, Text, Share } from 'react-native';
+ import { useNavigation } from '@react-navigation/native';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+-import { Card, Button } from '../components/ui';
++import { Card, Button, Pill } from '../components/ui';
+ import { StickyFooter } from './DonateScreen';
+-import { Icon } from '../components/Icon';
++import { Icon, IconName } from '../components/Icon';
+ import { colors, font, num, row, rowBetween } from '../theme';
+ import type { RootProps } from '../navigation/types';
+ 
++/**
++ * Status-aware donation receipt. The app NEVER renders a final "success" on
++ * its own: gateway payments stay «قيد التأكيد» until the server confirms,
++ * and manual methods (bank transfer / InstaPay) stay «قيد المراجعة» until an
++ * admin approves them in the dashboard.
++ */
++const STATUS_UI: Record<string, { icon: IconName; color: string; soft: string; title: string; note: string }> = {
++  'قيد التأكيد': {
++    icon: 'clock', color: colors.navy700, soft: '#EAF0F8',
++    title: 'تم استلام طلب التبرع',
++    note: 'جارٍ تأكيد عملية الدفع مع بوابة الدفع. سيصلك إشعار فور اعتماد التبرع.',
++  },
++  'قيد المراجعة': {
++    icon: 'file-text', color: '#B9791A', soft: colors.goldSoft,
++    title: 'تم استلام طلب التبرع',
++    note: 'تبرعات التحويل البنكي/إنستاباي تُعتمد بعد مراجعة الإدارة. سيصلك إشعار فور الاعتماد.',
++  },
++  مكتمل: {
++    icon: 'check', color: colors.green, soft: colors.greenSoft,
++    title: 'تم اعتماد تبرعك — شكراً لعطائك!',
++    note: 'تم تأكيد العملية بنجاح وسيصل تبرعك إلى مستحقيه بإذن الله.',
++  },
++  فشل: {
++    icon: 'x', color: colors.red, soft: colors.redSoft,
++    title: 'تعذّر إتمام العملية',
++    note: 'لم تكتمل عملية الدفع. لم يُخصم أي مبلغ — يمكنك المحاولة مرة أخرى.',
++  },
++};
++
+ export default function DonationSuccessScreen({ route }: RootProps<'DonationSuccess'>) {
+   const nav = useNavigation<any>();
+-  const { amount, cause, method, recurring, reference } = route.params;
++  const { amount, cause, method, recurring, reference, date, status } = route.params;
++  const ui = STATUS_UI[status] ?? STATUS_UI['قيد التأكيد'];
++
++  const shareReceipt = () =>
++    Share.share({
++      message: `إيصال تبرع — جمعية خواطر أحلى شباب\nرقم العملية: ${reference}\nالتاريخ: ${date}\nالمبلغ: ${amount}\nوجهة التبرع: ${cause}\nطريقة الدفع: ${method}\nالحالة: ${status}`,
++    }).catch(() => {});
+ 
+   return (
+     <Screen
+-      header={<AppBar title="تم التبرع" onBack={() => nav.navigate('Main', { screen: 'Home' })} onBell={undefined} />}
++      header={<AppBar title="إيصال التبرع" onBack={() => nav.navigate('Main', { screen: 'Home' })} onBell={undefined} />}
+       footer={
+         <StickyFooter>
+-          <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 120 }} />
++          <Button label="مشاركة الإيصال" variant="outline" icon="share-2" style={{ width: 150 }} onPress={shareReceipt} />
+           <Button label="تم" icon="check" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Home' })} />
+         </StickyFooter>
+       }
+     >
+-      {/* Success mark */}
+-      <View style={{ alignItems: 'center', marginTop: 24 }}>
+-        <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' }}>
+-          <View style={{ width: 66, height: 66, borderRadius: 33, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }}>
+-            <Icon name="check" size={36} color="#fff" />
++      {/* Status mark */}
++      <View style={{ alignItems: 'center', marginTop: 22 }}>
++        <View style={{ width: 92, height: 92, borderRadius: 46, backgroundColor: ui.soft, alignItems: 'center', justifyContent: 'center' }}>
++          <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: ui.color, alignItems: 'center', justifyContent: 'center' }}>
++            <Icon name={ui.icon} size={32} color="#fff" />
+           </View>
+         </View>
+-        <Text style={[font('800'), { fontSize: 22, color: colors.navy700, marginTop: 18 }]}>شكراً لتبرعك!</Text>
+-        <Text style={[font('400'), { fontSize: 13, color: colors.slate, marginTop: 8, textAlign: 'center', lineHeight: 20 }]}>
+-          تم استلام تبرعك بنجاح وسيصل إلى مستحقيه بإذن الله.{'\n'}جزاك الله خيراً على عطائك.
++        <Text style={[font('800'), { fontSize: 19, color: colors.navy700, marginTop: 16, textAlign: 'center' }]}>{ui.title}</Text>
++        <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 8, textAlign: 'center', lineHeight: 20, paddingHorizontal: 8 }]}>
++          {ui.note}
+         </Text>
+       </View>
+ 
+       {/* Receipt */}
+-      <Card style={{ marginTop: 24 }}>
++      <Card style={{ marginTop: 20 }}>
+         <View style={{ alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line2 }}>
+           <Text style={[font('400'), { fontSize: 11, color: colors.slate }]}>مبلغ التبرع</Text>
+-          <Text style={[font('800'), num, { fontSize: 30, color: colors.green, marginTop: 4 }]}>{amount}</Text>
++          <Text style={[font('800'), num, { fontSize: 28, color: colors.navy700, marginTop: 4 }]}>{amount}</Text>
+         </View>
+         <View style={{ paddingTop: 12, gap: 10 }}>
+           <ReceiptRow label="رقم العملية" value={reference} mono />
++          <ReceiptRow label="التاريخ" value={date} mono />
+           <ReceiptRow label="وجهة التبرع" value={cause} />
+           <ReceiptRow label="طريقة الدفع" value={method} />
+           <ReceiptRow label="نوع التبرع" value={recurring ? 'شهري مستمر' : 'لمرة واحدة'} />
+-          <ReceiptRow label="الحالة" value="مكتمل ✓" tone={colors.green} />
++          <View style={rowBetween}>
++            <Pill
++              label={status}
++              tone={status === 'مكتمل' ? 'green' : status === 'فشل' ? 'red' : 'gold'}
++            />
++            <Text style={[font('400'), { fontSize: 12, color: colors.slate }]}>حالة الدفع</Text>
++          </View>
+         </View>
+       </Card>
+ 
+-      {recurring && (
++      {recurring && status !== 'فشل' && (
+         <Card style={[row, { gap: 11, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
+           <Icon name="calendar" size={18} color={colors.navy700} />
+           <Text style={[font('400'), { flex: 1, fontSize: 10.5, color: colors.slate, textAlign: 'right', lineHeight: 16 }]}>
+-            سيتم خصم المبلغ تلقائياً كل شهر. يمكنك إيقاف التبرع الشهري في أي وقت من حسابك.
++            بعد اعتماد العملية سيتم تجديد التبرع شهرياً بنفس القيمة. يمكنك إيقافه في أي وقت من حسابك.
+           </Text>
+         </Card>
+       )}
+@@ -64,10 +106,10 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
+   );
+ }
+ 
+-function ReceiptRow({ label, value, mono, tone }: { label: string; value: string; mono?: boolean; tone?: string }) {
++function ReceiptRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+   return (
+     <View style={rowBetween}>
+-      <Text style={[font(mono ? '700' : '700'), mono ? num : undefined, { fontSize: 12.5, color: tone ?? colors.navy700 }]}>{value}</Text>
++      <Text style={[font('700'), mono ? num : undefined, { fontSize: 12.5, color: colors.navy700 }]}>{value}</Text>
+       <Text style={[font('400'), { fontSize: 12, color: colors.slate }]}>{label}</Text>
+     </View>
+   );
+diff --git a/mobile/src/screens/FavoritesScreen.tsx b/mobile/src/screens/FavoritesScreen.tsx
+new file mode 100644
+index 0000000..20723a7
+--- /dev/null
++++ b/mobile/src/screens/FavoritesScreen.tsx
+@@ -0,0 +1,59 @@
++import React from 'react';
++import { View, Text, Pressable } from 'react-native';
++import { LinearGradient } from 'expo-linear-gradient';
++import { useNavigation } from '@react-navigation/native';
++import { projects, cases, pct, egp } from '@ahla/shared';
++import { Screen } from '../components/Screen';
++import { AppBar } from '../components/AppBar';
++import { Card, ProgressBar, Pill, EmptyState } from '../components/ui';
++import { Icon } from '../components/Icon';
++import { colors, font, num, row, rowBetween } from '../theme';
++
++/** Mock favorites: first two projects + first sponsorable case. TODO(backend): GET /me/favorites. */
++const favProjects = projects.slice(0, 2);
++const favCases = cases.filter((c) => c.sponsorable).slice(0, 1);
++
++export default function FavoritesScreen() {
++  const nav = useNavigation<any>();
++  const empty = favProjects.length + favCases.length === 0;
++
++  return (
++    <Screen header={<AppBar title="المفضلة" onBack={() => nav.goBack()} onBell={undefined} />}>
++      {empty ? (
++        <EmptyState icon="heart" title="لا توجد عناصر مفضلة" hint="اضغط على أيقونة القلب في أي حالة أو مشروع لحفظه هنا" />
++      ) : (
++        <>
++          {[...favProjects.map((p) => ({ kind: 'project' as const, p })), ...favCases.map((c) => ({ kind: 'case' as const, c }))].map((f) => {
++            const item = f.kind === 'project' ? f.p : f.c;
++            const percent = pct(item.raisedAmount, item.targetAmount);
++            return (
++              <Pressable
++                key={item.id}
++                onPress={() => nav.navigate(f.kind === 'project' ? 'ProjectDetail' : 'CaseDetail', { id: item.id })}
++              >
++                <Card style={[row, { gap: 11, marginBottom: 10, alignItems: 'flex-start' }]}>
++                  <LinearGradient colors={item.gradient} style={{ width: 64, height: 76, borderRadius: 12 }} />
++                  <View style={{ flex: 1 }}>
++                    <View style={{ flexDirection: 'row-reverse' }}>
++                      <Pill label={f.kind === 'project' ? 'مشروع' : 'حالة'} tone="navy" />
++                    </View>
++                    <Text style={[font('800'), { fontSize: 13, color: colors.navy700, textAlign: 'right', marginTop: 4 }]}>{item.title}</Text>
++                    <View style={{ marginTop: 6 }}>
++                      <ProgressBar percent={percent} color={colors.green} />
++                    </View>
++                    <View style={[rowBetween, { marginTop: 5 }]}>
++                      <Text style={[font('400'), num, { fontSize: 9.5, color: colors.slate }]}>{egp(item.raisedAmount)} من {egp(item.targetAmount)}</Text>
++                      <Text style={[font('800'), { fontSize: 11, color: colors.green }]}>{percent}%</Text>
++                    </View>
++                  </View>
++                  <Icon name="heart" size={16} color={colors.red} />
++                </Card>
++              </Pressable>
++            );
++          })}
++        </>
++      )}
++      <View style={{ height: 12 }} />
++    </Screen>
++  );
++}
+diff --git a/mobile/src/screens/HomeScreen.tsx b/mobile/src/screens/HomeScreen.tsx
+index fecb6a9..2495407 100644
+--- a/mobile/src/screens/HomeScreen.tsx
++++ b/mobile/src/screens/HomeScreen.tsx
+@@ -2,19 +2,12 @@ import React from 'react';
+ import { View, Text, Pressable } from 'react-native';
+ import { LinearGradient } from 'expo-linear-gradient';
+ import { useNavigation } from '@react-navigation/native';
+-import {
+-  cases,
+-  projects,
+-  foundationStats,
+-  quickServices,
+-  pct,
+-  egp,
+-} from '@ahla/shared';
++import { cases, projects, articles, foundationStats, quickServices, pct, egp } from '@ahla/shared';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+ import { Card, Button, ProgressBar, Pill, Tile, Stat, SectionHeader } from '../components/ui';
+ import { Icon, IconName } from '../components/Icon';
+-import { colors, font, num, row, rowBetween, text } from '../theme';
++import { colors, font, num, row, rowBetween } from '../theme';
+ 
+ const serviceIcon: Record<string, IconName> = {
+   droplet: 'droplet',
+@@ -24,6 +17,9 @@ const serviceIcon: Record<string, IconName> = {
+   'map-pin': 'map-pin',
+ };
+ 
++/* Home v2 — section order per UX spec:
++   hero → impact numbers → quick services → urgent cases → featured projects
++   → latest news → online consultations (most important, emphasized last). */
+ export default function HomeScreen() {
+   const nav = useNavigation<any>();
+   const urgent = cases.find((c) => c.tag === 'عاجل')!;
+@@ -31,60 +27,51 @@ export default function HomeScreen() {
+ 
+   return (
+     <Screen header={<AppBar />}>
+-      {/* Hero */}
++      {/* 1 — Hero: logo mark + explainer + dual CTAs */}
+       <LinearGradient
+         colors={[colors.navy800, colors.navy900]}
+         start={{ x: 1, y: 0 }}
+         end={{ x: 0, y: 1 }}
+-        style={{ borderRadius: 20, padding: 20, height: 186, justifyContent: 'space-between' }}
++        style={{ borderRadius: 20, padding: 18 }}
+       >
+-        <View style={{ width: '65%', alignSelf: 'flex-end' }}>
+-          <Text style={[font('800'), { color: '#fff', fontSize: 21, lineHeight: 27, textAlign: 'right' }]}>
+-            معاً نصنع{'\n'}أثراً يدوم
+-          </Text>
+-          <Text style={[font('400'), { color: '#cfe', fontSize: 10.5, marginTop: 8, textAlign: 'right', lineHeight: 16 }]}>
+-            من الإسكندرية إلى أسوان،{'\n'}22 محافظة في خدمتكم
+-          </Text>
++        <View style={[row, { gap: 10, justifyContent: 'flex-end' }]}>
++          <View style={{ alignItems: 'flex-end', flex: 1 }}>
++            <Text style={[font('800'), { color: '#fff', fontSize: 20, textAlign: 'right' }]}>جمعية خواطر أحلى شباب</Text>
++            <Text style={[font('400'), { color: '#cfe', fontSize: 11.5, marginTop: 5, textAlign: 'right', lineHeight: 17 }]}>
++              جمعية خيرية مصرية تعمل في 22 محافظة — تبرعات موثوقة وخدمات مجانية للأسر الأولى بالرعاية.
++            </Text>
++          </View>
++          <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,.14)', alignItems: 'center', justifyContent: 'center' }}>
++            <Text style={[font('800'), { color: '#fff', fontSize: 20 }]}>خ</Text>
++          </View>
++        </View>
++        <View style={[row, { gap: 9, marginTop: 14 }]}>
++          <Pressable
++            onPress={() => nav.navigate('Main', { screen: 'Donate' })}
++            style={[row, { flex: 1, backgroundColor: '#fff', borderRadius: 100, paddingVertical: 11, justifyContent: 'center', gap: 6 }]}
++          >
++            <Icon name="heart" size={15} color={colors.navy700} />
++            <Text style={[font('800'), { color: colors.navy700, fontSize: 13 }]}>تبرع الآن</Text>
++          </Pressable>
++          <Pressable
++            onPress={() => nav.navigate('ServicesBrowse', { parentId: null })}
++            style={[row, { flex: 1, borderWidth: 1.5, borderColor: 'rgba(255,255,255,.65)', borderRadius: 100, paddingVertical: 11, justifyContent: 'center', gap: 6 }]}
++          >
++            <Icon name="calendar" size={15} color="#fff" />
++            <Text style={[font('800'), { color: '#fff', fontSize: 13 }]}>اطلب خدمة</Text>
++          </Pressable>
+         </View>
+-        <Pressable
+-          onPress={() => nav.navigate('Main', { screen: 'Donate' })}
+-          style={[row, { backgroundColor: '#fff', borderRadius: 100, paddingVertical: 8, paddingHorizontal: 16, alignSelf: 'flex-end', gap: 6 }]}
+-        >
+-          <Icon name="heart" size={15} color={colors.navy700} />
+-          <Text style={[font('800'), { color: colors.navy700, fontSize: 12 }]}>تبرع الآن</Text>
+-        </Pressable>
+       </LinearGradient>
+ 
+-      {/* Stats */}
++      {/* 2 — Impact numbers */}
+       <View style={[row, { gap: 9, marginTop: 14 }]}>
+         <Stat icon="map-pin" value={String(foundationStats.governorates)} label="محافظة" />
+         <Stat icon="users" value={foundationStats.beneficiaries} label="مستفيد" />
+         <Stat icon="calendar" value={String(foundationStats.yearsOfService)} label="سنة عطاء" />
+       </View>
+ 
+-      {/* Book a free service — main entry point (Offer §4.2) */}
+-      <Pressable onPress={() => nav.navigate('ServicesBrowse', { parentId: null })} style={{ marginTop: 14 }}>
+-        <LinearGradient
+-          colors={[colors.navy700, colors.navy600]}
+-          start={{ x: 1, y: 0 }}
+-          end={{ x: 0, y: 1 }}
+-          style={{ borderRadius: 16, padding: 14, flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}
+-        >
+-          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.15)', alignItems: 'center', justifyContent: 'center' }}>
+-            <Icon name="calendar" size={22} color="#fff" />
+-          </View>
+-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+-            <Text style={[font('800'), { fontSize: 15, color: '#fff' }]}>احجز خدمة مجانية</Text>
+-            <Text style={[font('400'), { fontSize: 11, color: '#cfe', marginTop: 2, textAlign: 'right' }]}>
+-              عيادات · استشارات · دعم تعليمي · خدمات اجتماعية
+-            </Text>
+-          </View>
+-          <Icon name="chevron-left" size={20} color="#cfe" />
+-        </LinearGradient>
+-      </Pressable>
+-
+-      {/* Quick services */}
+-      <SectionHeader title="خدمات سريعة" more="عرض الكل ‹" />
++      {/* 3 — Quick services */}
++      <SectionHeader title="خدمات سريعة" />
+       <View style={[row, { gap: 7 }]}>
+         {quickServices.map((s) => (
+           <Tile
+@@ -96,13 +83,17 @@ export default function HomeScreen() {
+               else if (s.id === 'cases') nav.navigate('Discover');
+               else if (s.id === 'donate') nav.navigate('Main', { screen: 'Donate' });
+               else if (s.id === 'projects') nav.navigate('Projects');
++              else if (s.id === 'water') nav.navigate('ContactUs');
+             }}
+           />
+         ))}
+       </View>
+ 
+-      {/* Urgent case */}
++      {/* 4 — Urgent cases */}
+       <View style={[rowBetween, { marginTop: 16, marginBottom: 10, marginHorizontal: 2 }]}>
++        <Pressable onPress={() => nav.navigate('Discover')}>
++          <Text style={[font('700'), { color: colors.navy500, fontSize: 11.5 }]}>عرض المزيد ‹</Text>
++        </Pressable>
+         <View style={[row, { gap: 7 }]}>
+           <Text style={[font('800'), { color: colors.navy700, fontSize: 15 }]}>حالة إنسانية عاجلة</Text>
+           <Pill label="عاجل" tone="red" />
+@@ -110,8 +101,23 @@ export default function HomeScreen() {
+       </View>
+       <CaseRow item={urgent} onPress={() => nav.navigate('CaseDetail', { id: urgent.id })} />
+ 
+-      {/* Featured project */}
+-      <SectionHeader title="مشروع مميز" more="عرض الكل ‹" onMore={() => nav.navigate('Projects')} />
++      {/* أكفل حالة — sponsorship entry */}
++      <Pressable
++        onPress={() => nav.navigate('Main', { screen: 'Discover', params: { initialFilter: 'كفالة شهرية' } })}
++        style={[row, { gap: 11, marginTop: 12, backgroundColor: colors.greenSoft, borderRadius: 16, padding: 13 }]}
++      >
++        <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
++          <Icon name="users" size={20} color={colors.greenDark} />
++        </View>
++        <View style={{ flex: 1, alignItems: 'flex-end' }}>
++          <Text style={[font('800'), { fontSize: 13.5, color: colors.greenDark }]}>أكفل حالة</Text>
++          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 2 }]}>كفالة شهرية ثابتة تغيّر حياة أسرة كاملة</Text>
++        </View>
++        <Icon name="chevron-left" size={18} color={colors.greenDark} />
++      </Pressable>
++
++      {/* 5 — Featured projects */}
++      <SectionHeader title="مشروع مميز" more="عرض المزيد ‹" onMore={() => nav.navigate('Projects')} />
+       <Card style={{ flexDirection: 'row-reverse', gap: 11, padding: 11 }}>
+         <LinearGradient colors={featured.gradient} style={{ width: 70, height: 92, borderRadius: 12 }} />
+         <View style={{ flex: 1 }}>
+@@ -129,7 +135,7 @@ export default function HomeScreen() {
+             </Text>
+           </View>
+           <Button
+-            label="ادعم المشروع"
++            label="دعم المشروع"
+             variant="green"
+             small
+             style={{ marginTop: 8 }}
+@@ -137,6 +143,50 @@ export default function HomeScreen() {
+           />
+         </View>
+       </Card>
++
++      {/* 6 — Latest news */}
++      <SectionHeader title="أحدث الأخبار" more="عرض المزيد ‹" onMore={() => nav.navigate('NewsFeed')} />
++      {articles.slice(0, 2).map((a) => (
++        <Pressable key={a.id} onPress={() => nav.navigate('ArticleDetail', { id: a.id })}>
++          <Card style={[row, { gap: 11, marginBottom: 10, alignItems: 'flex-start' }]}>
++            <LinearGradient colors={a.gradient} style={{ width: 64, height: 64, borderRadius: 12 }} />
++            <View style={{ flex: 1, alignItems: 'flex-end' }}>
++              <Text style={[font('700'), { fontSize: 9, color: colors.navy500 }]}>{a.category} · <Text style={num}>{a.date}</Text></Text>
++              <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700, textAlign: 'right', marginTop: 3 }]} numberOfLines={2}>
++                {a.title}
++              </Text>
++            </View>
++            <Icon name="chevron-left" size={16} color={colors.muted} />
++          </Card>
++        </Pressable>
++      ))}
++
++      {/* 7 — Online consultations (most important — emphasized) */}
++      <LinearGradient
++        colors={[colors.navy700, colors.navy900]}
++        start={{ x: 1, y: 0 }}
++        end={{ x: 0, y: 1 }}
++        style={{ borderRadius: 20, padding: 16, marginTop: 6 }}
++      >
++        <View style={[row, { gap: 12 }]}>
++          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.15)', alignItems: 'center', justifyContent: 'center' }}>
++            <Icon name="message-circle" size={24} color="#fff" />
++          </View>
++          <View style={{ flex: 1, alignItems: 'flex-end' }}>
++            <Text style={[font('800'), { fontSize: 15.5, color: '#fff' }]}>استشارات أونلاين مجانية</Text>
++            <Text style={[font('400'), { fontSize: 11, color: '#cfe', marginTop: 3, textAlign: 'right', lineHeight: 16 }]}>
++              نفسية · أسرية · تربوية · قانونية — جلسات سرية مع مختصين معتمدين
++            </Text>
++          </View>
++        </View>
++        <Pressable
++          onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })}
++          style={[row, { backgroundColor: '#fff', borderRadius: 100, paddingVertical: 12, justifyContent: 'center', gap: 7, marginTop: 12 }]}
++        >
++          <Icon name="calendar" size={16} color={colors.navy700} />
++          <Text style={[font('800'), { color: colors.navy700, fontSize: 14 }]}>احجز استشارة</Text>
++        </Pressable>
++      </LinearGradient>
+       <View style={{ height: 12 }} />
+     </Screen>
+   );
+@@ -159,7 +209,7 @@ export function CaseRow({ item, onPress }: { item: (typeof cases)[number]; onPre
+           </Text>
+           <Text style={[font('800'), { color: colors.red, fontSize: 12 }]}>{p}%</Text>
+         </View>
+-        <Button label="ساهم الآن" variant="red" small style={{ marginTop: 8 }} onPress={onPress} />
++        <Button label="تبرع للحالة" variant="red" small style={{ marginTop: 8 }} onPress={onPress} />
+       </View>
+     </Card>
+   );
+diff --git a/mobile/src/screens/OtpScreen.tsx b/mobile/src/screens/OtpScreen.tsx
+index 95e7af0..9348337 100644
+--- a/mobile/src/screens/OtpScreen.tsx
++++ b/mobile/src/screens/OtpScreen.tsx
+@@ -6,6 +6,7 @@ import { AppBar } from '../components/AppBar';
+ import { Button } from '../components/ui';
+ import { StickyFooter } from './DonateScreen';
+ import { colors, font, row } from '../theme';
++import { appState } from '../store/appState';
+ import type { RootProps } from '../navigation/types';
+ 
+ const LEN = 6;
+@@ -30,7 +31,8 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
+       setError(true);
+       return;
+     }
+-    // Mock: any 6-digit code is accepted.
++    // Mock: any 6-digit code is accepted. TODO(backend): POST /auth/otp/verify.
++    appState.login(phone);
+     nav.navigate('Main', { screen: 'Profile' });
+   };
+ 
+diff --git a/mobile/src/screens/PhoneAuthScreen.tsx b/mobile/src/screens/PhoneAuthScreen.tsx
+index a40d280..b061168 100644
+--- a/mobile/src/screens/PhoneAuthScreen.tsx
++++ b/mobile/src/screens/PhoneAuthScreen.tsx
+@@ -7,9 +7,7 @@ import { Card, Button } from '../components/ui';
+ import { StickyFooter } from './DonateScreen';
+ import { Icon } from '../components/Icon';
+ import { colors, font, radius, row } from '../theme';
+-
+-/** Egyptian mobile: 11 digits starting 010/011/012/015. */
+-const isValidEgPhone = (v: string) => /^01[0125][0-9]{8}$/.test(v);
++import { isEgPhone as isValidEgPhone } from '@ahla/shared';
+ 
+ export default function PhoneAuthScreen() {
+   const nav = useNavigation<any>();
+diff --git a/mobile/src/screens/PrivacyPolicyScreen.tsx b/mobile/src/screens/PrivacyPolicyScreen.tsx
+new file mode 100644
+index 0000000..3d71379
+--- /dev/null
++++ b/mobile/src/screens/PrivacyPolicyScreen.tsx
+@@ -0,0 +1,62 @@
++import React from 'react';
++import { View, Text } from 'react-native';
++import { useNavigation } from '@react-navigation/native';
++import { Screen } from '../components/Screen';
++import { AppBar } from '../components/AppBar';
++import { Card } from '../components/ui';
++import { Icon, IconName } from '../components/Icon';
++import { colors, font, row } from '../theme';
++
++const SECTIONS: { icon: IconName; title: string; body: string }[] = [
++  {
++    icon: 'shield',
++    title: 'حماية بيانات المستفيدين',
++    body: 'نلتزم بحماية كرامة وخصوصية المستفيدين: لا نعرض أرقام هواتفهم أو عناوينهم التفصيلية أو أي بيانات شخصية حساسة داخل التطبيق. تُعرض فقط معلومات عامة آمنة مثل المحافظة ونوع الاحتياج وحالة التوثيق.',
++  },
++  {
++    icon: 'lock',
++    title: 'بياناتك الشخصية',
++    body: 'نجمع الحد الأدنى من البيانات اللازمة لإتمام التبرع أو الحجز (الاسم ورقم الهاتف). تُنقل بياناتك مشفّرة ولا تُشارك مع أي طرف ثالث لأغراض تسويقية.',
++  },
++  {
++    icon: 'credit-card',
++    title: 'بيانات الدفع',
++    body: 'لا يخزّن التطبيق بيانات بطاقتك البنكية. تتم عمليات الدفع عبر بوابات دفع مرخّصة، ولا يُعتمد أي تبرع إلا بعد تأكيد بوابة الدفع أو مراجعة الإدارة.',
++  },
++  {
++    icon: 'message-circle',
++    title: 'سرية الاستشارات',
++    body: 'جميع جلسات الاستشارة سرية تماماً. لا يطّلع على تفاصيلها إلا المختص المعني، ولا تُستخدم في أي غرض آخر.',
++  },
++  {
++    icon: 'bell',
++    title: 'الإشعارات',
++    body: 'تتحكم بالكامل في أنواع الإشعارات التي تصلك من صفحة «الإشعارات» في حسابك، ويمكنك إيقافها في أي وقت.',
++  },
++  {
++    icon: 'trash-2',
++    title: 'حذف البيانات',
++    body: 'يحق لك طلب حذف حسابك وبياناتك في أي وقت عبر التواصل معنا، وسنقوم بالحذف خلال مدة لا تتجاوز 30 يوماً.',
++  },
++];
++
++export default function PrivacyPolicyScreen() {
++  const nav = useNavigation<any>();
++  return (
++    <Screen header={<AppBar title="سياسة الخصوصية" onBack={() => nav.goBack()} onBell={undefined} />}>
++      <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', lineHeight: 19, marginBottom: 12, marginHorizontal: 2 }]}>
++        خصوصيتك وخصوصية المستفيدين أمانة. توضح هذه السياسة كيف نتعامل مع البيانات داخل تطبيق جمعية خواطر أحلى شباب.
++      </Text>
++      {SECTIONS.map((s) => (
++        <Card key={s.title} style={{ marginBottom: 10 }}>
++          <View style={[row, { gap: 8, justifyContent: 'flex-end' }]}>
++            <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700 }]}>{s.title}</Text>
++            <Icon name={s.icon} size={16} color={colors.navy500} />
++          </View>
++          <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', lineHeight: 20, marginTop: 6 }]}>{s.body}</Text>
++        </Card>
++      ))}
++      <View style={{ height: 12 }} />
++    </Screen>
++  );
++}
+diff --git a/mobile/src/screens/ProfileScreen.tsx b/mobile/src/screens/ProfileScreen.tsx
+index 11183ca..9b4791a 100644
+--- a/mobile/src/screens/ProfileScreen.tsx
++++ b/mobile/src/screens/ProfileScreen.tsx
+@@ -5,9 +5,10 @@ import { useNavigation } from '@react-navigation/native';
+ import { donorProfile, donations, egp } from '@ahla/shared';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+-import { Card, Stat, SectionHeader } from '../components/ui';
++import { Card, Stat, SectionHeader, Button } from '../components/ui';
+ import { Icon, IconName } from '../components/Icon';
+ import { colors, font, num, row, rowBetween } from '../theme';
++import { appState, useAppState } from '../store/appState';
+ 
+ const myDonations = donations.filter((d) => d.donorName === donorProfile.name);
+ 
+@@ -18,21 +19,66 @@ const favorites: { id: string; title: string; amount: number; gradient: [string,
+   { id: 'f4', title: 'مساعدات طبية', amount: 18000, gradient: ['#c3a888', '#8f7350'] },
+ ];
+ 
+-const SETTINGS: { label: string; danger?: boolean; value?: string; route?: string }[] = [
++type Row = { label: string; danger?: boolean; value?: string; route?: string; action?: 'logout' };
++
++/** حسابي rows — order per UX spec. */
++const SETTINGS: Row[] = [
++  { label: 'بياناتي', route: 'AccountSettings' },
++  { label: 'تبرعاتي', route: 'DonationHistory' },
++  { label: 'إيصالاتي', route: 'Receipts' },
+   { label: 'حجوزاتي', route: 'MyBookings' },
+-  { label: 'سجل التبرعات', route: 'DonationHistory' },
+-  { label: 'تسجيل الدخول / تأكيد الهاتف', route: 'PhoneAuth' },
+-  { label: 'تفضيلات الإشعارات', route: 'NotificationPreferences' },
++  { label: 'المفضلة', route: 'Favorites' },
++  { label: 'الإشعارات', route: 'NotificationPreferences' },
+   { label: 'اللغة', value: 'العربية ‹', route: 'Language' },
+-  { label: 'إعدادات الحساب', route: 'AccountSettings' },
++  { label: 'تواصل معنا', route: 'ContactUs' },
++  { label: 'سياسة الخصوصية', route: 'PrivacyPolicy' },
++  { label: 'تسجيل الخروج', danger: true, action: 'logout' },
++];
++
++const TOOLS: Row[] = [
+   { label: 'حاسبة الزكاة', route: 'ZakatCalculator' },
+   { label: 'الأسئلة الشائعة', route: 'Faq' },
+   { label: 'جولة تعريفية', route: 'Onboarding' },
+-  { label: 'تسجيل الخروج', danger: true },
+ ];
+ 
+ export default function ProfileScreen() {
+   const nav = useNavigation<any>();
++  const { loggedIn, phone } = useAppState();
++
++  if (!loggedIn) {
++    // Guest state (UX v2): clear message + login CTA, tools still reachable.
++    return (
++      <Screen header={<AppBar title="حسابي" />}>
++        <Card style={{ alignItems: 'center', paddingVertical: 28, marginTop: 8 }}>
++          <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
++            <Icon name="user" size={32} color={colors.navy500} />
++          </View>
++          <Text style={[font('800'), { fontSize: 16, color: colors.navy700, marginTop: 14, textAlign: 'center' }]}>
++            سجل دخولك لمتابعة تبرعاتك وحجوزاتك
++          </Text>
++          <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 18 }]}>
++            بحساب واحد تتابع إيصالاتك ومواعيدك وتصلك الإشعارات المهمة.
++          </Text>
++          <Button label="تسجيل الدخول" icon="log-in" style={{ marginTop: 16, alignSelf: 'stretch' }} onPress={() => nav.navigate('PhoneAuth')} />
++        </Card>
++
++        <SectionHeader title="أدوات" />
++        <Card style={{ padding: 0 }}>
++          {TOOLS.map((s, i) => (
++            <View key={s.label}>
++              <Pressable style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]} onPress={() => s.route && nav.navigate(s.route)}>
++                <Icon name="chevron-left" size={16} color={colors.muted} />
++                <Text style={[font('700'), { color: colors.navy700 }]}>{s.label}</Text>
++              </Pressable>
++              {i < TOOLS.length - 1 && <View style={{ height: 1, backgroundColor: colors.line2, marginHorizontal: 12 }} />}
++            </View>
++          ))}
++        </Card>
++        <View style={{ height: 12 }} />
++      </Screen>
++    );
++  }
++
+   return (
+     <Screen header={<AppBar title="حسابي" />}>
+       {/* Profile card */}
+@@ -77,7 +123,7 @@ export default function ProfileScreen() {
+       </Card>
+ 
+       {/* Favorites carousel */}
+-      <SectionHeader title="مشاريعي المفضلة" more="عرض الكل" />
++      <SectionHeader title="مشاريعي المفضلة" more="عرض الكل" onMore={() => nav.navigate('Favorites')} />
+       <ScrollView
+         horizontal
+         showsHorizontalScrollIndicator={false}
+@@ -107,7 +153,7 @@ export default function ProfileScreen() {
+           <View key={s.label}>
+             <Pressable
+               style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]}
+-              onPress={() => s.route && nav.navigate(s.route)}
++              onPress={() => (s.action === 'logout' ? appState.logout() : s.route && nav.navigate(s.route))}
+             >
+               {s.value ? (
+                 <Text style={[font('400'), { color: colors.muted, fontSize: 11 }]}>{s.value}</Text>
+@@ -120,6 +166,19 @@ export default function ProfileScreen() {
+           </View>
+         ))}
+       </Card>
++      {/* Tools */}
++      <SectionHeader title="أدوات" />
++      <Card style={{ padding: 0 }}>
++        {TOOLS.map((s, i) => (
++          <View key={s.label}>
++            <Pressable style={[rowBetween, { paddingVertical: 12, paddingHorizontal: 14 }]} onPress={() => s.route && nav.navigate(s.route)}>
++              <Icon name="chevron-left" size={16} color={colors.muted} />
++              <Text style={[font('700'), { color: colors.navy700 }]}>{s.label}</Text>
++            </Pressable>
++            {i < TOOLS.length - 1 && <View style={{ height: 1, backgroundColor: colors.line2, marginHorizontal: 12 }} />}
++          </View>
++        ))}
++      </Card>
+       <View style={{ height: 12 }} />
+     </Screen>
+   );
+diff --git a/mobile/src/screens/ProjectDetailScreen.tsx b/mobile/src/screens/ProjectDetailScreen.tsx
+index 95d3530..d43b5a3 100644
+--- a/mobile/src/screens/ProjectDetailScreen.tsx
++++ b/mobile/src/screens/ProjectDetailScreen.tsx
+@@ -6,6 +6,7 @@ import { projects, pct, egp } from '@ahla/shared';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+ import { Card, Button, ProgressBar, Pill } from '../components/ui';
++import { RemoteImage } from '../components/RemoteImage';
+ import { StickyFooter } from './DonateScreen';
+ import { Icon, IconName } from '../components/Icon';
+ import { colors, font, num, row, rowBetween } from '../theme';
+@@ -28,11 +29,11 @@ export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'
+       footer={
+         <StickyFooter>
+           <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 104 }} />
+-          <Button label="ادعم المشروع" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
++          <Button label="دعم المشروع الآن" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+         </StickyFooter>
+       }
+     >
+-      <LinearGradient colors={project.gradient} style={{ height: 150, borderRadius: 16 }} />
++      <RemoteImage uri={project.imageUrl} gradient={project.gradient} icon="droplet" style={{ height: 150, borderRadius: 16 }} />
+ 
+       <View style={{ alignItems: 'flex-end', marginTop: 14 }}>
+         <Pill label={`مشروع ${project.status}`} tone="navy" />
+@@ -108,6 +109,31 @@ export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'
+             </React.Fragment>
+           ))}
+       </View>
++
++      {/* Updates timeline (UX v2) */}
++      {project.updates && project.updates.length > 0 && (
++        <>
++          <View style={[row, { gap: 7, marginTop: 16, marginBottom: 10, marginHorizontal: 2 }]}>
++            <Icon name="file-text" size={16} color={colors.navy700} />
++            <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>تحديثات المشروع</Text>
++          </View>
++          <Card>
++            {project.updates.map((u, i) => (
++              <View key={u.date} style={{ flexDirection: 'row-reverse', gap: 10 }}>
++                <View style={{ alignItems: 'center' }}>
++                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: i === 0 ? colors.green : colors.navy300, marginTop: 3 }} />
++                  {i < project.updates!.length - 1 && <View style={{ flex: 1, width: 2, backgroundColor: colors.line }} />}
++                </View>
++                <View style={{ flex: 1, alignItems: 'flex-end', paddingBottom: i < project.updates!.length - 1 ? 14 : 0 }}>
++                  <Text style={[font('600'), num, { fontSize: 10, color: colors.muted }]}>{u.date}</Text>
++                  <Text style={[font('700'), { fontSize: 12.5, color: colors.navy700, textAlign: 'right', marginTop: 2, lineHeight: 18 }]}>{u.text}</Text>
++                </View>
++              </View>
++            ))}
++          </Card>
++        </>
++      )}
++
+       <View style={{ height: 12 }} />
+     </Screen>
+   );
+diff --git a/mobile/src/screens/ProjectsScreen.tsx b/mobile/src/screens/ProjectsScreen.tsx
+index c91aaf9..33ebc15 100644
+--- a/mobile/src/screens/ProjectsScreen.tsx
++++ b/mobile/src/screens/ProjectsScreen.tsx
+@@ -63,7 +63,7 @@ export default function ProjectsScreen() {
+             </View>
+             <View style={[rowBetween, { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.line2, paddingTop: 10 }]}>
+               <Text style={[font('600'), num, { fontSize: 10.5, color: colors.muted }]}>
+-                {p.supporters.toLocaleString('en-US')} داعم · {doneStages}/{p.stages.length} مراحل
++                {p.supporters.toLocaleString('en-US')} داعم · {doneStages}/{p.stages.length} مراحل · {p.updates?.length ?? 0} تحديثات
+               </Text>
+               <Button label="ادعم المشروع" variant="green" small onPress={() => nav.navigate('ProjectDetail', { id: p.id })} />
+             </View>
+diff --git a/mobile/src/screens/ReceiptsScreen.tsx b/mobile/src/screens/ReceiptsScreen.tsx
+new file mode 100644
+index 0000000..67295f0
+--- /dev/null
++++ b/mobile/src/screens/ReceiptsScreen.tsx
+@@ -0,0 +1,72 @@
++import React from 'react';
++import { View, Text, Pressable } from 'react-native';
++import { useNavigation } from '@react-navigation/native';
++import { donations, donorProfile } from '@ahla/shared';
++import { Screen } from '../components/Screen';
++import { AppBar } from '../components/AppBar';
++import { Card, Pill, EmptyState, Button } from '../components/ui';
++import { Icon } from '../components/Icon';
++import { colors, font, num, row, rowBetween } from '../theme';
++import { useAppState, type Receipt } from '../store/appState';
++
++/** Historic (already confirmed) donations shown as receipts alongside session ones. */
++const history: Receipt[] = donations
++  .filter((d) => d.donorName === donorProfile.name)
++  .map((d) => ({
++    reference: `AS-${100000 + parseInt(d.id.replace(/\D/g, ''), 10) * 7919}`,
++    date: d.date,
++    amount: `${d.amount} ج.م`,
++    cause: d.cause,
++    method: d.method,
++    recurring: d.recurring,
++    status: d.status === 'قيد المعالجة' ? 'قيد التأكيد' : (d.status as Receipt['status']),
++  }));
++
++const tone = (s: Receipt['status']) => (s === 'مكتمل' ? 'green' : s === 'فشل' ? 'red' : 'gold');
++
++export default function ReceiptsScreen() {
++  const nav = useNavigation<any>();
++  const { receipts } = useAppState();
++  const all = [...receipts, ...history];
++
++  return (
++    <Screen header={<AppBar title="إيصالاتي" onBack={() => nav.goBack()} onBell={undefined} />}>
++      <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', marginBottom: 10, marginHorizontal: 2, lineHeight: 18 }]}>
++        كل إيصالات تبرعاتك في مكان واحد. الإيصالات قيد التأكيد/المراجعة تُعتمد بعد تأكيد الدفع أو مراجعة الإدارة.
++      </Text>
++
++      {all.map((r, i) => (
++        <Pressable key={`${r.reference}-${i}`} onPress={() => nav.navigate('DonationSuccess', r)}>
++          <Card style={[row, { gap: 11, marginBottom: 10 }]}>
++            <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: colors.paper2, alignItems: 'center', justifyContent: 'center' }}>
++              <Icon name="file-text" size={19} color={colors.navy700} />
++            </View>
++            <View style={{ flex: 1, alignItems: 'flex-end' }}>
++              <View style={[rowBetween, { alignSelf: 'stretch' }]}>
++                <Text style={[font('800'), num, { fontSize: 13.5, color: colors.navy700 }]}>{r.amount}</Text>
++                <Text style={[font('800'), { fontSize: 12.5, color: colors.navy700, flex: 1, textAlign: 'right' }]} numberOfLines={1}>
++                  {r.cause}
++                </Text>
++              </View>
++              <View style={[row, { gap: 6, marginTop: 5 }]}>
++                <Pill label={r.status} tone={tone(r.status) as any} />
++                <Text style={[font('400'), num, { fontSize: 9.5, color: colors.muted }]}>
++                  {r.reference} · {r.date}
++                </Text>
++              </View>
++            </View>
++            <Icon name="chevron-left" size={17} color={colors.muted} />
++          </Card>
++        </Pressable>
++      ))}
++
++      {all.length === 0 && (
++        <>
++          <EmptyState icon="file-text" title="لا توجد إيصالات بعد" hint="عند تبرعك سيظهر الإيصال هنا فور استلام الطلب" />
++          <Button label="تبرع الآن" icon="heart" onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
++        </>
++      )}
++      <View style={{ height: 12 }} />
++    </Screen>
++  );
++}
+diff --git a/mobile/src/screens/VolunteerScreen.tsx b/mobile/src/screens/VolunteerScreen.tsx
+index 2fa0cdf..0e3c347 100644
+--- a/mobile/src/screens/VolunteerScreen.tsx
++++ b/mobile/src/screens/VolunteerScreen.tsx
+@@ -1,7 +1,7 @@
+ import React, { useState } from 'react';
+ import { View, Text, TextInput, Pressable } from 'react-native';
+ import { useNavigation } from '@react-navigation/native';
+-import { governorates } from '@ahla/shared';
++import { governorates, isEgPhone } from '@ahla/shared';
+ import { Screen } from '../components/Screen';
+ import { AppBar } from '../components/AppBar';
+ import { Card, Button } from '../components/ui';
+@@ -67,7 +67,7 @@ export default function VolunteerScreen() {
+   const [submitted, setSubmitted] = useState(false);
+   const [touched, setTouched] = useState(false);
+ 
+-  const valid = name.trim() && /^01[0125][0-9]{8}$/.test(phone) && gov && interests.length > 0;
++  const valid = name.trim() && isEgPhone(phone) && gov && interests.length > 0;
+ 
+   const toggle = (arr: string[], set: (v: string[]) => void, v: string, multi = true) =>
+     set(multi ? (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]) : [v]);
+diff --git a/mobile/src/store/appState.ts b/mobile/src/store/appState.ts
+new file mode 100644
+index 0000000..0560906
+--- /dev/null
++++ b/mobile/src/store/appState.ts
+@@ -0,0 +1,56 @@
++import { useSyncExternalStore } from 'react';
++import type { PaymentMethod } from '@ahla/shared';
++
++/**
++ * Lightweight in-memory app state (session + donation receipts).
++ * TODO(backend): replace with real auth (JWT) + GET /me/donations. Receipt
++ * statuses here are ALWAYS pending — 'مكتمل' can only ever arrive from the
++ * server (gateway callback) or admin approval, never from the app UI.
++ */
++export type ReceiptStatus = 'قيد التأكيد' | 'قيد المراجعة' | 'مكتمل' | 'فشل';
++
++export interface Receipt {
++  reference: string;
++  date: string; // ISO
++  amount: string; // display string e.g. "500 ج.م"
++  cause: string;
++  method: PaymentMethod;
++  recurring: boolean;
++  status: ReceiptStatus;
++}
++
++interface AppState {
++  loggedIn: boolean;
++  phone: string | null;
++  receipts: Receipt[];
++}
++
++let state: AppState = { loggedIn: false, phone: null, receipts: [] };
++const subs = new Set<() => void>();
++const emit = () => subs.forEach((f) => f());
++
++export const appState = {
++  get: (): AppState => state,
++  login(phone: string) {
++    state = { ...state, loggedIn: true, phone };
++    emit();
++  },
++  logout() {
++    state = { ...state, loggedIn: false, phone: null };
++    emit();
++  },
++  addReceipt(r: Receipt) {
++    state = { ...state, receipts: [r, ...state.receipts] };
++    emit();
++  },
++};
++
++export function useAppState(): AppState {
++  return useSyncExternalStore(
++    (cb) => {
++      subs.add(cb);
++      return () => subs.delete(cb);
++    },
++    () => state
++  );
++}
+diff --git a/package-lock.json b/package-lock.json
+index ac986f5..397a310 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -45,6 +45,7 @@
+         "@react-navigation/bottom-tabs": "^7.3.0",
+         "@react-navigation/native": "^7.1.0",
+         "@react-navigation/native-stack": "^7.3.0",
++        "@react-navigation/stack": "^7.10.11",
+         "babel-preset-expo": "~54.0.11",
+         "expo": "54.0.35",
+         "expo-font": "~14.0.12",
+@@ -123,29 +124,6 @@
+         "react-native-screens": ">= 4.0.0"
+       }
+     },
+-    "mobile/node_modules/@react-navigation/elements": {
+-      "version": "2.9.29",
+-      "resolved": "https://registry.npmjs.org/@react-navigation/elements/-/elements-2.9.29.tgz",
+-      "integrity": "sha512-+QpClRQacrwqr4cbHcURJwspuJ6Rmi4GlFQZgqldexDV9e3ZuyGzYNYuIDp2pIBtEKXS18oTGcsdd9XHBaGNnA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "color": "^4.2.3",
+-        "use-latest-callback": "^0.2.4",
+-        "use-sync-external-store": "^1.5.0"
+-      },
+-      "peerDependencies": {
+-        "@react-native-masked-view/masked-view": ">= 0.2.0",
+-        "@react-navigation/native": "^7.3.7",
+-        "react": ">= 18.2.0",
+-        "react-native": "*",
+-        "react-native-safe-area-context": ">= 4.0.0"
+-      },
+-      "peerDependenciesMeta": {
+-        "@react-native-masked-view/masked-view": {
+-          "optional": true
+-        }
+-      }
+-    },
+     "mobile/node_modules/@react-navigation/native": {
+       "version": "7.3.7",
+       "resolved": "https://registry.npmjs.org/@react-navigation/native/-/native-7.3.7.tgz",
+@@ -3486,6 +3464,29 @@
+         "react": ">= 18.2.0"
+       }
+     },
++    "node_modules/@react-navigation/elements": {
++      "version": "2.9.30",
++      "resolved": "https://registry.npmjs.org/@react-navigation/elements/-/elements-2.9.30.tgz",
++      "integrity": "sha512-2isleieiRMmP4WNMV2Q1u3qP1M47ZqsJ2hJ/Og11FeKXK8YmUTHya7PW7ecsgAh2CXKTxAcbfJDFTSvq2D++Tw==",
++      "license": "MIT",
++      "dependencies": {
++        "color": "^4.2.3",
++        "use-latest-callback": "^0.2.4",
++        "use-sync-external-store": "^1.5.0"
++      },
++      "peerDependencies": {
++        "@react-native-masked-view/masked-view": ">= 0.2.0",
++        "@react-navigation/native": "^7.3.8",
++        "react": ">= 18.2.0",
++        "react-native": "*",
++        "react-native-safe-area-context": ">= 4.0.0"
++      },
++      "peerDependenciesMeta": {
++        "@react-native-masked-view/masked-view": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/@react-navigation/routers": {
+       "version": "7.6.0",
+       "resolved": "https://registry.npmjs.org/@react-navigation/routers/-/routers-7.6.0.tgz",
+@@ -3495,6 +3496,25 @@
+         "nanoid": "^3.3.11"
+       }
+     },
++    "node_modules/@react-navigation/stack": {
++      "version": "7.10.11",
++      "resolved": "https://registry.npmjs.org/@react-navigation/stack/-/stack-7.10.11.tgz",
++      "integrity": "sha512-FNlylwYaGwGArRjmJhmL3FviTjT/j10UVx6TAaqqeLeYEircqMm2kBBz2e9FpcXH2OeCnPinAjZ0B1th2mNmsg==",
++      "license": "MIT",
++      "dependencies": {
++        "@react-navigation/elements": "^2.9.30",
++        "color": "^4.2.3",
++        "use-latest-callback": "^0.2.4"
++      },
++      "peerDependencies": {
++        "@react-navigation/native": "^7.3.8",
++        "react": ">= 18.2.0",
++        "react-native": "*",
++        "react-native-gesture-handler": ">= 2.0.0",
++        "react-native-safe-area-context": ">= 4.0.0",
++        "react-native-screens": ">= 4.0.0"
++      }
++    },
+     "node_modules/@remix-run/router": {
+       "version": "1.23.3",
+       "resolved": "https://registry.npmjs.org/@remix-run/router/-/router-1.23.3.tgz",
+@@ -4090,6 +4110,119 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/@vitest/expect": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/expect/-/expect-2.1.9.tgz",
++      "integrity": "sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/spy": "2.1.9",
++        "@vitest/utils": "2.1.9",
++        "chai": "^5.1.2",
++        "tinyrainbow": "^1.2.0"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/mocker": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/mocker/-/mocker-2.1.9.tgz",
++      "integrity": "sha512-tVL6uJgoUdi6icpxmdrn5YNo3g3Dxv+IHJBr0GXHaEdTcw3F+cPKnsXFhli6nO+f/6SDKPHEK1UN+k+TQv0Ehg==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/spy": "2.1.9",
++        "estree-walker": "^3.0.3",
++        "magic-string": "^0.30.12"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      },
++      "peerDependencies": {
++        "msw": "^2.4.9",
++        "vite": "^5.0.0"
++      },
++      "peerDependenciesMeta": {
++        "msw": {
++          "optional": true
++        },
++        "vite": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/@vitest/pretty-format": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-2.1.9.tgz",
++      "integrity": "sha512-KhRIdGV2U9HOUzxfiHmY8IFHTdqtOhIzCpd8WRdJiE7D/HUcZVD0EgQCVjm+Q9gkUXWgBvMmTtZgIG48wq7sOQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "tinyrainbow": "^1.2.0"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/runner": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/runner/-/runner-2.1.9.tgz",
++      "integrity": "sha512-ZXSSqTFIrzduD63btIfEyOmNcBmQvgOVsPNPe0jYtESiXkhd8u2erDLnMxmGrDCwHCCHE7hxwRDCT3pt0esT4g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/utils": "2.1.9",
++        "pathe": "^1.1.2"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/snapshot": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/snapshot/-/snapshot-2.1.9.tgz",
++      "integrity": "sha512-oBO82rEjsxLNJincVhLhaxxZdEtV0EFHMK5Kmx5sJ6H9L183dHECjiefOAdnqpIgT5eZwT04PoggUnW88vOBNQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/pretty-format": "2.1.9",
++        "magic-string": "^0.30.12",
++        "pathe": "^1.1.2"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/spy": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/spy/-/spy-2.1.9.tgz",
++      "integrity": "sha512-E1B35FwzXXTs9FHNK6bDszs7mtydNi5MIfUWpceJ8Xbfb1gBMscAnwLbEu+B44ed6W3XjL9/ehLPHR1fkf1KLQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "tinyspy": "^3.0.2"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/@vitest/utils": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/@vitest/utils/-/utils-2.1.9.tgz",
++      "integrity": "sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/pretty-format": "2.1.9",
++        "loupe": "^3.1.2",
++        "tinyrainbow": "^1.2.0"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
+     "node_modules/@xmldom/xmldom": {
+       "version": "0.8.13",
+       "resolved": "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.8.13.tgz",
+@@ -4242,6 +4375,16 @@
+       "integrity": "sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA==",
+       "license": "MIT"
+     },
++    "node_modules/assertion-error": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/assertion-error/-/assertion-error-2.0.1.tgz",
++      "integrity": "sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/async-limiter": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/async-limiter/-/async-limiter-1.0.1.tgz",
+@@ -4684,6 +4827,16 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/cac": {
++      "version": "6.7.14",
++      "resolved": "https://registry.npmjs.org/cac/-/cac-6.7.14.tgz",
++      "integrity": "sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=8"
++      }
++    },
+     "node_modules/camelcase": {
+       "version": "5.3.1",
+       "resolved": "https://registry.npmjs.org/camelcase/-/camelcase-5.3.1.tgz",
+@@ -4723,6 +4876,23 @@
+       ],
+       "license": "CC-BY-4.0"
+     },
++    "node_modules/chai": {
++      "version": "5.3.3",
++      "resolved": "https://registry.npmjs.org/chai/-/chai-5.3.3.tgz",
++      "integrity": "sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "assertion-error": "^2.0.1",
++        "check-error": "^2.1.1",
++        "deep-eql": "^5.0.1",
++        "loupe": "^3.1.0",
++        "pathval": "^2.0.0"
++      },
++      "engines": {
++        "node": ">=18"
++      }
++    },
+     "node_modules/chalk": {
+       "version": "4.1.2",
+       "resolved": "https://registry.npmjs.org/chalk/-/chalk-4.1.2.tgz",
+@@ -4739,6 +4909,16 @@
+         "url": "https://github.com/chalk/chalk?sponsor=1"
+       }
+     },
++    "node_modules/check-error": {
++      "version": "2.1.3",
++      "resolved": "https://registry.npmjs.org/check-error/-/check-error-2.1.3.tgz",
++      "integrity": "sha512-PAJdDJusoxnwm1VwW07VWwUN1sl7smmC3OKggvndJFadxxDRyFJBX/ggnu/KE4kQAB7a3Dp8f/YXC1FlUprWmA==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 16"
++      }
++    },
+     "node_modules/chokidar": {
+       "version": "3.6.0",
+       "resolved": "https://registry.npmjs.org/chokidar/-/chokidar-3.6.0.tgz",
+@@ -5162,6 +5342,16 @@
+         "node": ">=0.10"
+       }
+     },
++    "node_modules/deep-eql": {
++      "version": "5.0.2",
++      "resolved": "https://registry.npmjs.org/deep-eql/-/deep-eql-5.0.2.tgz",
++      "integrity": "sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=6"
++      }
++    },
+     "node_modules/deep-extend": {
+       "version": "0.6.0",
+       "resolved": "https://registry.npmjs.org/deep-extend/-/deep-extend-0.6.0.tgz",
+@@ -5391,6 +5581,13 @@
+         "node": ">= 0.4"
+       }
+     },
++    "node_modules/es-module-lexer": {
++      "version": "1.7.0",
++      "resolved": "https://registry.npmjs.org/es-module-lexer/-/es-module-lexer-1.7.0.tgz",
++      "integrity": "sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/esbuild": {
+       "version": "0.21.5",
+       "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.21.5.tgz",
+@@ -5470,6 +5667,16 @@
+         "node": ">=4"
+       }
+     },
++    "node_modules/estree-walker": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/estree-walker/-/estree-walker-3.0.3.tgz",
++      "integrity": "sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/estree": "^1.0.0"
++      }
++    },
+     "node_modules/etag": {
+       "version": "1.8.1",
+       "resolved": "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz",
+@@ -5488,6 +5695,16 @@
+         "node": ">=6"
+       }
+     },
++    "node_modules/expect-type": {
++      "version": "1.4.0",
++      "resolved": "https://registry.npmjs.org/expect-type/-/expect-type-1.4.0.tgz",
++      "integrity": "sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">=12.0.0"
++      }
++    },
+     "node_modules/expo-font": {
+       "version": "14.0.12",
+       "resolved": "https://registry.npmjs.org/expo-font/-/expo-font-14.0.12.tgz",
+@@ -6928,6 +7145,13 @@
+         "loose-envify": "cli.js"
+       }
+     },
++    "node_modules/loupe": {
++      "version": "3.2.1",
++      "resolved": "https://registry.npmjs.org/loupe/-/loupe-3.2.1.tgz",
++      "integrity": "sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/lru-cache": {
+       "version": "5.1.1",
+       "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz",
+@@ -6946,6 +7170,16 @@
+         "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc"
+       }
+     },
++    "node_modules/magic-string": {
++      "version": "0.30.21",
++      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
++      "integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@jridgewell/sourcemap-codec": "^1.5.5"
++      }
++    },
+     "node_modules/makeerror": {
+       "version": "1.0.12",
+       "resolved": "https://registry.npmjs.org/makeerror/-/makeerror-1.0.12.tgz",
+@@ -8075,6 +8309,23 @@
+         "node": "20 || >=22"
+       }
+     },
++    "node_modules/pathe": {
++      "version": "1.1.2",
++      "resolved": "https://registry.npmjs.org/pathe/-/pathe-1.1.2.tgz",
++      "integrity": "sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/pathval": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/pathval/-/pathval-2.0.1.tgz",
++      "integrity": "sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">= 14.16"
++      }
++    },
+     "node_modules/picocolors": {
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
+@@ -9236,6 +9487,13 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/siginfo": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/siginfo/-/siginfo-2.0.0.tgz",
++      "integrity": "sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==",
++      "dev": true,
++      "license": "ISC"
++    },
+     "node_modules/signal-exit": {
+       "version": "3.0.7",
+       "resolved": "https://registry.npmjs.org/signal-exit/-/signal-exit-3.0.7.tgz",
+@@ -9350,6 +9608,13 @@
+         "node": ">=8"
+       }
+     },
++    "node_modules/stackback": {
++      "version": "0.0.2",
++      "resolved": "https://registry.npmjs.org/stackback/-/stackback-0.0.2.tgz",
++      "integrity": "sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/stackframe": {
+       "version": "1.3.4",
+       "resolved": "https://registry.npmjs.org/stackframe/-/stackframe-1.3.4.tgz",
+@@ -9383,6 +9648,13 @@
+         "node": ">= 0.6"
+       }
+     },
++    "node_modules/std-env": {
++      "version": "3.10.0",
++      "resolved": "https://registry.npmjs.org/std-env/-/std-env-3.10.0.tgz",
++      "integrity": "sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/stream-buffers": {
+       "version": "2.2.0",
+       "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-2.2.0.tgz",
+@@ -9688,6 +9960,20 @@
+       "integrity": "sha512-fcwX4mndzpLQKBS1DVYhGAcYaYt7vsHNIvQV+WXMvnow5cgjPphq5CaayLaGsjRdSCKZFNGt7/GYAuXaNOiYCA==",
+       "license": "MIT"
+     },
++    "node_modules/tinybench": {
++      "version": "2.9.0",
++      "resolved": "https://registry.npmjs.org/tinybench/-/tinybench-2.9.0.tgz",
++      "integrity": "sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/tinyexec": {
++      "version": "0.3.2",
++      "resolved": "https://registry.npmjs.org/tinyexec/-/tinyexec-0.3.2.tgz",
++      "integrity": "sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/tinyglobby": {
+       "version": "0.2.17",
+       "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
+@@ -9733,6 +10019,36 @@
+         "url": "https://github.com/sponsors/jonschlinkert"
+       }
+     },
++    "node_modules/tinypool": {
++      "version": "1.1.1",
++      "resolved": "https://registry.npmjs.org/tinypool/-/tinypool-1.1.1.tgz",
++      "integrity": "sha512-Zba82s87IFq9A9XmjiX5uZA/ARWDrB03OHlq+Vw1fSdt0I+4/Kutwy8BP4Y/y/aORMo61FQ0vIb5j44vSo5Pkg==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": "^18.0.0 || >=20.0.0"
++      }
++    },
++    "node_modules/tinyrainbow": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/tinyrainbow/-/tinyrainbow-1.2.0.tgz",
++      "integrity": "sha512-weEDEq7Z5eTHPDh4xjX789+fHfF+P8boiFB+0vbWzpbnbsEr/GRaohi/uMKxg8RZMXnl1ItAi/IUHWMsjDV7kQ==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
++    "node_modules/tinyspy": {
++      "version": "3.0.2",
++      "resolved": "https://registry.npmjs.org/tinyspy/-/tinyspy-3.0.2.tgz",
++      "integrity": "sha512-n1cw8k1k0x4pgA2+9XrOkFydTerNcJ1zWCO5Nn9scWHTD+5tp8dghT2x1uduQePZTZgd3Tupf+x9BxJjeJi77Q==",
++      "dev": true,
++      "license": "MIT",
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
+     "node_modules/tmpl": {
+       "version": "1.0.5",
+       "resolved": "https://registry.npmjs.org/tmpl/-/tmpl-1.0.5.tgz",
+@@ -10046,6 +10362,95 @@
+         }
+       }
+     },
++    "node_modules/vite-node": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/vite-node/-/vite-node-2.1.9.tgz",
++      "integrity": "sha512-AM9aQ/IPrW/6ENLQg3AGY4K1N2TGZdR5e4gu/MmmR2xR3Ll1+dib+nook92g4TV3PXVyeyxdWwtaCAiUL0hMxA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "cac": "^6.7.14",
++        "debug": "^4.3.7",
++        "es-module-lexer": "^1.5.4",
++        "pathe": "^1.1.2",
++        "vite": "^5.0.0"
++      },
++      "bin": {
++        "vite-node": "vite-node.mjs"
++      },
++      "engines": {
++        "node": "^18.0.0 || >=20.0.0"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      }
++    },
++    "node_modules/vitest": {
++      "version": "2.1.9",
++      "resolved": "https://registry.npmjs.org/vitest/-/vitest-2.1.9.tgz",
++      "integrity": "sha512-MSmPM9REYqDGBI8439mA4mWhV5sKmDlBKWIYbA3lRb2PTHACE0mgKwA8yQ2xq9vxDTuk4iPrECBAEW2aoFXY0Q==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@vitest/expect": "2.1.9",
++        "@vitest/mocker": "2.1.9",
++        "@vitest/pretty-format": "^2.1.9",
++        "@vitest/runner": "2.1.9",
++        "@vitest/snapshot": "2.1.9",
++        "@vitest/spy": "2.1.9",
++        "@vitest/utils": "2.1.9",
++        "chai": "^5.1.2",
++        "debug": "^4.3.7",
++        "expect-type": "^1.1.0",
++        "magic-string": "^0.30.12",
++        "pathe": "^1.1.2",
++        "std-env": "^3.8.0",
++        "tinybench": "^2.9.0",
++        "tinyexec": "^0.3.1",
++        "tinypool": "^1.0.1",
++        "tinyrainbow": "^1.2.0",
++        "vite": "^5.0.0",
++        "vite-node": "2.1.9",
++        "why-is-node-running": "^2.3.0"
++      },
++      "bin": {
++        "vitest": "vitest.mjs"
++      },
++      "engines": {
++        "node": "^18.0.0 || >=20.0.0"
++      },
++      "funding": {
++        "url": "https://opencollective.com/vitest"
++      },
++      "peerDependencies": {
++        "@edge-runtime/vm": "*",
++        "@types/node": "^18.0.0 || >=20.0.0",
++        "@vitest/browser": "2.1.9",
++        "@vitest/ui": "2.1.9",
++        "happy-dom": "*",
++        "jsdom": "*"
++      },
++      "peerDependenciesMeta": {
++        "@edge-runtime/vm": {
++          "optional": true
++        },
++        "@types/node": {
++          "optional": true
++        },
++        "@vitest/browser": {
++          "optional": true
++        },
++        "@vitest/ui": {
++          "optional": true
++        },
++        "happy-dom": {
++          "optional": true
++        },
++        "jsdom": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/vlq": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/vlq/-/vlq-1.0.1.tgz",
+@@ -10136,6 +10541,23 @@
+         "node": ">= 8"
+       }
+     },
++    "node_modules/why-is-node-running": {
++      "version": "2.3.0",
++      "resolved": "https://registry.npmjs.org/why-is-node-running/-/why-is-node-running-2.3.0.tgz",
++      "integrity": "sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "siginfo": "^2.0.0",
++        "stackback": "0.0.2"
++      },
++      "bin": {
++        "why-is-node-running": "cli.js"
++      },
++      "engines": {
++        "node": ">=8"
++      }
++    },
+     "node_modules/wonka": {
+       "version": "6.3.6",
+       "resolved": "https://registry.npmjs.org/wonka/-/wonka-6.3.6.tgz",
+@@ -10304,7 +10726,8 @@
+       "name": "@ahla/shared",
+       "version": "1.0.0",
+       "devDependencies": {
+-        "typescript": "^5.4.0"
++        "typescript": "^5.4.0",
++        "vitest": "^2.1.9"
+       }
+     }
+   }
+diff --git a/shared/package.json b/shared/package.json
+index 1c37c6e..55a75f5 100644
+--- a/shared/package.json
++++ b/shared/package.json
+@@ -5,9 +5,11 @@
+   "main": "src/index.ts",
+   "types": "src/index.ts",
+   "scripts": {
+-    "typecheck": "tsc --noEmit"
++    "typecheck": "tsc --noEmit",
++    "test": "vitest run"
+   },
+   "devDependencies": {
+-    "typescript": "^5.4.0"
++    "typescript": "^5.4.0",
++    "vitest": "^2.1.9"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/shared/src/__tests__/rules.test.ts b/shared/src/__tests__/rules.test.ts
+new file mode 100644
+index 0000000..cb7ca42
+--- /dev/null
++++ b/shared/src/__tests__/rules.test.ts
+@@ -0,0 +1,158 @@
++import { describe, it, expect } from 'vitest';
++import {
++  isEgPhone,
++  isEmail,
++  initialDonationStatus,
++  isMethodUsable,
++  isValidDonationAmount,
++} from '../rules';
++import { paymentMethods, cases, projects } from '../data';
++import { providers, buildAvailableDays, makeBookingRef } from '../services';
++import type { PaymentMethod } from '../types';
++
++/* ───────────── Donation security rules ───────────── */
++describe('donation status rules', () => {
++  it('manual methods (bank transfer / InstaPay) default to قيد المراجعة (admin approval required)', () => {
++    expect(initialDonationStatus('تحويل بنكي')).toBe('قيد المراجعة');
++    expect(initialDonationStatus('إنستاباي')).toBe('قيد المراجعة');
++  });
++
++  it('gateway methods default to قيد التأكيد (server callback required)', () => {
++    expect(initialDonationStatus('بطاقة بنكية')).toBe('قيد التأكيد');
++    expect(initialDonationStatus('فوري')).toBe('قيد التأكيد');
++  });
++
++  it('the client can NEVER produce مكتمل for any method', () => {
++    for (const m of paymentMethods) {
++      expect(initialDonationStatus(m.id)).not.toBe('مكتمل');
++      expect(['قيد التأكيد', 'قيد المراجعة']).toContain(initialDonationStatus(m.id));
++    }
++  });
++
++  it('the ClientDonationStatus type excludes مكتمل at compile time', () => {
++    // @ts-expect-error — 'مكتمل' is not assignable to ClientDonationStatus
++    const bad: ReturnType<typeof initialDonationStatus> = 'مكتمل';
++    void bad;
++  });
++
++  it('unavailable methods cannot be used (فودافون كاش is قيد التفعيل)', () => {
++    expect(isMethodUsable('فودافون كاش')).toBe(false);
++    expect(isMethodUsable('بطاقة بنكية')).toBe(true);
++  });
++
++  it('every payment method has a valid availability + manual flag', () => {
++    for (const m of paymentMethods) {
++      expect(['متاحة', 'قيد التفعيل', 'غير متاحة حالياً']).toContain(m.availability);
++      expect(typeof m.manual).toBe('boolean');
++    }
++    // every manual method must be a transfer-family method
++    for (const m of paymentMethods.filter((x) => x.manual)) {
++      expect(m.group).toBe('تحويل بنكي');
++    }
++  });
++
++  it('donation amount validation rejects zero, negatives, floats, and absurd values', () => {
++    expect(isValidDonationAmount('500')).toBe(true);
++    expect(isValidDonationAmount(5)).toBe(true);
++    expect(isValidDonationAmount('0')).toBe(false);
++    expect(isValidDonationAmount('-50')).toBe(false);
++    expect(isValidDonationAmount('4')).toBe(false);
++    expect(isValidDonationAmount('10.5')).toBe(false);
++    expect(isValidDonationAmount('')).toBe(false);
++    expect(isValidDonationAmount('2000000')).toBe(false);
++  });
++});
++
++/* ───────────── Contact validation ───────────── */
++describe('Egyptian phone validation', () => {
++  it('accepts valid 010/011/012/015 numbers', () => {
++    for (const p of ['01012345678', '01198765432', '01234567890', '01555555555']) {
++      expect(isEgPhone(p)).toBe(true);
++    }
++  });
++  it('rejects wrong prefixes, lengths, and non-digits', () => {
++    for (const p of ['01312345678', '0101234567', '010123456789', '11012345678', '0101234567a', '', '+201012345678']) {
++      expect(isEgPhone(p)).toBe(false);
++    }
++  });
++});
++
++describe('email validation', () => {
++  it('accepts normal emails and rejects malformed ones', () => {
++    expect(isEmail('user@example.com')).toBe(true);
++    expect(isEmail('a@b.co')).toBe(true);
++    for (const e of ['user@', '@x.com', 'user example.com', 'user@nodot', '']) {
++      expect(isEmail(e)).toBe(false);
++    }
++  });
++});
++
++/* ───────────── Beneficiary privacy (no sensitive data in public case content) ───────────── */
++describe('beneficiary privacy', () => {
++  const phoneLike = /01[0-9]{9}/;
++  const nationalIdLike = /[0-9]{14}/;
++
++  it('no case exposes a phone number or national ID in any public field', () => {
++    for (const c of cases) {
++      for (const field of [c.code, c.title, c.summary, c.need, c.location, c.lastUpdate ?? '']) {
++        expect(field).not.toMatch(phoneLike);
++        expect(field).not.toMatch(nationalIdLike);
++      }
++    }
++  });
++
++  it('case locations are governorate-level only (no street-level details)', () => {
++    for (const c of cases) {
++      expect(c.location).not.toMatch(/شارع|عمارة|منزل رقم|شقة|بجوار/);
++      expect(c.location.length).toBeLessThan(30);
++    }
++  });
++
++  it('cases use anonymised codes, not full family names', () => {
++    // At least the family cases must be code-anonymised (أسرة رقم …)
++    expect(cases.some((c) => /أسرة رقم [0-9]+/.test(c.code))).toBe(true);
++  });
++});
++
++/* ───────────── Booking availability rules ───────────── */
++describe('booking availability', () => {
++  const provider = { ...providers[0], availableDays: [0, 2], unavailableDates: [] as string[] };
++
++  it('only the provider working weekdays are available', () => {
++    const base = new Date(2025, 4, 18); // Sunday
++    const days = buildAvailableDays(provider, base, 7);
++    for (const d of days) {
++      const weekday = new Date(d.iso).getDay();
++      expect(d.available).toBe(provider.availableDays.includes(weekday));
++    }
++  });
++
++  it('explicitly-unavailable dates are excluded even on working weekdays', () => {
++    const base = new Date(2025, 4, 18); // Sunday (weekday 0 = working)
++    const blocked = { ...provider, unavailableDates: ['2025-05-18'] };
++    const days = buildAvailableDays(blocked, base, 3);
++    expect(days[0].iso).toBe('2025-05-18');
++    expect(days[0].available).toBe(false);
++  });
++
++  it('booking references follow the AS-###### format', () => {
++    expect(makeBookingRef(1736000000)).toMatch(/^AS-[0-9]{6}$/);
++    expect(makeBookingRef(1)).toMatch(/^AS-[0-9]{6}$/);
++  });
++});
++
++/* ───────────── Content invariants used by the UI ───────────── */
++describe('content invariants', () => {
++  it('raised never exceeds target in seed data (progress bars stay ≤ 100%)', () => {
++    for (const x of [...cases, ...projects]) {
++      expect(x.raisedAmount).toBeLessThanOrEqual(x.targetAmount);
++    }
++  });
++  it('project updates are dated and newest-first', () => {
++    for (const p of projects) {
++      const dates = (p.updates ?? []).map((u) => u.date);
++      const sorted = [...dates].sort().reverse();
++      expect(dates).toEqual(sorted);
++    }
++  });
++});
+diff --git a/shared/src/data.ts b/shared/src/data.ts
+index 1ec358b..b9f7889 100644
+--- a/shared/src/data.ts
++++ b/shared/src/data.ts
+@@ -8,8 +8,21 @@ import type {
+   FoundationStats,
+   AppNotification,
+   Article,
++  PaymentMethodInfo,
+ } from './types';
+ 
++/**
++ * Payment methods with live availability + confirmation mode (Offer/UX v2).
++ * TODO(backend): serve from GET /config so the admin can toggle availability.
++ */
++export const paymentMethods: PaymentMethodInfo[] = [
++  { id: 'بطاقة بنكية', group: 'دفع إلكتروني', description: 'فيزا / ماستركارد — تأكيد فوري من بوابة الدفع', availability: 'متاحة', manual: false },
++  { id: 'فوري', group: 'دفع إلكتروني', description: 'ادفع بكود فوري من أقرب منفذ', availability: 'متاحة', manual: false },
++  { id: 'إنستاباي', group: 'تحويل بنكي', description: 'حوِّل عبر إنستاباي — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
++  { id: 'فودافون كاش', group: 'محفظة إلكترونية', description: 'الدفع عبر المحفظة الإلكترونية', availability: 'قيد التفعيل', manual: false },
++  { id: 'تحويل بنكي', group: 'تحويل بنكي', description: 'تحويل على حساب الجمعية — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
++];
++
+ export const foundationStats: FoundationStats = {
+   governorates: 22,
+   beneficiaries: '1.2M+',
+@@ -30,6 +43,8 @@ export const cases: HumanitarianCase[] = [
+     targetAmount: 18000,
+     raisedAmount: 10800,
+     supporters: 214,
++    sponsorable: true,
++    lastUpdate: 'تم توثيق الحالة وتحديث بياناتها منذ يومين',
+     gradient: ['#b98a5e', '#7d5a3c'],
+   },
+   {
+@@ -44,6 +59,8 @@ export const cases: HumanitarianCase[] = [
+     targetAmount: 12000,
+     raisedAmount: 4800,
+     supporters: 96,
++    sponsorable: true,
++    lastUpdate: 'تم صرف الدعم الدراسي للفصل الأول منذ أسبوع',
+     gradient: ['#93a7c4', '#617699'],
+   },
+   {
+@@ -58,6 +75,8 @@ export const cases: HumanitarianCase[] = [
+     targetAmount: 40000,
+     raisedAmount: 20000,
+     supporters: 331,
++    sponsorable: false,
++    lastUpdate: 'أُجريت جلسة العلاج الثالثة منذ 3 أيام',
+     gradient: ['#a08768', '#6d543a'],
+   },
+   {
+@@ -72,6 +91,8 @@ export const cases: HumanitarianCase[] = [
+     targetAmount: 60000,
+     raisedAmount: 15000,
+     supporters: 120,
++    sponsorable: true,
++    lastUpdate: 'جارٍ استكمال توثيق الحالة',
+     gradient: ['#8aa0bf', '#586f92'],
+   },
+ ];
+@@ -86,6 +107,11 @@ export const projects: Project[] = [
+     targetAmount: 400000,
+     raisedAmount: 245000,
+     supporters: 1248,
++    updates: [
++      { date: '2025-05-08', text: 'دخول المحطة مرحلة التركيب والتشغيل التجريبي.' },
++      { date: '2025-04-20', text: 'وصول معدات التحلية واكتمال أعمال التجهيز.' },
++      { date: '2025-03-30', text: 'اكتمال دراسة الاحتياج واختيار الموقع.' },
++    ],
+     stages: [
+       { label: 'الدراسة', done: true },
+       { label: 'التجهيز', done: true },
+@@ -102,6 +128,10 @@ export const projects: Project[] = [
+     targetAmount: 200000,
+     raisedAmount: 132000,
+     supporters: 640,
++    updates: [
++      { date: '2025-05-12', text: 'توزيع 1,200 وجبة ساخنة هذا الأسبوع.' },
++      { date: '2025-04-28', text: 'تجهيز المطبخ المركزي الثاني.' },
++    ],
+     stages: [
+       { label: 'التخطيط', done: true },
+       { label: 'التجهيز', done: true },
+@@ -117,6 +147,9 @@ export const projects: Project[] = [
+     targetAmount: 150000,
+     raisedAmount: 90000,
+     supporters: 512,
++    updates: [
++      { date: '2025-05-01', text: 'اعتماد كشوف الطلاب المستحقين للفصل الجديد.' },
++    ],
+     stages: [
+       { label: 'الحصر', done: true },
+       { label: 'الكفالة', done: false },
+@@ -196,6 +229,8 @@ export const donations: Donation[] = [
+   { id: 'd-8', donorName: 'هبة علي', cause: 'كفالة الطالبة نور', amount: 600, method: 'بطاقة بنكية', date: '2025-05-09', recurring: true, status: 'مكتمل' },
+   { id: 'd-9', donorName: 'كريم ماهر', cause: 'ترميم مسكن أسرة', amount: 400, method: 'فوري', date: '2025-05-08', recurring: false, status: 'فشل' },
+   { id: 'd-10', donorName: 'نورهان أشرف', cause: 'الحالات الإنسانية', amount: 300, method: 'فودافون كاش', date: '2025-05-07', recurring: false, status: 'مكتمل' },
++  { id: 'd-11', donorName: 'شريف عادل', cause: 'محطة تحلية مياه', amount: 2500, method: 'تحويل بنكي', date: '2025-05-15', recurring: false, status: 'قيد المراجعة' },
++  { id: 'd-12', donorName: 'آية مصطفى', cause: 'كفالة أسرة محتاجة', amount: 900, method: 'إنستاباي', date: '2025-05-15', recurring: true, status: 'قيد المراجعة' },
+ ];
+ 
+ export const appointments: Appointment[] = [
+diff --git a/shared/src/index.ts b/shared/src/index.ts
+index cc43b46..e2993cb 100644
+--- a/shared/src/index.ts
++++ b/shared/src/index.ts
+@@ -3,3 +3,4 @@ export * from './types';
+ export * from './data';
+ export * from './services';
+ export * from './admin';
++export * from './rules';
+diff --git a/shared/src/rules.ts b/shared/src/rules.ts
+new file mode 100644
+index 0000000..3211cc5
+--- /dev/null
++++ b/shared/src/rules.ts
+@@ -0,0 +1,36 @@
++import { paymentMethods } from './data';
++import type { PaymentMethod } from './types';
++
++/**
++ * Business rules shared by app + dashboard (single source of truth, unit-tested).
++ */
++
++/** Egyptian mobile: 11 digits, starts 010/011/012/015. */
++export const isEgPhone = (v: string): boolean => /^01[0125][0-9]{8}$/.test(v);
++
++export const isEmail = (v: string): boolean => /^\S+@\S+\.\S+$/.test(v);
++
++/** Statuses a CLIENT is allowed to create a donation with. 'مكتمل' is deliberately impossible. */
++export type ClientDonationStatus = 'قيد التأكيد' | 'قيد المراجعة';
++
++/**
++ * Initial status for a new donation, derived ONLY from the payment method:
++ * - manual methods (bank transfer / InstaPay) → 'قيد المراجعة' (admin approval required)
++ * - gateway methods → 'قيد التأكيد' (server payment-callback required)
++ * The frontend can never produce 'مكتمل'.
++ */
++export function initialDonationStatus(method: PaymentMethod): ClientDonationStatus {
++  const info = paymentMethods.find((m) => m.id === method);
++  return info?.manual ? 'قيد المراجعة' : 'قيد التأكيد';
++}
++
++/** A method can be used for a new donation only when it is 'متاحة'. */
++export function isMethodUsable(method: PaymentMethod): boolean {
++  return paymentMethods.find((m) => m.id === method)?.availability === 'متاحة';
++}
++
++/** Positive integer EGP amount within sane bounds. */
++export function isValidDonationAmount(v: string | number): boolean {
++  const n = typeof v === 'number' ? v : Number(v);
++  return Number.isInteger(n) && n >= 5 && n <= 1_000_000;
++}
+diff --git a/shared/src/tokens.ts b/shared/src/tokens.ts
+index 2bcc9c7..50f9c1a 100644
+--- a/shared/src/tokens.ts
++++ b/shared/src/tokens.ts
+@@ -54,9 +54,10 @@ export const spacing = {
+ } as const;
+ 
+ export const radius = {
+-  sm: 10, // inputs, small chips
+-  md: 14, // buttons
+-  lg: 20, // cards, sheets
++  sm: 12, // inputs, small chips
++  md: 14, // compact buttons
++  lg: 16, // cards, sheets
++  btn: 24, // large primary buttons
+   pill: 100, // pills, chips, FAB
+ } as const;
+ 
+diff --git a/shared/src/types.ts b/shared/src/types.ts
+index 744d7bc..4b27f66 100644
+--- a/shared/src/types.ts
++++ b/shared/src/types.ts
+@@ -6,6 +6,7 @@ export interface HumanitarianCase {
+   id: string;
+   code: string; // e.g. "أسرة رقم 1427"
+   title: string;
++  /** Governorate-level only — NEVER exact address (beneficiary privacy). */
+   location: string;
+   summary: string;
+   need: string;
+@@ -14,11 +15,22 @@ export interface HumanitarianCase {
+   targetAmount: number;
+   raisedAmount: number;
+   supporters: number;
++  /** Approved image from the admin panel (privacy-vetted). Fallback = branded gradient. */
++  imageUrl?: string;
++  /** Eligible for monthly sponsorship (كفالة شهرية). */
++  sponsorable?: boolean;
++  /** Latest public update label, e.g. "تم توثيق الحالة منذ يومين". */
++  lastUpdate?: string;
+   gradient: [string, string];
+ }
+ 
+ export type ProjectStatus = 'مستدام' | 'جارٍ' | 'مكتمل';
+ 
++export interface ProjectUpdate {
++  date: string; // ISO
++  text: string;
++}
++
+ export interface Project {
+   id: string;
+   title: string;
+@@ -28,6 +40,10 @@ export interface Project {
+   raisedAmount: number;
+   supporters: number;
+   stages: { label: string; done: boolean }[];
++  /** Approved image from the admin panel. */
++  imageUrl?: string;
++  /** Public timeline updates shown on the project detail page. */
++  updates?: ProjectUpdate[];
+   gradient: [string, string];
+ }
+ 
+@@ -41,6 +57,8 @@ export type ConsultationType =
+ 
+ export interface Consultant {
+   id: string;
++  /** Approved photo or professional avatar from the admin panel. */
++  imageUrl?: string;
+   name: string;
+   specialty: string;
+   type: ConsultationType;
+@@ -59,6 +77,26 @@ export type PaymentMethod =
+   | 'فودافون كاش'
+   | 'تحويل بنكي';
+ 
++export type PaymentAvailability = 'متاحة' | 'قيد التفعيل' | 'غير متاحة حالياً';
++
++export interface PaymentMethodInfo {
++  id: PaymentMethod;
++  /** Method family shown to the user. */
++  group: 'دفع إلكتروني' | 'تحويل بنكي' | 'محفظة إلكترونية';
++  description: string;
++  availability: PaymentAvailability;
++  /**
++   * true = manual method (bank transfer / InstaPay): the donation stays
++   * "قيد المراجعة" until an admin approves it. false = gateway method:
++   * stays "قيد التأكيد" until the SERVER confirms the payment callback.
++   * The app NEVER marks a donation successful on its own.
++   */
++  manual: boolean;
++}
++
++/** 'مكتمل' is set ONLY by backend confirmation or admin approval — never by the app UI. */
++export type DonationStatus = 'مكتمل' | 'قيد المعالجة' | 'قيد التأكيد' | 'قيد المراجعة' | 'فشل';
++
+ export interface Donation {
+   id: string;
+   donorName: string;
+@@ -67,7 +105,7 @@ export interface Donation {
+   method: PaymentMethod;
+   date: string; // ISO
+   recurring: boolean;
+-  status: 'مكتمل' | 'قيد المعالجة' | 'فشل';
++  status: DonationStatus;
+ }
+ 
+ export type AppointmentStatus = 'مؤكد' | 'قيد الانتظار' | 'مكتمل' | 'ملغي';
+@@ -100,6 +138,8 @@ export type ArticleCategory = 'خبر' | 'نشاط' | 'مقال' | 'قافلة';
+ 
+ export interface Article {
+   id: string;
++  /** Approved cover image from the admin panel. */
++  imageUrl?: string;
+   category: ArticleCategory;
+   title: string;
+   excerpt: string;
+diff --git a/shared/vitest.config.ts b/shared/vitest.config.ts
+new file mode 100644
+index 0000000..10531ed
+--- /dev/null
++++ b/shared/vitest.config.ts
+@@ -0,0 +1,9 @@
++import { defineConfig } from 'vitest/config';
++
++export default defineConfig({
++  test: {
++    // exFAT hosts create AppleDouble '._*' sidecar files — never treat them as tests.
++    include: ['src/**/*.test.ts'],
++    exclude: ['**/._*', '**/node_modules/**'],
++  },
++});

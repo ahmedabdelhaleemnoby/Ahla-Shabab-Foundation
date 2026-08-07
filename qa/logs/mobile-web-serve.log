@@ -1,0 +1,7 @@
+ INFO  Accepting connections at http://localhost:4600
+ HTTP  7/26/2026 9:06:29 AM ::1 GET /
+ HTTP  7/26/2026 9:06:29 AM ::1 Returned 200 in 54 ms
+ HTTP  7/26/2026 9:06:44 AM ::1 GET /
+ HTTP  7/26/2026 9:06:44 AM ::1 Returned 200 in 11 ms
+ HTTP  7/26/2026 9:06:44 AM ::1 GET /favicon.ico
+ HTTP  7/26/2026 9:06:44 AM ::1 Returned 404 in 6 ms

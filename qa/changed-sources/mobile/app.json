@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "خواطر أحلى شباب",
+    "slug": "ahla-shabab",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "ahlashabab",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "tech.saasfarm.ahlashabab"
+    },
+    "android": {
+      "package": "tech.saasfarm.ahlashabab",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#14284A"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "supportsRTL": true
+    }
+  }
+}

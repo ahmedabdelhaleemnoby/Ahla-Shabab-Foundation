@@ -1,0 +1,35 @@
+# REQUIREMENTS STATUS
+
+**Date:** 2026-07-26 · **Commit:** `ec46501` (main, clean) · **Legend:** PASS / PARTIAL / FAIL / BLOCKED / N/A
+**Method key:** `[live]` = verified in a running browser (mobile app via Expo web export, or dashboard); `[code]` = source inspection; `[build]` = command output.
+
+| # | Requirement | Status | Evidence | Remaining issue | Action |
+|---|---|---|---|---|---|
+| 1 | Five-item bottom navigation | **PARTIAL** | `[live]` Home screenshot shows exactly 5 tabs, correct RTL order (الأسر · الحالات العاجلة · تبرع · الاستشارات · اعرف عنا), تبرع raised/emphasized & centered. `[code]` `mobile/App.tsx:100-105`, `mobile/src/components/TabBar.tsx:9-13`. | Navigator declares **6** `Tab.Screen`s — a hidden `Home` tab is the initial route, so **no tab is highlighted on cold launch** (confirmed live). Tab #1 label is `الأسر`, spec said `الأسر/الحالات`. | Remove/relabel the hidden `Home` tab or set an active tab on launch; align label #1. (D-01, D-08) |
+| 2 | Bottom bar hidden internally | **PASS** | `[live]` Governorate-detail screen renders with **no** bottom bar. `[code]` all internal screens are root-`Stack` siblings outside the `Main` tab navigator (`App.tsx:132-171`). Verified for case details, consultation forms, article, governorate, login/OTP. | — | — |
+| 3 | Email OTP demo | **PASS** | `[code]` `EmailAuthScreen.tsx` (email input, `isEmail` gate, whitespace stripped, lowercased before pass), `OtpScreen.tsx` (6-digit `number-pad`, any 6-digit accepted, 30s resend, `TODO(production)` markers). | OtpScreen copy "تم إرسال…" (past tense) has no demo caveat on that screen. | Soften OTP copy or add a demo note. (D-06) |
+| 4 | Home statistics removed | **PASS** | `[live]` Home has no impact-number section (donation → consultations → vision/mission → urgent case). `[code]` `HomeScreen.tsx` doesn't import `foundationStats`. | Stale layout comment `HomeScreen.tsx:20-22` still describes old sections. | Delete stale comment. (D-09) |
+| 5 | Donation first | **PASS** | `[live]` Section 1 = "ساهم في دعم الأسر الكريمة". `[code]` `HomeScreen.tsx:30`. | — | — |
+| 6 | Consultations second | **PASS** | `[live]` Section 2 = "خدمة الاستشارات المجانية". `[code]` `HomeScreen.tsx:68`. | — | — |
+| 7 | Governorates moved to About | **PASS** | `[live]` About screen shows "نطاق عملنا في المحافظات" with 12 chips; Home has none. `[code]` `NewsScreen.tsx:72-104`, no `workGovernorates` on Home. | — | — |
+| 8 | Governorate interaction | **PARTIAL** | `[live]` Tapping القاهرة → `GovernorateActivity` with services/cases/initiative. `[code]` `NewsScreen.tsx:85` → `GovernorateActivityScreen`. | Content is **generic, not per-governorate** (`cases.slice(0,2)` — same 2 cases for every governorate; hardcoded initiative). No empty-state; missing overflow guards on the detail title. | Filter content by governorate; add empty state + title `numberOfLines`. (D-05) |
+| 9 | Provider dashboard | **PASS** | `[code]` `mobile/src/screens/ConsultantDashboardScreen.tsx` + `providerStore.ts`: Overview (5 metrics), Bookings, Forms, Profile, demo banner. | The **web** `dashboard/` is a separate admin/CMS console; provider dashboard is the mobile screen. | — |
+| 10 | Provider availability | **PARTIAL** | `[code]` Day toggle, add/remove slots, blocked dates work (`providerStore.ts:162-215`). | **Start/end times are read-only** (no editor, `:203`); **no persistence** — state resets on reload despite "مُحفوظة محلياً" banner. | Add time editing; persist (AsyncStorage) or fix the banner claim. (D-03, D-04) |
+| 11 | Provider bookings | **PARTIAL** | `[code]` Filters (الكل/جديد/مؤكد/مكتمل/ملغي), search, details, Confirm/Complete/Cancel (`:436-458`). | **Reschedule action missing**; status changes not persisted across reload. | Add Reschedule; persist status. (D-02, D-04) |
+| 12 | Provider form answers | **PASS** | `[code]` Expanded booking shows common + specialized answers, attachment placeholder, optional-field guards, text wrapping (`:384-433`). | Very long single specialized answer may overflow (`:417-419`). | Add `flex:1` to answer value. (D-11) |
+| 13 | Guest public browsing | **PASS** | `[code]` No gate on Home/Cases/Urgent/Sponsorship/About/Projects/News/Services/Donate/Consultations; `[live]` browsed several as guest. | — | — |
+| 14 | Guest personal-history restrictions | **PASS** | `[code]` `LoginGate` wraps DonationHistory, Receipts, MyBookings, Favorites, Notifications. | — | — |
+| 15 | Friendly login gate | **PASS** | `[code]` `LoginGate.tsx:49-66` — explanation + benefit bullets + "تسجيل الدخول" + "متابعة كزائر". Soft, never a hard block. | — | — |
+| 16 | Guest consultation submission | **PASS** | `[code]` `ConsultationRequestScreen.tsx:102-121` submits for guests (fallback email), confirmation + demo disclaimer. | In-memory only (see #18). | — |
+| 17 | Same-email deduplication | **PASS** | `[code]` `demoUsers.ts` — `normalizeEmail` (trim+lowercase) + `Map` keyed by normalized email; different casing/spaces reuse one identity. | **No automated test coverage** of the dedup module. | Add vitest for `normalizeEmail`/`findOrCreate`. (D-07) |
+| 18 | Login links prior requests | **PASS** | `[code]` `loginDemoUserByEmail` (`demoUsers.ts:93-113`) replays stored consultations into the session, reference-guarded, no duplicate. | In-memory only → **lost on app restart** (no AsyncStorage). Works within a session. | Persist or state the limitation. (D-04) |
+| 19 | RTL | **PASS** | `[live]` Nav + screens render RTL correctly (order, right-aligned text, LTR email/OTP inputs). `[code]` `App.tsx:8-9` `forceRTL(false)` + manual `row-reverse`. | — | — |
+| 20 | Responsive behavior | **PARTIAL** | `[live]` Mobile app verified at 375px (clean); dashboard verified at desktop. `[code]` safe-area via `Math.max(insets.bottom,12)`, `adjustsFontSizeToFit` on some buttons. | **320px / 430px / tablet / Android safe-area / keyboard not tested** (no emulator/device) — BLOCKED sub-aspects. Some overflow guards missing. | Device/emulator pass at 320/430. |
+| 21 | Demo safety | **PASS** | `[code]` 0 `fetch`/`axios`/`localhost`/secrets in mobile; disclaimers present; payment never auto-completes (`initialDonationStatus` unit-tested). Web dashboard uses only `localStorage`. | 55 `any` usages (tech debt). | Optional: tighten types. (D-11) |
+| 22 | Build success | **PASS** | `[build]` Dashboard `vite build` exit 0; mobile `tsc` exit 0; shared `tsc` + `vitest` 28/28 exit 0; mobile web export exit 0. | — | — |
+| 23 | No dead buttons | **PASS** | `[code]` all nav targets resolve to registered screens (see NAVIGATION_MATRIX); `[live]` traversed Home/About/Governorate/Consultations tabs & CTAs — all worked. | Not every mobile button runtime-clicked (no device). Reschedule is a missing feature, not a dead button. | — |
+| 24 | Client walkthrough document | **PASS** | Present: `CLIENT_DEMO_WALKTHROUGH.md` (repo root). | Verify it reflects the 5-tab nav + email login. | Refresh doc if stale. |
+
+## Totals
+- **PASS: 19** · **PARTIAL: 5** · **FAIL: 0** · **BLOCKED: 0** (with BLOCKED sub-aspects noted in #20)
+- **Weighted completion ≈ 90%** (PASS=1, PARTIAL=0.5 → 21.5/24).

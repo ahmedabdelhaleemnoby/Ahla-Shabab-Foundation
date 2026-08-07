@@ -1,0 +1,12 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/ahmedabuzyad/Ahla-Shabab-Foundation/shared
+
+ ✓ src/__tests__/cms.test.ts (14 tests) 5ms
+ ✓ src/__tests__/rules.test.ts (18 tests) 7ms
+
+ Test Files  2 passed (2)
+      Tests  32 passed (32)
+   Start at  17:51:15
+   Duration  333ms (transform 97ms, setup 0ms, collect 140ms, tests 12ms, environment 0ms, prepare 94ms)
+

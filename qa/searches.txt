@@ -1,0 +1,31 @@
+== TODO/FIXME ==
+mobile/src/store/appState.ts:6: * TODO(backend): replace with real auth (JWT) + GET /me/donations. Receipt
+mobile/src/components/RemoteImage.tsx:10: * - `uri` comes from the admin panel (TODO(backend): media upload URLs).
+mobile/src/screens/DonateScreen.tsx:60:    // TODO(backend): POST /donations → navigate with the server's reference/status.
+mobile/src/screens/BookAppointmentScreen.tsx:48:  // TODO(backend): GET /services/:id/availability — booked slots come from the server.
+mobile/src/screens/OtpScreen.tsx:34:    // Mock: any 6-digit code is accepted. TODO(backend): POST /auth/otp/verify.
+mobile/src/screens/FavoritesScreen.tsx:12:/** Mock favorites: first two projects + first sponsorable case. TODO(backend): GET /me/favorites. */
+dashboard/src/pages/Content.tsx:38:          TODO(backend): PUT /admin/config/impact. */}
+dashboard/src/pages/Donations.tsx:33:    // TODO(backend): PATCH /admin/donations/:id/status + activity-log entry.
+dashboard/src/pages/Reports.tsx:92:      {/* Notification performance (stub — TODO(backend): real delivery metrics) */}
+shared/src/data.ts:16: * TODO(backend): serve from GET /config so the admin can toggle availability.
+
+== MOCK/HARDCODED ==
+mobile/src/screens/MyBookingsScreen.tsx:22:// Treat these mock appointments as "mine" for the demo.
+mobile/src/screens/OtpScreen.tsx:34:    // Mock: any 6-digit code is accepted. TODO(backend): POST /auth/otp/verify.
+mobile/src/screens/FavoritesScreen.tsx:12:/** Mock favorites: first two projects + first sponsorable case. TODO(backend): GET /me/favorites. */
+dashboard/src/pages/Overview.tsx:11:// bookings over the week (mock distribution)
+shared/src/services.ts:4: * All mock data for now; shapes mirror what the backend/dashboard will manage.
+shared/src/admin.ts:2: * Admin / management mock data (Technical Offer §5).
+
+== localhost/console.log/eslint-disable == (none)
+== @ts-expect-error ==
+shared/src/__tests__/rules.test.ts:33:    // @ts-expect-error — 'مكتمل' is not assignable to ClientDonationStatus
+
+== as any ==
+mobile/src/screens/DonationHistoryScreen.tsx:91:              <Pill label={d.status} tone={statusTone(d.status) as any} />
+mobile/src/screens/ArticleDetailScreen.tsx:33:          <Pill label={article.category} tone={catTone(article.category) as any} />
+mobile/src/screens/ReceiptsScreen.tsx:52:                <Pill label={r.status} tone={tone(r.status) as any} />
+dashboard/src/pages/Users.tsx:48:          <select value={reg} onChange={(e) => setReg(e.target.value as any)} className="field !w-auto">
+
+== useNavigation<any> count: 35 (typed-nav debt) ==

@@ -1,0 +1,14 @@
+
+> ahla-shabab-dashboard@1.0.0 build
+> node scripts/sync-fonts.mjs && tsc --noEmit && vite build
+
+[sync-fonts] fonts up to date
+vite v5.4.21 building for production...
+transforming...
+✓ 1625 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.57 kB │ gzip:   0.43 kB
+dist/assets/index-LWXAz8Wo.css   24.80 kB │ gzip:   5.76 kB
+dist/assets/index-DQc4kka_.js   412.25 kB │ gzip: 117.97 kB
+✓ built in 1.63s

@@ -1,0 +1,27 @@
+### CMD: (shared) tsc --noEmit ; vitest run
+### started: 2026-07-26T05:57:06Z
+--- typecheck ---
+
+> @ahla/shared@1.0.0 typecheck
+> tsc --noEmit
+
+typecheck_exit=0
+--- vitest run ---
+
+> @ahla/shared@1.0.0 test
+> vitest run
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Volumes/PortableSSD/Ahla Shabab Foundation/shared
+
+ ✓ src/__tests__/cms.test.ts (10 tests) 6ms
+ ✓ src/__tests__/rules.test.ts (18 tests) 7ms
+
+ Test Files  2 passed (2)
+      Tests  28 passed (28)
+   Start at  08:57:09
+   Duration  664ms (transform 236ms, setup 0ms, collect 254ms, tests 13ms, environment 0ms, prepare 573ms)
+
+### TEST_EXIT: 0
+### ended: 2026-07-26T05:57:10Z

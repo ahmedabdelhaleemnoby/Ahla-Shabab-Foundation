@@ -1,0 +1,10 @@
+server: cloudflare
+content-security-policy: default-src 'self';script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net;style-src 'self' 'unsafe-inline' cdn.jsdelivr.net;img-src 'self' data: cdn.jsdelivr.net;font-src 'self' cdn.jsdelivr.net;base-uri 'self';form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-frame-options: SAMEORIGIN
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 98
+x-ratelimit-reset: 57

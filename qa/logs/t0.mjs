@@ -1,0 +1,12 @@
+import { launch, boot, shot, text, sleep } from './lib.mjs';
+const { browser, page, logs, requests } = await launch();
+await boot(page);
+await shot(page, '00-home-top');
+console.log('--- TITLE:', await page.title());
+console.log('--- URL:', page.url());
+console.log('--- HAS __nav:', await page.evaluate(() => typeof globalThis.__nav));
+console.log('--- HAS __appState:', await page.evaluate(() => typeof globalThis.__appState));
+console.log('--- CONSOLE ---'); logs.forEach(l=>console.log(l));
+console.log('--- NON-LOCAL REQUESTS ---');
+requests.filter(r=>!r.includes('localhost:8087')).forEach(r=>console.log(r));
+await browser.close();
