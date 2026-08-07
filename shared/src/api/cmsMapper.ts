@@ -81,11 +81,12 @@ function mapSettings(w: Record<string, any> | undefined, d: CmsSettings): CmsSet
 /* ----------------------------------------------------------- consultations */
 
 /**
- * The API today keys consultation types in English (`psychological`, `legal`,
- * `family`) while the app keys them in Arabic (`نفسية`, `دينية`, `طبية`,
- * `أسرية`, `أعمال`) — and the app's keys are route params, so they cannot
- * simply be replaced. This aliases the two so a not-yet-seeded backend still
- * lines up with the bundled forms.
+ * Aliases English consultation keys onto the app's Arabic ones.
+ *
+ * The backend now seeds the Arabic keys directly (T-07), so on a current
+ * deployment this table is a no-op. It stays because the app ships ahead of the
+ * API: an installed build may talk to a server that has not been redeployed yet,
+ * and the app's keys are route params, so they cannot simply be replaced.
  */
 const KEY_ALIASES: Record<string, string> = {
   psychological: 'نفسية',

@@ -370,6 +370,52 @@ the maintainers, not a side effect of adding CI. Recommended, not imposed.
 
 ---
 
+## T-07 — Consultation types speak the app's contract ✅ DONE in code, UNVERIFIED in prod
+
+**Before.** The backend seeded `psychological, legal, family, social, educational`; the app routes
+consultations by five **Arabic** keys (`نفسية، دينية، طبية، أسرية، أعمال`), which are route
+parameters rather than labels. Only two of the five corresponded at all.
+
+**The defect the finding missed.** The consent box was typed `checkbox`. In the app, `checkbox`
+shares a branch with `multiselect` and renders one tappable chip **per option** — and the consent
+field has **no options**. An API-driven form would therefore have shown a **required agreement with
+nothing to tick**, with validation blocking submission and no control able to satisfy it. The
+consultation form would have been unsubmittable.
+
+**Why nothing visibly broke.** `cmsMapper.isFullFidelity()` rejects an API type missing a
+disclaimer, a `consent`-typed field, or options on a choice field, and falls back to the bundled
+form. Users saw a working screen throughout. The cost was silent: **no consultation form edited in
+the dashboard could ever reach the app** — the CMS form builder was writing to nothing.
+
+**Files.** `src/cms/default-consultation-types.ts` (new, canonical, **generated from the shared
+`defaultConsultations` rather than transcribed** so the two cannot drift); `prisma/seed/cms-state.ts`
+imports it and stops hardcoding `schemaVersion: 10`; `src/cms/cms-migration.service.ts` gains
+**migration 10 → 11**; `CMS_SCHEMA_VERSION` → 11; Swagger example `psychological` → `نفسية`;
+`cmsMapper.ts` comment corrected in both copies.
+
+Migration 8 → 9 — which wrote the bad rows — is deliberately untouched: an applied migration is
+history and editing it cannot repair what it already produced, which is why step 11 exists. Step 11
+replaces types only when they are not already canonical, so a deliberate dashboard edit survives.
+
+**Retest.** Backend **63 passed / 6 suites** (was 57); shared **43 passed / 3 files** (was 35);
+`nest build` and the dashboard build clean. The decisive case: with the new seed the mapper **takes
+the form from the API** — a server-side label edit survives into the rendered form — while the old
+shape is still rejected into fallback, so the safety net stays.
+
+**Acceptance NOT yet met.** T-07 asks for `verify-api-layer.ts` at 47/47. It still reports **45/47**
+with the same two KNOWN entries, because the script probes the **live** API and production still
+serves the old seed. This is DONE-in-code and UNVERIFIED-in-production until the deploy lands and
+the script is re-run.
+
+**⚠️ Separate finding — recorded as T-17.** `seedCmsState` upserts with a populated `update:` branch,
+and `deploy.yml` runs `prisma db seed` on **every** push to `main`. **Every deploy therefore
+overwrites the whole CMS document** — settings, menu, home, pages, payment methods, consultation
+types — with the bundled defaults, destroying anything an administrator authored in the dashboard.
+Not caused by T-07 and out of its scope, but it undermines the CMS work delivered in T-02. Left as a
+decision rather than a silent change, because it alters how the team ships content updates.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

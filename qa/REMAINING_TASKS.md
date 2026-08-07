@@ -48,10 +48,31 @@ mid/senior full-stack engineer familiar with this codebase.
 
 ## P1 — must complete before production (9 tasks, ≈16d)
 
-### T-07 · Fix consultation-type key mismatch + missing consent field
+### T-07 · Fix consultation-type key mismatch + missing consent field — ✅ DONE in code, UNVERIFIED in prod
 - Module Consultations · Backend+Data · High · Effort 1d · Files `backend/prisma/seed/**`, `src/cms/**`
 - Backend seeds `psychological, legal, family, social, educational`; the app expects the five Arabic keys, and backend types carry **no consent field**. Evidence: `verify-api-layer.log`.
-- **Acceptance** `verify-api-layer.ts` reports 47/47 with zero known defects.
+- **Third defect, not in the original finding:** the consent box was typed `checkbox`, and the app
+  renders `checkbox` from `options` — which the consent field has none of. An API-driven form would
+  have shown a **required agreement with nothing to tick and no way to submit**. Nothing broke only
+  because `cmsMapper.isFullFidelity()` rejects such a type; the silent cost was that **no
+  consultation form edited in the dashboard could ever reach the app**.
+- **Done** canonical `src/cms/default-consultation-types.ts` generated from the shared defaults;
+  seed imports it; **new CMS migration 10 → 11** repairs already-deployed rows (8 → 9 left intact
+  on purpose); `CMS_SCHEMA_VERSION` → 11; seed stops hardcoding the version; Swagger example fixed.
+  Backend 63 tests / shared 43 tests pass. Evidence `final-delivery-audit/api/T-07-consultation-contract.md`.
+- **Acceptance** `verify-api-layer.ts` reports 47/47 with zero known defects — **NOT YET MET**: still
+  45/47, because the script probes the **live** API and production still serves the old seed. Re-run
+  after the next deploy; both the seed and the on-read migration converge on the canonical set.
+
+### T-17 · Every deploy overwrites the admin's CMS content — NEW (found during T-07)
+- Module CMS · Backend/Deploy · **High** · Effort 0.25d · File `prisma/seed/cms-state.ts`
+- `seedCmsState` upserts with a populated `update:` branch, and `deploy.yml` runs `prisma db seed`
+  on **every** push to `main`. So every deploy resets settings, menu, home layout, pages, payment
+  methods and consultation types to the bundled defaults — **destroying anything an administrator
+  authored through the dashboard CMS**. This substantially undermines the CMS work in T-02.
+- **Acceptance** A CMS edit made in the dashboard survives a deploy.
+- Likely fix: seed on `create` only, or gate reseeding behind an explicit flag. Left as a decision
+  because it changes how the team ships content updates.
 
 ### T-08 · Authorization test suite (RBAC 403 + IDOR)
 - Module Security · Backend · High · Depends T-06 · Effort 2d
