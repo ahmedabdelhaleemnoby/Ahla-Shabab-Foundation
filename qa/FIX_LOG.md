@@ -560,6 +560,52 @@ editor now **discloses** it: «مواعيد العمل والأيام لا تُ�
 
 ---
 
+## T-19 — Provider scheduling persists ✅ DONE (round-trip proof BLOCKED on T-06)
+
+**Before.** The editor collected **day indexes plus Arabic slot labels** (`'10:00 ص'`) against a
+server that keeps **one range per weekday** — `@@unique([providerId, weekday])` — and steps
+`startTime → endTime` by `slotMinutes` into the `"HH:mm"` times the booking engine keys on. The two
+models are not translatable in that direction: with one row per weekday, picking 9 ص and 6 م would
+have had to collapse into `09:00 → 18:00`, **silently opening every hour between** as bookable slots
+the admin never chose. That is why T-18 disclosed the gap rather than half-wiring it.
+
+**Fix.** The editor now speaks the server's model: per weekday, enable/disable plus a start, an end
+and a slot length, with a live «N موعد» count computed the way the server computes it. Blocked dates
+are managed through the detail route (the only one returning `unavailableDates`) with add/remove
+diffs. `store/adminApi.ts` gained `ProviderSchedule`, `schedules` on `AdminProviderRow`,
+`fetchAdminProvider`, `updateProviderSchedule`, `addUnavailableDate`, `removeUnavailableDate`. The
+page's row type no longer extends the shared `Provider`, which carries slot labels and a gradient the
+admin API has no concept of.
+
+Save order is deliberate — identity first (a new provider has no id until `create` returns), then
+the schedule, then blocked-date diffs. On failure the error surfaces and the modal stays open; the
+identity save is **not** rolled back, because a partial save the admin can retry beats discarding the
+name they just typed.
+
+**Backend gap found and closed in passing.** `UpdateScheduleSchema` validated every field but
+**never the pair**, so `17:00 → 09:00` stored happily and produced zero bookable slots — a provider
+that looks scheduled and can never be booked. Now refused server-side too, so any client is covered
+rather than just this dashboard.
+
+**Retest.** New `provider-schedule-contract.e2e-spec.ts` — **9 cases** pinning the contract from the
+client's side: the editor's payload validates against the real DTO; the old 12-hour label is
+**rejected**, proving the previous shape was genuinely unsendable; an empty `<input type="time">`
+is rejected; and the UI's slot count equals `generateTimeSlots(...).length` across remainder,
+zero-span and inverted ranges. Full backend suite **76 passed / 8 suites** (was 67 / 7); both builds
+clean.
+
+Live in the browser: the modal shows 7 weekday toggles and a blocked-date picker, **no Arabic slot
+chips**, and the T-18 disclosure is gone because it now saves. Enabling الإثنين gives
+`09:00–17:00` at 60 minutes → **«8 موعد»**, matching `generateTimeSlots`. Setting the end before the
+start drops it to **«0 موعد»** and **blocks the save** with «المدة لا تكفي لموعد واحد» — the invalid
+schedule never reaches the server.
+
+**Result.** Half the acceptance is proven, half is **BLOCKED, not skipped**: the round trip — save as
+a signed-in admin, then read `GET /providers/:id/availability` — needs an admin token (T-06). It is a
+five-minute check once staging exists, not more work. No requirement row changes status.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

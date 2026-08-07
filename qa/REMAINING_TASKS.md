@@ -196,15 +196,27 @@ mid/senior full-stack engineer familiar with this codebase.
   exactly what the hook maps. Bundle 419.27 → **399.66 kB** across T-16+T-18.
   Evidence `final-delivery-audit/reports/T-18-reference-data-from-api.md`.
 
-### T-19 · Provider scheduling is still local — NEW (found during T-18)
-- Module Admin · Dashboard→API · **P2** · Effort 1d · File `pages/Providers.tsx`
-- Working days, time slots and unavailable dates are edited locally and never saved. The server
-  models availability as `{weekday, startTime, endTime, slotMinutes}` (`PATCH
-  /admin/providers/:id/schedule`) while the editor uses day indexes plus Arabic slot labels
-  (`'10:00 ص'`), so the two need a real translation layer — deliberately not half-wired.
-- The editor now **discloses** this rather than appearing to save:
-  «مواعيد العمل والأيام لا تُحفظ على الخادم بعد — تُحفظ بيانات المقدّم الأساسية فقط.»
-- **Acceptance** Editing a provider's schedule persists and drives real booking availability.
+### T-19 · Provider scheduling — ✅ DONE (round-trip proof BLOCKED on T-06)
+- Module Admin · Dashboard→API · **P2** · Effort 1d · Files `pages/Providers.tsx`, `store/adminApi.ts`
+- The editor spoke a model the API cannot express: day indexes plus Arabic slot labels, against a
+  server that keeps **one range per weekday** (`@@unique([providerId, weekday])`) and steps it by
+  `slotMinutes`. Picking 9 ص and 6 م would have collapsed to `09:00 → 18:00`, silently opening every
+  hour between — slots the admin never chose. That is why T-18 disclosed it instead of half-wiring.
+- **Done** editor rebuilt on ranges (day toggle + start + end + slot length) with a live «N موعد»
+  count; blocked dates add/remove via the detail route; `updateProviderSchedule`,
+  `addUnavailableDate`, `removeUnavailableDate`, `fetchAdminProvider` added; provider cards show the
+  real schedule. Save order: identity → schedule → blocked-date diffs.
+- **Backend gap closed in passing** `UpdateScheduleSchema` validated each field but never the pair,
+  so `17:00 → 09:00` stored fine and yielded zero bookable slots — a provider that looks scheduled
+  and can never be booked. Now rejected server-side as well as in the editor.
+- **Acceptance** *persists and drives real booking availability* — **half met, half BLOCKED.** The
+  editor writes exactly the shape the booking engine consumes: 9 contract tests against the real DTO,
+  and the UI's slot count matches `generateTimeSlots` across 7 cases (remainder, zero-span,
+  inverted). Live: enabling الإثنين gives `09:00–17:00`/60m → «8 موعد»; an inverted range shows
+  «0 موعد» and **blocks the save**. Not executable here: the round trip (save as a signed-in admin,
+  then read `GET /providers/:id/availability`) — no admin token exists (**T-06**). A five-minute
+  check once staging exists. Backend suite **76 / 8 suites**.
+  Evidence `final-delivery-audit/reports/T-19-provider-scheduling.md`.
 
 ---
 
