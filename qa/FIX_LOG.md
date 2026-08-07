@@ -698,6 +698,49 @@ delivery.
 
 ---
 
+## T-15 — Receipts: unguessable references, and money that was stuck ✅ DONE
+
+**The task's framing did not match the system.** T-15 asks for "User A requesting B's receipt →
+403/404", which assumes an owner-scoped receipt resource. There is no Receipt model: the donation
+**reference** is the receipt, and `GET /donations/:reference` is `@Public()` by design so a guest
+donor — who has no account — can check it. The reference is the credential; guessability is the whole
+story. Asserting a 403 would have asserted the wrong thing.
+
+**Three defects, all measured.**
+
+1. **Enumerable.** `AS-` + six `Math.random()` digits = **900,000 values**, shared by donations,
+   bookings *and* consultations — two with public lookups. Walking that space harvests every donor's
+   name and amount, and every booking's phone, age, gender and **national id**.
+2. **Collisions.** 10,000 old references produced **51 duplicates**. `reference` is `@unique`, so
+   each is a *failed* donation or booking; ~50% odds of a first collision by the ~1,100th record.
+   200,000 new references: **zero**.
+3. **Real money stuck — the worst of the three.** `MANUAL_METHODS` listed
+   `[BANK_TRANSFER, INSTAPAY]` and was never updated when the methods were narrowed to the client's
+   three. INSTAPAY is deprecated and uncreatable; **فوري and فودافون كاش were missing**, so those
+   donations were created «قيد التأكيد» — *awaiting a gateway callback that can never arrive, because
+   there is no gateway* — and **never entered the admin's review queue**. The file's own comment
+   already said all three methods are admin-approved: the code and its documentation disagreed, and
+   the code won.
+
+**Fix.** 60 bits of `crypto.randomBytes` in Crockford base32 (no I/L/O/U, so a code survives being
+read aloud) → ~1.15e18. `MANUAL_METHODS` inverted to an empty `GATEWAY_METHODS` allowlist, so any
+method added later defaults to admin review rather than to silent limbo. The public receipt drops
+`userId`/`gatewayTxId`/`id`; the public booking lookup drops `nationalId`. Existing short references
+keep working — lookups are exact-match.
+
+**Retest.** 9 integration tests against a real PostgreSQL, **mutation-checked**: restoring the old
+generator and the old method list fails exactly four tests and nothing else. **101 unit + 20
+integration + 43 shared** all pass.
+
+**Result.** Row 27 → **PASS**; recounted tally **PASS 22 · PARTIAL 22 · FAIL 0 · MISSING 3 · BLOCKED
+5 = 70%**.
+
+**⚠️ ACTION FOR OPS.** Existing production donations by فوري or فودافون كاش are likely sitting in
+«قيد التأكيد», invisible to the review queue. The fix corrects new donations only. The query to find
+them is in the evidence file; running it needs database access (T-06).
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

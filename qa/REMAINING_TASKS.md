@@ -178,9 +178,36 @@ mid/senior full-stack engineer familiar with this codebase.
 - Module Donations · Full stack · High · Depends T-03, T-06 · Effort 2d
 - **Acceptance** User uploads proof → donation `قيد المراجعة` → only an authorized admin can approve → receipt issued → audit entry written.
 
-### T-15 · Receipts: server-issued + ownership test
-- Module Receipts · Backend+Mobile · High · Depends T-05 · Effort 1.5d
-- **Acceptance** Receipt exists only after confirmed/approved payment; unique reference; **User A requesting B's receipt id → 403/404**.
+### T-15 · Receipts: server-issued + ownership test — ✅ DONE (3 real defects fixed)
+- Module Receipts · Backend+Mobile · High · Effort 1.5d
+- **The task's framing did not match the system.** There is no Receipt model: the donation
+  *reference* IS the receipt, and `GET /donations/:reference` is `@Public()` by design so a guest
+  donor can check it. The reference is therefore the credential, and guessability is the whole story
+  — asserting a 403 would have asserted the wrong thing.
+- **Defect 1 — enumerable references.** `AS-` + 6 `Math.random()` digits = **900,000 values**, shared
+  by donations, bookings *and* consultations, two of which have public lookups. Walking that space
+  harvests every donor's name and amount and every booking's phone, age, gender and **national id**.
+  Now 60 bits of `crypto.randomBytes` in Crockford base32 (~1.15e18).
+- **Defect 2 — collisions, measured.** 10,000 old references → **51 duplicates**; `reference` is
+  `@unique`, so each is a *failed* donation. ~50% odds of a first collision by the ~1,100th record.
+  20,000 new references → **0**.
+- **Defect 3 — real money stuck. `MANUAL_METHODS` listed `[BANK_TRANSFER, INSTAPAY]`** and was never
+  updated when the methods were narrowed. INSTAPAY is deprecated; **فوري and فودافون كاش were
+  missing**, so those donations were created «قيد التأكيد» — awaiting a gateway callback that can
+  never arrive — and **never entered the admin review queue**. Inverted to an empty `GATEWAY_METHODS`
+  allowlist so anything new defaults to review.
+- **Also** the public receipt no longer returns `userId`/`gatewayTxId`/`id`; the public booking
+  lookup no longer returns `nationalId`.
+- **Acceptance** unique reference **MET** and strengthened; "only after confirmed payment" is **N/A
+  by design** (no gateway — everything is pending until an admin approves, and the client cannot set
+  the status, which is tested); "A requesting B's receipt → 403/404" **reinterpreted** — the link is
+  deliberately public, so the equivalent protections (unguessable reference + owner-scoped `/me`
+  list) are tested instead. A live 403 matrix over HTTP is still **T-08**, blocked on T-06.
+- 9 integration tests on a real database, mutation-checked. Evidence
+  `final-delivery-audit/security/T-15-receipts-and-references.md`.
+- **⚠️ ACTION FOR OPS** existing production donations by فوري/فودافون كاش are likely stuck in
+  «قيد التأكيد» and invisible to the review queue. Query to find them is in the evidence file; the
+  update needs database access (T-06).
 
 ### T-16 · Remove silent seed fallback in dashboard reads — ✅ DONE & VERIFIED IN A BROWSER
 - Module Admin · Dashboard · High · Effort 0.75d · File `store/useAdminRows.ts`

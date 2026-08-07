@@ -13,9 +13,10 @@
 >
 > Tally after T-12 round 2 (row 40 → PASS): PASS 20 · PARTIAL 24 · FAIL 0 · MISSING 3 · BLOCKED 5 → 68%.
 >
-> **Tally after the integration harness** (row 25 → PASS, booking race proven on a real database):
-> PASS 21 · PARTIAL 23 · FAIL 0 · MISSING 3 · BLOCKED 5
-> → **(21+11.5)/47 = 69%** (baseline 57%). Counts re-derived from the rows, not carried forward.
+> Tally after the integration harness (row 25 → PASS): PASS 21 · PARTIAL 23 · FAIL 0 · MISSING 3 · BLOCKED 5 → 69%.
+>
+> **Tally after T-15** (row 27 → PASS): PASS 22 · PARTIAL 22 · FAIL 0 · MISSING 3 · BLOCKED 5
+> → **(22+11)/47 = 70%** (baseline 57%). Counts re-derived from the rows, not carried forward.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -51,7 +52,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | T-07 `8edf040`; verified live — **47/47, zero known defects** |
 | 25 | Bookings | Engine + Serializable-tx concurrency | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | race PROVEN on a real DB (2-way + 5-way); P2034 → 409 fixed; partial unique index recommended |
 | 26 | Donations | Create; server owns status | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring |
-| 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired; IDOR test still BLOCKED |
+| 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | PASS | — | — | PASS | PASS | **PASS** ✅ | T-15: references made unguessable (900k → 1.15e18), 0 collisions, PII trimmed; 9 DB-backed tests |
 | 28 | Notifications | In-app feed, unread, mark read | PASS | PASS | FAIL | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | mobile wired `c85f9ed`; admin broadcast wired T-13, send unverified |
 | 29 | Notifications | Preferences per type | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired `c85f9ed` |
 | 30 | Favorites | Add/remove, per-user | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | list wired `c85f9ed`; heart toggle still local |
