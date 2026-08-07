@@ -215,7 +215,16 @@ export const submitVolunteer = (input: CreateVolunteerInput) =>
 
 export interface CreateDonationInput {
   donorName: string;
+  /** The label shown on the receipt. */
   cause: string;
+  /**
+   * What the donation is FOR. The server derives a case's or project's
+   * `raisedAmount` from these when an admin approves the donation, so a gift
+   * made from a case screen has to carry the id — `cause` alone is free text
+   * and cannot be matched back (T-20).
+   */
+  caseId?: string;
+  projectId?: string;
   /** Whole EGP — the server requires a positive integer. */
   amount: number;
   method: PaymentMethod;

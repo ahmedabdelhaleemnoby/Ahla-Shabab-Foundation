@@ -15,11 +15,12 @@ import {
   pct,
   egp,
   donationSupport,
+  submitDonation,
   type PaymentMethod,
 } from '@ahla/shared';
 import { getCases, getProjects } from '../store/content';
 import { getPaymentMethods } from '../store/cms';
-import { appState } from '../store/appState';
+import { appState, type Receipt } from '../store/appState';
 
 /* Donation journey (demo): destination → case/project → amount & recurrence
    → payment method → summary → pending receipt. No real payment ever runs. */
@@ -120,24 +121,64 @@ export default function DonateScreen() {
     setStep(step - 1);
   };
 
-  const confirm = () => {
-    if (!methodInfo) return;
-    // Recorded PENDING only — «مكتمل» can come solely from the payment-gateway
-    // server or admin approval. This demo never simulates a successful payment.
-    const receipt = {
-      reference: makeBookingRef(Math.floor(Date.now() / 1000)),
-      date: new Date().toISOString().slice(0, 10),
-      amount: total,
-      cause: causeLabel,
-      method,
-      recurring,
-      status: initialDonationStatus(method),
-    };
-    appState.addReceipt(receipt);
-    setStep(0);
-    setCaseId(undefined);
-    setProjectId(undefined);
-    nav.navigate('DonationSuccess', receipt);
+  const [submitting, setSubmitting] = useState(false);
+
+  /*
+   * Record the donation ON THE SERVER.
+   *
+   * This used to build a receipt locally with an invented reference and navigate
+   * straight to the success screen — the donation never reached the API, so the
+   * admin never saw it, no server receipt existed, and the case's progress bar
+   * could never move. The donor saw a confirmation for something that had not
+   * been recorded anywhere.
+   *
+   * Still never "successful": the server assigns «قيد المراجعة», because every
+   * approved method is completed outside the app and confirmed by an admin. The
+   * reference now comes FROM the server, so the code on the receipt is the one
+   * support can actually look up.
+   */
+  const confirm = async () => {
+    if (!methodInfo || submitting) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      const created = await submitDonation({
+        donorName: appState.get().email || 'متبرع',
+        cause: causeLabel,
+        // `total` is a display string ("500 ج.م") and `effective` is the raw
+        // input; the API takes whole EGP as a number.
+        amount: Number(effective),
+        method,
+        recurring,
+        // What the donation is FOR — this is what moves the fundraising total.
+        ...(caseId ? { caseId } : {}),
+        ...(projectId ? { projectId } : {}),
+      });
+
+      const receipt: Receipt = {
+        reference: created.reference,
+        date: new Date().toISOString().slice(0, 10),
+        amount: total,
+        cause: causeLabel,
+        method,
+        recurring,
+        // The SERVER's status is authoritative. The cast is safe because the
+        // contract is tested both sides: the backend assigns «قيد المراجعة» to
+        // all three approved methods (T-15), which is what this union allows.
+        status: (created.status as Receipt['status']) ?? initialDonationStatus(method),
+      };
+      appState.addReceipt(receipt);
+      setStep(0);
+      setCaseId(undefined);
+      setProjectId(undefined);
+      nav.navigate('DonationSuccess', receipt);
+    } catch (e) {
+      // No local fallback: telling a donor their gift is recorded when the
+      // server never received it is the one outcome to avoid.
+      setErr((e as Error)?.message ?? 'تعذّر تسجيل التبرع. تحقق من الاتصال وحاول مرة أخرى.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

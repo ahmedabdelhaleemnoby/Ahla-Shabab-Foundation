@@ -39,8 +39,12 @@ export default function CaseDetailScreen({ route }: RootProps<'CaseDetail'>) {
       header={<AppBar onBack={() => nav.goBack()} />}
       footer={
         <StickyFooter>
-          <Button label="تبرع مرة واحدة" variant="outline" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
-          <Button label="كفالة شهرية" variant="green" icon="users" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+          {/* Carry the case through. These used to navigate with no params, so a
+              donor who tapped "تبرع" on a specific case landed on the generic
+              donate screen and their money was recorded against nothing — the
+              case's progress bar could never move (T-20). */}
+          <Button label="تبرع مرة واحدة" variant="outline" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate', params: { caseId: item.id } })} />
+          <Button label="كفالة شهرية" variant="green" icon="users" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate', params: { caseId: item.id, sponsor: true } })} />
         </StickyFooter>
       }
     >

@@ -33,7 +33,9 @@ export default function ProjectDetailScreen({ route }: RootProps<'ProjectDetail'
       footer={
         <StickyFooter>
           <Button label="مشاركة" variant="outline" icon="share-2" style={{ width: 104 }} onPress={() => Share.share({ message: `ادعم مشروع «${project.title}» مع جمعية خواطر أحلى شباب — اكتمل ${p}% من الهدف` }).catch(() => {})} />
-          <Button label="دعم المشروع الآن" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate' })} />
+          {/* Same fix as CaseDetailScreen: carry the project through, or the
+              donation is recorded against nothing (T-20). */}
+          <Button label="دعم المشروع الآن" icon="heart" style={{ flex: 1 }} onPress={() => nav.navigate('Main', { screen: 'Donate', params: { projectId: project.id } })} />
         </StickyFooter>
       }
     >
