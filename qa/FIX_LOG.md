@@ -91,6 +91,45 @@ confirmed once a token exists. Content/services CRUD (**G-02**) and the notifica
 
 ---
 
+## T-02 — Content & services CRUD persists ✅ DONE
+
+**Before.** `Content.tsx` (cases/projects/articles) and `Services.tsx`
+(categories/services) read live rows from the API, but every `save()` and delete
+mutated React state only. A newly created case got a locally invented id
+(`c-${Date.now()}`) and disappeared on refresh. The backend had the full CRUD
+surface all along — 19 `/admin/portfolio/*` routes plus services/categories.
+
+**Root cause.** Same as G-01: the read layer was migrated, the write layer never was.
+
+**Files changed** (`ahla-shabab-dashboard`, commit `f87bd35`)
+- `src/store/adminApi.ts` — `post`/`del` helpers + 14 CRUD functions
+- `src/store/adminMappers.ts` — `caseToWire` / `projectToWire` / `articleToWire`
+- `src/store/useRowAction.ts` — `submit()` returning the server row
+- `src/pages/Content.tsx`, `src/pages/Services.tsx`
+
+**Fix.** Each editor now calls the endpoint and only touches local state on
+success, **adopting the id the server returned**. Failures keep the modal open
+with the reason on screen. Two deliberate decisions:
+- `raisedAmount` is **not** sent — it is derived from approved donations
+  server-side, so the dashboard cannot inflate a fundraising total.
+- Optional fields are omitted rather than sent as `''`, because the Zod DTOs
+  reject an empty string where they expect a URL.
+
+**Retest**
+
+| Check | Before | After |
+|---|---|---|
+| CRUD functions called from a page | 0 / 14 | **14 / 14** |
+| Locally-invented ids (`x-${Date.now()}`) | 5 | **0** |
+| `npm run build` | pass | ✅ pass |
+
+**Result.** ✅ **RESOLVED** at the client layer. Still **BLOCKED** for end-to-end
+proof: no admin bearer token exists in this environment (T-06). Creating a
+service/category also requires real UUIDs, so those writes will correctly fail
+with a visible error while the tables are showing bundled seed rows.
+
+---
+
 ## Corrections to the baseline audit
 
 Two findings in the first report were wrong and are withdrawn/corrected:
@@ -102,5 +141,5 @@ Two findings in the first report were wrong and are withdrawn/corrected:
 
 ## Status of the delivery decision
 
-Unchanged: **NOT READY — REMAINING CORE TASKS.** Two P0 items are closed (T-01, T-03); four
-remain (T-02 content CRUD, T-04 real mobile auth, T-05 `/me/*` wiring, T-06 credentials).
+Unchanged: **NOT READY — REMAINING CORE TASKS.** Three P0 items are closed (T-01, T-02, T-03);
+three remain (T-04 real mobile auth, T-05 `/me/*` wiring, T-06 credentials).

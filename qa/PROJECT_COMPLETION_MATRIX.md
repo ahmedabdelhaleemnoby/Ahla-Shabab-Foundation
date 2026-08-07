@@ -1,7 +1,8 @@
 # PROJECT COMPLETION MATRIX
 
 > **Updated 2026-08-07 after remediation.** T-01 (row 45) and T-03 moved. See `FIX_LOG.md`.
-> New tally: PASS 15 · PARTIAL 26 · FAIL 2 · MISSING 3 · BLOCKED 5 → **(15+13)/47 = 60%** (was 57%).
+> New tally after T-01/T-02/T-03: PASS 16 · PARTIAL 26 · FAIL 2 · MISSING 3 · BLOCKED 5
+> → **(16+13)/47 = 62%** (baseline was 57%).
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -29,10 +30,10 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | BLOCKED | **PARTIAL** | live 3-case test |
 | 17 | Auth | Admin login (`POST /admin/auth/login`) | PASS | — | PASS | — | BLOCKED | MISSING | **PARTIAL** | live login proof |
 | 18 | User flow | History/receipts/bookings/favorites/notifications for signed-in user | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | mobile `/me/*` wiring |
-| 19 | Cases | Urgent + sponsorship: list/detail/publish/feature | PASS | PASS | FAIL | — | PARTIAL | PARTIAL | **PARTIAL** | admin CRUD writes |
-| 20 | Projects | CRUD, stages, updates, ordering | PASS | PASS | FAIL | — | PARTIAL | PARTIAL | **PARTIAL** | admin CRUD writes |
-| 21 | News | Articles CRUD, publish, pin | PASS | PASS | FAIL | — | PARTIAL | PARTIAL | **PARTIAL** | admin CRUD writes |
-| 22 | Services | Categories + services CRUD, activate | PASS | PASS | FAIL | — | PARTIAL | PARTIAL | **PARTIAL** | admin CRUD writes |
+| 19 | Cases | Urgent + sponsorship: list/detail/publish/feature | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
+| 20 | Projects | CRUD, stages, updates, ordering | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
+| 21 | News | Articles CRUD, publish, pin | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
+| 22 | Services | Categories + services CRUD, activate | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 23 | Consultations | Submit request → stored | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | mobile submits locally |
 | 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | **FAIL** | PARTIAL | **PARTIAL** | **key mismatch + missing consent** |
 | 25 | Bookings | Engine + Serializable-tx concurrency | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring; race test |
@@ -52,7 +53,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 39 | Responsive/RTL | 320/390/430/tablet + dashboard breakpoints | — | PARTIAL | PARTIAL | — | — | MISSING | **PARTIAL** | re-verify this build |
 | 40 | Testing | Backend automated tests | PARTIAL | — | — | — | — | PARTIAL | **PARTIAL** | default runner finds 0 tests |
 | 41 | Auth E2E | Mobile login actually authenticates | PASS | **FAIL** | — | — | **FAIL** | BLOCKED | **FAIL** | G-04 |
-| 42 | Admin writes | Any admin mutation persists | PASS | — | PARTIAL | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | status actions wired `a797361`; content CRUD (T-02) pending |
+| 42 | Admin writes | Any admin mutation persists | PASS | — | PASS | — | PASS | PARTIAL | **PASS** ✅ | status `a797361` + content/services CRUD `f87bd35`; live proof needs a token |
 | 43 | Broadcast | Admin sends notification | PASS | — | **FAIL** | — | **FAIL** | MISSING | **FAIL** | G-03 |
 | 44 | Consultant portal | Dashboard UI for consultants | PASS | FAIL | **MISSING** | **MISSING** | FAIL | MISSING | **MISSING** | build the portal |
 | 45 | Database | Migration history | **PASS** | — | — | — | — | PASS | **PASS** ✅ | done `a1cd48a`; CI switch pending prod baseline |
