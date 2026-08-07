@@ -1,8 +1,8 @@
 # PROJECT COMPLETION MATRIX
 
 > **Updated 2026-08-07 after remediation.** T-01 (row 45) and T-03 moved. See `FIX_LOG.md`.
-> New tally after T-01/T-02/T-03: PASS 16 · PARTIAL 26 · FAIL 2 · MISSING 3 · BLOCKED 5
-> → **(16+13)/47 = 62%** (baseline was 57%).
+> New tally after T-01…T-04: PASS 17 · PARTIAL 26 · FAIL 1 · MISSING 3 · BLOCKED 5
+> → **(17+13)/47 = 64%** (baseline was 57%).
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -26,7 +26,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 12 | Error hygiene | 401/404 clean, no stack traces | PASS | — | — | — | PASS | PASS | **PASS** | — |
 | 13 | Admin reads | All dashboard lists read the live API | PASS | — | PASS | — | PASS | PARTIAL | **PASS** | remove silent seed fallback |
 | 14 | Admin CMS write | `PUT /admin/cms` persists CMS edits | PASS | — | PASS | — | PASS | PARTIAL | **PASS** | — |
-| 15 | Auth | Email OTP request/verify endpoints | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | wire mobile to real OTP; verify delivery |
+| 15 | Auth | Email OTP request/verify endpoints | PASS | PASS | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | wired; live delivery still BLOCKED |
 | 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | BLOCKED | **PARTIAL** | live 3-case test |
 | 17 | Auth | Admin login (`POST /admin/auth/login`) | PASS | — | PASS | — | BLOCKED | MISSING | **PARTIAL** | live login proof |
 | 18 | User flow | History/receipts/bookings/favorites/notifications for signed-in user | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | mobile `/me/*` wiring |
@@ -52,7 +52,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 38 | Deployment | nginx conf + GitHub Actions deploy | PARTIAL | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | documented runbook |
 | 39 | Responsive/RTL | 320/390/430/tablet + dashboard breakpoints | — | PARTIAL | PARTIAL | — | — | MISSING | **PARTIAL** | re-verify this build |
 | 40 | Testing | Backend automated tests | PARTIAL | — | — | — | — | PARTIAL | **PARTIAL** | default runner finds 0 tests |
-| 41 | Auth E2E | Mobile login actually authenticates | PASS | **FAIL** | — | — | **FAIL** | BLOCKED | **FAIL** | G-04 |
+| 41 | Auth E2E | Mobile login actually authenticates | PASS | PASS | — | — | PASS | PARTIAL | **PASS** ✅ | wired `60e3417`; wrong code proven rejected live. Inbox-based happy path BLOCKED |
 | 42 | Admin writes | Any admin mutation persists | PASS | — | PASS | — | PASS | PARTIAL | **PASS** ✅ | status `a797361` + content/services CRUD `f87bd35`; live proof needs a token |
 | 43 | Broadcast | Admin sends notification | PASS | — | **FAIL** | — | **FAIL** | MISSING | **FAIL** | G-03 |
 | 44 | Consultant portal | Dashboard UI for consultants | PASS | FAIL | **MISSING** | **MISSING** | FAIL | MISSING | **MISSING** | build the portal |

@@ -130,6 +130,54 @@ with a visible error while the tables are showing bundled seed rows.
 
 ---
 
+## T-04 — Real mobile email-OTP login ✅ DONE (client), delivery BLOCKED
+
+**Before.** `OtpScreen.verify()` accepted **any** 6-digit code and called
+`loginDemoUserByEmail(email)` locally. No JWT was ever obtained, so every
+`/me/*` feature was unreachable and seven account screens showed convincing
+local demo data (finding N-02).
+
+**Root cause.** The auth UI was built for the demo before the backend existed
+and was never reconnected once `/auth/otp/*` shipped.
+
+**Files changed** (`Ahla-Shabab-Foundation`, commit `60e3417`)
+- `shared/src/api/endpoints.ts` — `requestOtp`, `verifyOtp`, `refreshSession`,
+  `logoutSession`, `fetchMe` *(no fallback: an auth call must never "succeed" offline)*
+- `mobile/src/store/session.ts` *(new)* — token pair in the OS keystore via
+  `expo-secure-store`, with a sync in-memory mirror
+- `mobile/App.tsx` — `getToken` wired into `configureApi`; `restoreSession()` at boot
+- `mobile/src/screens/EmailAuthScreen.tsx`, `OtpScreen.tsx`
+- `mobile/src/components/AppDrawer.tsx` — logout revokes server-side
+
+**Design decisions.** Tokens go to the **keystore, not AsyncStorage** — they are
+bearer credentials. `restoreSession()` *rotates* the stored pair at boot so the
+first real request cannot 401, and self-clears if the token was revoked. Logout
+revokes server-side but still clears locally if that call fails — the user asked
+to sign out.
+
+**Retest — executed against the LIVE API**
+
+| Test | Result |
+|---|---|
+| Wrong code `000000` | `400` «رمز التحقق غير صالح أو منتهي الصلاحية» — **no session issued** |
+| `GET /me` with no token | `401` |
+| `POST /auth/refresh` with bogus token | `401` «رمز التحديث غير صالح» |
+| `POST /auth/otp/request` invalid email | `400` + field error |
+| `POST /auth/otp/request` valid address | `200` «تم إرسال رمز التحقق» |
+| Mobile typecheck | ✅ clean |
+
+Evidence: `qa/final-delivery-audit/api/T-04-auth-live-tests.md`
+
+**Result.** ✅ **RESOLVED** — a wrong code can no longer produce a session, which
+was the whole defect.
+
+**Still BLOCKED (T-06).** Completing a *successful* verify needs a readable
+inbox, so the issued-token happy path, refresh rotation against a genuine token,
+and the "three casings resolve to one account" assertion remain unproven. The
+account screens also still read local stores — that is T-05, not this task.
+
+---
+
 ## Corrections to the baseline audit
 
 Two findings in the first report were wrong and are withdrawn/corrected:
@@ -141,5 +189,6 @@ Two findings in the first report were wrong and are withdrawn/corrected:
 
 ## Status of the delivery decision
 
-Unchanged: **NOT READY — REMAINING CORE TASKS.** Three P0 items are closed (T-01, T-02, T-03);
-three remain (T-04 real mobile auth, T-05 `/me/*` wiring, T-06 credentials).
+Unchanged: **NOT READY — REMAINING CORE TASKS.** Four P0 items are closed (T-01, T-02, T-03,
+T-04); two remain — **T-05** (`/me/*` wiring) and **T-06** (credentials, which gates the
+remaining verification).
