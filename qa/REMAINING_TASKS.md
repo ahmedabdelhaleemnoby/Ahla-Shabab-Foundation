@@ -76,9 +76,15 @@ mid/senior full-stack engineer familiar with this codebase.
 - `npm test` → *"No tests found (0 matches)"*. Add `testRegex` for `test/`, then cover auth, bookings, donations, RBAC.
 - **Acceptance** `npm test` runs all suites in CI and fails the build on regression.
 
-### T-13 · Admin notification broadcast wiring
+### T-13 · Admin notification broadcast wiring — ✅ CLIENT DONE, verification BLOCKED
 - Module Notifications · Dashboard→API · High · Effort 1d · File `pages/Notifications.tsx`
 - **Acceptance** Broadcast persists, appears in the user's in-app feed, respects preferences.
+- **Done** Composer rewritten against `POST /admin/notifications/broadcast` (3 segments,
+  governorate picker, real `{sent,total}`, error banner). See `FIX_LOG.md` + evidence
+  `final-delivery-audit/api/T-13-broadcast-verification.md`.
+- **Still open (needs T-06 staging)** the acceptance clause itself — delivery to the feed,
+  FCM fan-out, preference filtering. The send was **not executed on production**: `segment:'all'`
+  would notify every real user. Remaining effort ≈ 0.25d once staging exists.
 
 ### T-14 · Manual transfer flow (proof upload → approval)
 - Module Donations · Full stack · High · Depends T-03, T-06 · Effort 2d

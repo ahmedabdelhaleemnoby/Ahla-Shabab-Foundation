@@ -226,14 +226,58 @@ path are verified.
 
 ---
 
+## T-13 — Admin notification broadcast wired ✅ DONE (client), send BLOCKED
+
+**Before.** `pages/Notifications.tsx` was pure `useState`. It offered 5 notification "kinds"
+and 4 audiences; the API has no `kind` field and only 3 segments, and two of the four
+audiences (`أصحاب الحجوزات`, `المتطوعون`) did not exist server-side. The history table was
+seeded from bundled demo rows, so it showed a populated broadcast log for messages that were
+never sent, and the button showed «تم الإرسال ✓» unconditionally. This was the last unwired
+dashboard write (G-03).
+
+**Root cause.** The page was built during the demo phase against an imagined contract and
+never reconciled with `POST /admin/notifications/broadcast` once the backend existed.
+
+**Files.**
+- `src/store/adminApi.ts` — added `broadcastNotification()` (through `authed()`, like every
+  other write) and `fetchGovernorates()`; the broadcast takes a numeric governorate id, so
+  the names must come from the API rather than the bundled name list.
+- `src/pages/Notifications.tsx` — rewritten against the real DTO: 3 segments, conditional
+  governorate picker, `maxLength` matching `max(200)`/`max(2000)`, in-flight state, error
+  `Banner`, and the server's real `{sent, total}` reported back to the operator.
+
+**Fix decisions worth recording.**
+- The `kind` selector was **removed rather than kept as decoration**. A control the API
+  silently ignores is worse than an absent one.
+- The seeded history was **deleted, not relabelled**. There is no GET route for past
+  broadcasts, so the table now holds only sends made since the page was opened and says so:
+  «الخادم لا يوفّر سجلًّا للبثوث السابقة».
+- On failure the operator is told **nothing was sent**, instead of the old silent success.
+
+**Retest.** `qa/final-delivery-audit/api/T-13-broadcast-verification.md` — 8 checks executed,
+1 deliberately not executed. `tsc --noEmit` clean; `npm run build` clean; `GET /governorates`
+live 200; unauthenticated broadcast → **401**; the shipped bundle contains
+`admin/notifications/broadcast`; the two fabricated audiences appear **0** times in `dist/`.
+
+**Result.** Row 43 **FAIL → PARTIAL**. Not PASS: the authenticated send was **not executed**,
+because `segment:'all'` fans out to every real user and production is the only environment
+available — that is a destructive test on production, which is out of bounds. Delivery,
+FCM fan-out and preference filtering stay unverified until T-06 provides staging.
+
+---
+
 ## Corrections to the baseline audit
 
-Two findings in the first report were wrong and are withdrawn/corrected:
+Three findings in the first report were wrong and are withdrawn/corrected:
 
 1. **G-15 "dead code" — WITHDRAWN.** `dashboard/src/shared/` is aliased as `@ahla/shared` by
    both `vite.config.ts` and `tsconfig.json`. It is the live shared package, not a stray copy.
 2. **"4 mutations" — CORRECTED to 6 wirable row actions.** The sweep regex missed
    `toggleUserBlock`, and `/admin/messages/:id` accepts a status. All are now wired.
+3. **"No requirement is FAIL any more" (published after T-05) — WRONG when written.**
+   Row 43 (admin broadcast) was still FAIL at that point. The correct post-T-05 tally was
+   PASS 18 · PARTIAL 25 · **FAIL 1** · MISSING 3 · BLOCKED 5 → **65%**, not 66%. The claim
+   was stated to the client one task early; it became true only with T-13.
 
 ## Status of the delivery decision
 

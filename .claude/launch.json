@@ -13,6 +13,12 @@
       ],
       "cwd": "mobile",
       "port": 8087
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/ahmedabuzyad/ahla-shabab-dashboard", "run", "dev"],
+      "port": 5173
     }
   ]
 }

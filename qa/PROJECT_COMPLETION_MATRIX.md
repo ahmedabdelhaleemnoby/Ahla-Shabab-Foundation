@@ -1,8 +1,14 @@
 # PROJECT COMPLETION MATRIX
 
 > **Updated 2026-08-07 after remediation.** T-01 (row 45) and T-03 moved. See `FIX_LOG.md`.
-> New tally after T-01…T-05: PASS 18 · PARTIAL 26 · FAIL 0 · MISSING 3 · BLOCKED 5
-> → **(18+13)/47 = 66%** (baseline was 57%). **No requirement is FAIL any more.**
+>
+> **Correction (T-13).** The line published after T-05 read “PASS 18 · PARTIAL 26 · FAIL 0 …
+> No requirement is FAIL any more.” That was wrong: **row 43 (admin broadcast) was still FAIL.**
+> The true tally after T-01…T-05 was PASS 18 · PARTIAL 25 · **FAIL 1** · MISSING 3 · BLOCKED 5
+> → (18+12.5)/47 = **65%**. The claim was reported to the client before it was true.
+>
+> Tally after T-13: PASS 18 · PARTIAL 26 · FAIL 0 · MISSING 3 · BLOCKED 5
+> → **(18+13)/47 = 66%** (baseline 57%). No requirement is FAIL — accurate as of T-13, not before.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -39,7 +45,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 25 | Bookings | Engine + Serializable-tx concurrency | PASS | PASS | PASS | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | my-bookings wired; race test BLOCKED |
 | 26 | Donations | Create; server owns status | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring |
 | 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired; IDOR test still BLOCKED |
-| 28 | Notifications | In-app feed, unread, mark read | PASS | PASS | FAIL | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | mobile wired `c85f9ed`; admin broadcast still T-13 |
+| 28 | Notifications | In-app feed, unread, mark read | PASS | PASS | FAIL | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | mobile wired `c85f9ed`; admin broadcast wired T-13, send unverified |
 | 29 | Notifications | Preferences per type | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired `c85f9ed` |
 | 30 | Favorites | Add/remove, per-user | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | list wired `c85f9ed`; heart toggle still local |
 | 31 | Contact | Messages submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
@@ -54,7 +60,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 40 | Testing | Backend automated tests | PARTIAL | — | — | — | — | PARTIAL | **PARTIAL** | default runner finds 0 tests |
 | 41 | Auth E2E | Mobile login actually authenticates | PASS | PASS | — | — | PASS | PARTIAL | **PASS** ✅ | wired `60e3417`; wrong code proven rejected live. Inbox-based happy path BLOCKED |
 | 42 | Admin writes | Any admin mutation persists | PASS | — | PASS | — | PASS | PARTIAL | **PASS** ✅ | status `a797361` + content/services CRUD `f87bd35`; live proof needs a token |
-| 43 | Broadcast | Admin sends notification | PASS | — | **FAIL** | — | **FAIL** | MISSING | **FAIL** | G-03 |
+| 43 | Broadcast | Admin sends notification | PASS | — | PASS | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired T-13; send not executed — would push to real users on prod |
 | 44 | Consultant portal | Dashboard UI for consultants | PASS | FAIL | **MISSING** | **MISSING** | FAIL | MISSING | **MISSING** | build the portal |
 | 45 | Database | Migration history | **PASS** | — | — | — | — | PASS | **PASS** ✅ | done `a1cd48a`; CI switch pending prod baseline |
 | 46 | Monitoring | Sentry/APM/error tracking | **MISSING** | MISSING | MISSING | — | — | MISSING | **MISSING** | choose + wire |
