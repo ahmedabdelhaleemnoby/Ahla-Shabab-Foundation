@@ -419,6 +419,53 @@ decision rather than a silent change, because it alters how the team ships conte
 
 ---
 
+## T-17 — Deploys stop overwriting admin-authored data ✅ DONE, proven on a real database
+
+**Before.** `deploy.yml` runs `npx prisma db seed` on **every** push to `main`, and Prisma's
+`upsert` applies its `update:` branch when the row already exists. **Seven** seeds carried a
+populated one, so every deploy silently reset live data. This was wider than the CMS finding that
+opened T-17:
+
+- **`roles.ts` → `permissionsJson`** — a role an administrator had *tightened* was widened back to
+  the bundled defaults. That is a **security regression**, not merely lost content.
+- **`cms-state.ts`** — the entire CMS document: settings, menu, home, pages, payment methods,
+  consultation types.
+- `categories.ts` (×2), `services.ts`, `providers.ts` (×2, including **rating** and **reviews**,
+  which are derived values the seed has no business asserting), `faqs.ts`, `foundation.ts`.
+
+Left authoritative on purpose: `governorates.ts` ordering (reference data no admin edits) and the
+seeds already using `update: {}`.
+
+**Files.** `prisma/seed/seed-mode.ts` *(new)* — `preserve()` empties the `update:` branch unless
+`SEED_OVERWRITE_CONTENT=true`; `logSeedMode()` announces the mode. Applied across the seven seeds;
+`prisma/seed/index.ts` prints the banner; `.env.example` documents the flag.
+
+**Design note.** The escape hatch stays because the team does sometimes want to push bundled content
+over live rows — but it is now opt-in and loud rather than the silent default. Structural changes
+still reach production through the CMS migrations (backfill-on-read), which is what they are for;
+T-07's migration 10 → 11 is the worked example. **Seeds initialise, migrations repair.**
+
+**Retest — on a throwaway PostgreSQL 15 cluster** (port 55433, own data directory, destroyed
+afterwards; the machine's own services untouched):
+
+| Check | Result |
+|---|---|
+| Fresh database still fully seeded | 27 governorates · 4 roles **with permissions** · 15 categories · 6 services · 4 cases · 3 projects · 4 articles · 8 FAQs · CMS v11 with the 5 canonical consultation types |
+| Four admin edits survive a re-seed (CMS `appName`, role permissions, an FAQ, the consultation list) | **all 4 preserved** ✅ |
+| Same re-seed with `SEED_OVERWRITE_CONTENT=true` — i.e. the OLD behaviour | **all 4 destroyed** — the mutation check; the data loss was real and reproducible |
+| `test/seed-mode.e2e-spec.ts` (4 cases) | PASS |
+| Full backend suite | **67 passed / 7 suites** (was 63 / 6) |
+| Seeds still carrying an unguarded populated `update:` | **0** |
+
+**Result.** Acceptance *"a CMS edit made in the dashboard survives a deploy"* is **MET**, and
+demonstrated for role permissions, FAQs and consultation types too — not only the CMS document.
+
+**Note for the next deploy.** Deploys will no longer refresh bundled content on rows that already
+exist. To push updated defaults deliberately, run one deploy with `SEED_OVERWRITE_CONTENT=true`
+(accepting that it resets admin edits), or make the change in the dashboard — now the durable path.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

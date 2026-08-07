@@ -65,15 +65,26 @@ mid/senior full-stack engineer familiar with this codebase.
   The live API serves the five Arabic keys with `consent`-typed required fields, disclaimers, and
   options on every choice field. CI on the same commit: 63 tests / 6 suites. Row 24 → **PASS**.
 
-### T-17 · Every deploy overwrites the admin's CMS content — NEW (found during T-07)
-- Module CMS · Backend/Deploy · **High** · Effort 0.25d · File `prisma/seed/cms-state.ts`
-- `seedCmsState` upserts with a populated `update:` branch, and `deploy.yml` runs `prisma db seed`
-  on **every** push to `main`. So every deploy resets settings, menu, home layout, pages, payment
-  methods and consultation types to the bundled defaults — **destroying anything an administrator
-  authored through the dashboard CMS**. This substantially undermines the CMS work in T-02.
-- **Acceptance** A CMS edit made in the dashboard survives a deploy.
-- Likely fix: seed on `create` only, or gate reseeding behind an explicit flag. Left as a decision
-  because it changes how the team ships content updates.
+### T-17 · Every deploy overwrites admin-authored data — ✅ DONE & PROVEN ON A REAL DATABASE
+- Module CMS · Backend/Deploy · **High** · Effort 0.25d · Files `prisma/seed/**`
+- `deploy.yml` runs `prisma db seed` on **every** push to `main`, and Prisma's `upsert` applies its
+  `update:` branch to existing rows. **Seven** seeds carried a populated one — wider than the CMS:
+  the whole CMS document, **`Role.permissionsJson`** (a role an admin had *tightened* was widened
+  back to defaults — a security regression, not merely lost content), category/service/provider/FAQ/
+  foundation-stat text, and provider **rating/reviews**, which are derived values.
+- **Done** `prisma/seed/seed-mode.ts` adds `preserve()`: the seed now creates what is missing and
+  leaves what exists alone, unless `SEED_OVERWRITE_CONTENT=true` is explicitly set. `logSeedMode()`
+  states which mode ran. Structural changes still reach production via the CMS migrations
+  (backfill-on-read) — *seeds initialise, migrations repair*. 67 tests / 7 suites pass.
+- **Acceptance** A CMS edit made in the dashboard survives a deploy — **MET**, verified on a
+  throwaway PostgreSQL 15 cluster: four admin edits (CMS `appName`, role permissions, an FAQ, the
+  consultation list) survived a re-seed, while the same re-seed **with the flag set destroyed all
+  four** — proving both the fix and the original data loss. A fresh database still seeds completely
+  (27 governorates, 4 roles with permissions, 15 categories, 5 canonical consultation types, v11).
+  Evidence `final-delivery-audit/database/T-17-seed-preserves-admin-edits.md`.
+- **Note** deploys no longer refresh bundled content on existing rows. To push updated defaults
+  deliberately, run one deploy with `SEED_OVERWRITE_CONTENT=true` (it resets admin edits), or make
+  the change in the dashboard — now the durable path.
 
 ### T-08 · Authorization test suite (RBAC 403 + IDOR)
 - Module Security · Backend · High · Depends T-06 · Effort 2d
