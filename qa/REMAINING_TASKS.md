@@ -90,10 +90,23 @@ mid/senior full-stack engineer familiar with this codebase.
 - Module Security · Backend · High · Depends T-06 · Effort 2d
 - **Acceptance** Automated tests prove: guest→401 on all `/me/*` and `/admin/*`; User A cannot read B's bookings/receipts/donations/notifications/favorites (404/403, never 200); each role gets 403 on modules outside its matrix.
 
-### T-09 · Booking concurrency proof + DB constraint
-- Module Bookings · Backend · High · Depends T-06 · Effort 1d
-- Serializable transaction exists; add `@@unique([providerId, date, timeSlot])` as defence in depth and prove the race.
-- **Acceptance** Two simultaneous identical bookings → exactly one 201, one 409.
+### T-09 · Booking concurrency proof + DB constraint — ✅ PROVEN (constraint recommended, not applied)
+- Module Bookings · Backend · High · ~~Depends T-06~~ · Effort 1d
+- **"Depends T-06" was a misreading** — proving a race needs a *database*, not credentials. Done via
+  the disposable-Postgres harness.
+- **Acceptance** two simultaneous identical bookings → exactly one 201, one 409 — **MET**: two
+  concurrent requests leave exactly **1 row** with the loser receiving `SLOT_TAKEN`; a **five-way
+  burst** also leaves 1. Cancel-then-rebook still works.
+- **Defect found by running it for real** a Postgres serialization failure (Prisma **P2034**) was
+  unmapped, so under heavier concurrency the loser got a **500** instead of a 409. Now converted to
+  `SLOT_TAKEN`; deliberately not retried.
+- **⚠️ The recommended `@@unique([providerId, date, timeSlot])` would BREAK a working feature.**
+  Cancelled bookings keep their rows, so cancel-and-rebook legitimately produces two rows for one
+  slot. A plain unique constraint rejects the rebooking. The correct form is a **partial** index
+  (`WHERE status <> 'ملغي'`), which Prisma cannot express natively — SQL is in the evidence file.
+  Not applied: it needs raw SQL and will fail if production holds duplicate non-cancelled rows,
+  which cannot be checked without database access. **Recommended, after that check.**
+- Evidence `final-delivery-audit/database/T-09-and-integration-harness.md`.
 
 ### T-10 · Payment gateway end-to-end (sandbox)
 - Module Payments · Backend · High · Depends T-06 · Effort 2.5d

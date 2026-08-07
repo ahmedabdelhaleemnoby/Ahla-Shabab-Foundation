@@ -647,6 +647,57 @@ arithmetic, not the answer. Roughly a day, and not blocked on T-06.
 
 ---
 
+## Integration harness + T-09 booking race ✅ DONE
+
+**Before.** Coverage plateaued at 20.71% because the rest is service-layer Prisma work that mocks
+cannot honestly verify — decisively so for reports, where the audit rule requires values be compared
+against **database** data.
+
+**Fix.** CI now runs a `postgres:15` service container, applies the T-01 baseline migrations to an
+empty database, seeds it, and runs an integration suite. Applying those migrations on every push also
+re-proves continuously that they build the schema from scratch. Unit and integration suites stay
+separate — `npm test` (101, no DB) and `npm run test:int` (11, DB required, **fails loudly** rather
+than skipping).
+
+**T-09 was never actually blocked.** It was filed as *"Depends T-06"*, but proving a race needs a
+database, not credentials. With the harness: two simultaneous bookings for one slot leave **exactly
+one row**, the loser gets `SLOT_TAKEN`, and a **five-way burst** also leaves one. Cancel-then-rebook
+still works. Acceptance met.
+
+**Defect found by running it for real.** A Postgres serialization failure (Prisma **P2034**) was
+unmapped, so under heavier concurrency the loser received a **500** — "the server broke" — when the
+slot had simply been taken a moment earlier. Now converted to the same 409, with a test simulating
+the abort. Deliberately not retried: if the loser lost, the slot is gone.
+
+**The audit's own recommendation would have broken a working feature.** T-09 proposed
+`@@unique([providerId, date, timeSlot])`. Cancelled bookings keep their rows, so cancel-and-rebook
+legitimately yields two rows for one slot — a plain unique constraint rejects the rebooking, which
+the new suite proves currently works. The correct form is a **partial** index
+(`WHERE status <> 'ملغي'`), which Prisma cannot express natively. Not applied: it needs raw SQL and
+would fail if production holds duplicate non-cancelled rows, which cannot be checked without database
+access. Recommended, with that check first; SQL is in the evidence file.
+
+**Safety is an allowlist, not a blocklist.** These suites delete rows, so `test/integration/db.ts`
+requires the database *name* to look disposable (`*_test`, `*_int`). A blocklist was written first
+and is the wrong shape — it passes by default, so any production database nobody thought to name
+would be accepted and wiped. This matters concretely because `@prisma/client` loads `.env` on import,
+so a developer's local URL is in effect even when the shell exports none.
+
+**A self-inflicted flake, fixed.** Cleanup was keyed on phone number and missed the burst test's
+rows, so the suite passed once and then failed on every rerun — looking exactly like a regression in
+the booking guard. Now cleaned by slot, and run twice consecutively to prove idempotence.
+
+**Result.** CI green on GitHub's runner (`31214313676`): migrations applied from empty, seed ran,
+**101 unit + 11 integration** passed. Row 25 → **PASS**; recounted tally **PASS 21 · PARTIAL 23 ·
+FAIL 0 · MISSING 3 · BLOCKED 5 = 69%**.
+
+**What it unlocks.** The harness is the reusable part: remaining service coverage is now ordinary
+work, and **T-15 (receipt ownership)** can be proven the same way, without T-06. Only genuinely
+external things still need it — T-08's live 403 matrix over HTTP, T-10's payment sandbox, OTP
+delivery.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:
