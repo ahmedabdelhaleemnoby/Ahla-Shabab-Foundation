@@ -260,3 +260,46 @@ export const submitBooking = (input: CreateBookingInput) =>
 
 export const fetchBookingByReference = (reference: string) =>
   request<Record<string, any>>(`bookings/${encodeURIComponent(reference)}`, { auth: false });
+
+
+/* ------------------------------------------------------------------ auth
+ * Passwordless email OTP. None of these fall back to bundled data: an auth
+ * call that "succeeds" offline would hand the user a session the server never
+ * issued. Failures surface as ApiError with the backend's Arabic message.
+ */
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface AuthSession extends AuthTokens {
+  user: { id: string; email: string; name: string | null };
+}
+
+/** Emails a 6-digit code. Resolves on success; throws ApiError otherwise. */
+export const requestOtp = (email: string) =>
+  request<{ message?: string }>('auth/otp/request', {
+    method: 'POST',
+    body: { email: email.trim().toLowerCase() },
+    auth: false,
+  });
+
+/** Exchanges the code for a token pair + the user record. */
+export const verifyOtp = (email: string, code: string) =>
+  request<AuthSession>('auth/otp/verify', {
+    method: 'POST',
+    body: { email: email.trim().toLowerCase(), code },
+    auth: false,
+  });
+
+/** Rotates the pair. The refresh token is single-use server-side. */
+export const refreshSession = (refreshToken: string) =>
+  request<AuthTokens>('auth/refresh', { method: 'POST', body: { refreshToken }, auth: false });
+
+/** Revokes the refresh token server-side. */
+export const logoutSession = (refreshToken: string) =>
+  request<{ message?: string }>('auth/logout', { method: 'POST', body: { refreshToken }, auth: false });
+
+/** The signed-in user's profile — the cheapest proof a token is valid. */
+export const fetchMe = () => request<Record<string, any>>('me');

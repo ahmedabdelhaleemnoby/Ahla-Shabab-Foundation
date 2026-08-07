@@ -7,18 +7,35 @@ import { Card, Button } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { Icon } from '../components/Icon';
 import { colors, font, radius, row } from '../theme';
-import { isEmail } from '@ahla/shared';
+import { isEmail, requestOtp } from '@ahla/shared';
 
 export default function EmailAuthScreen() {
   const nav = useNavigation<any>();
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const valid = isEmail(email.trim());
 
-  const submit = () => {
+  /**
+   * Asks the backend to email a 6-digit code. Only on success do we move to the
+   * OTP screen — showing the code entry after a failed send would leave the user
+   * waiting for an email that was never sent.
+   */
+  const submit = async () => {
     setTouched(true);
-    // TODO(production): send and verify OTP through backend email service
-    if (valid) nav.navigate('Otp', { email: email.trim().toLowerCase() });
+    setError(null);
+    if (!valid || sending) return;
+    const normalized = email.trim().toLowerCase();
+    setSending(true);
+    try {
+      await requestOtp(normalized);
+      nav.navigate('Otp', { email: normalized });
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'تعذّر إرسال رمز التحقق. حاول مرة أخرى.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -26,7 +43,7 @@ export default function EmailAuthScreen() {
       header={<AppBar title="تسجيل الدخول" onBack={() => nav.goBack()} onBell={undefined} />}
       footer={
         <StickyFooter>
-          <Button label="إرسال رمز التحقق" icon="send" style={{ flex: 1 }} onPress={submit} />
+          <Button label={sending ? 'جارٍ الإرسال…' : 'إرسال رمز التحقق'} icon="send" style={{ flex: 1, opacity: sending ? 0.6 : 1 }} onPress={() => void submit()} />
         </StickyFooter>
       }
     >
@@ -74,6 +91,11 @@ export default function EmailAuthScreen() {
       {touched && !valid ? (
         <Text style={[font('600'), { fontSize: 11, color: colors.red, textAlign: 'right', marginTop: 6 }]}>
           أدخل بريداً إلكترونياً صحيحاً
+        </Text>
+      ) : null}
+      {error ? (
+        <Text style={[font('700'), { fontSize: 11.5, color: colors.red, textAlign: 'right', marginTop: 8, lineHeight: 17 }]}>
+          {error}
         </Text>
       ) : null}
 

@@ -7,6 +7,9 @@ import { Card, Button } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { StickyFooter } from './DonateScreen';
 import { colors, font, row } from '../theme';
+import { verifyOtp, requestOtp } from '@ahla/shared';
+import { saveSession } from '../store/session';
+import { appState } from '../store/appState';
 import { loginDemoUserByEmail } from '../store/demoUsers';
 import type { RootProps } from '../navigation/types';
 
@@ -18,6 +21,9 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
   const { email } = route.params;
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
+  /** Server-side rejection (wrong/expired/used code, too many attempts). */
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const inputRef = useRef<TextInput>(null);
 
@@ -27,21 +33,49 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
     return () => clearInterval(t);
   }, [seconds]);
 
-  const verify = () => {
+  /**
+   * Exchanges the code for a real token pair. The app cannot decide whether a
+   * code is valid — only the server can — so a rejection keeps the user here
+   * with the backend's reason (wrong code, expired, too many attempts).
+   */
+  const verify = async () => {
     if (code.length < LEN) {
       setError(true);
       return;
     }
-    // TODO(production): send and verify OTP through backend email service
-    loginDemoUserByEmail(email);
-    nav.navigate('Main', { screen: 'About' });
+    if (verifying) return;
+    setServerError(null);
+    setVerifying(true);
+    try {
+      const session = await verifyOtp(email, code);
+      await saveSession(session);
+      appState.login(session.user?.email ?? email);
+      // Keeps locally-stored consultations/bookings attached to this address
+      // until the /me/* screens read them from the server (T-05).
+      loginDemoUserByEmail(email);
+      nav.navigate('Main', { screen: 'About' });
+    } catch (e: unknown) {
+      setCode('');
+      setError(true);
+      setServerError((e as Error)?.message ?? 'رمز التحقق غير صحيح أو منتهي الصلاحية.');
+    } finally {
+      setVerifying(false);
+    }
   };
 
-  const resend = () => {
+  /** Re-sends through the same endpoint; the cooldown is enforced client-side
+   *  and again by the backend's rate limit. */
+  const resend = async () => {
     if (seconds > 0) return;
-    setSeconds(RESEND_SECONDS);
+    setServerError(null);
     setCode('');
     setError(false);
+    try {
+      await requestOtp(email);
+      setSeconds(RESEND_SECONDS);
+    } catch (e: unknown) {
+      setServerError((e as Error)?.message ?? 'تعذّر إعادة إرسال الرمز.');
+    }
   };
 
   return (
@@ -49,7 +83,7 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       header={<AppBar title="رمز التحقق" onBack={() => nav.goBack()} onBell={undefined} />}
       footer={
         <StickyFooter>
-          <Button label="تأكيد" icon="check" style={{ flex: 1 }} onPress={verify} />
+          <Button label={verifying ? 'جارٍ التحقق…' : 'تأكيد'} icon="check" style={{ flex: 1, opacity: verifying ? 0.6 : 1 }} onPress={() => void verify()} />
         </StickyFooter>
       }
     >
@@ -108,9 +142,9 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
         />
       </Pressable>
 
-      {error ? (
-        <Text style={[font('600'), { fontSize: 11, color: colors.red, textAlign: 'center', marginTop: 12 }]}>
-          أدخل الرمز المكوّن من 6 أرقام
+      {error || serverError ? (
+        <Text style={[font('700'), { fontSize: 11.5, color: colors.red, textAlign: 'center', marginTop: 12, lineHeight: 17 }]}>
+          {serverError ?? 'أدخل الرمز المكوّن من 6 أرقام'}
         </Text>
       ) : null}
 
@@ -121,7 +155,7 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
             إعادة إرسال الرمز خلال <Text style={[font('700'), { color: colors.navy700 }]}>{seconds}</Text> ثانية
           </Text>
         ) : (
-          <Pressable onPress={resend}>
+          <Pressable onPress={() => void resend()}>
             <Text style={[font('700'), { fontSize: 13, color: colors.navy700 }]}>إعادة إرسال الرمز</Text>
           </Pressable>
         )}

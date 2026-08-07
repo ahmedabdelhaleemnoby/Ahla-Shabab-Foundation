@@ -17,6 +17,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { configureApi } from '@ahla/shared';
+import { getAccessToken, restoreSession } from './src/store/session';
 import { hydrateCms } from './src/store/cms';
 import { hydrateContent } from './src/store/content';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -120,6 +121,9 @@ function Tabs() {
  */
 configureApi({
   baseUrl: process.env.EXPO_PUBLIC_API_BASE,
+  // Bearer token for every authenticated request. Sync by contract, which is
+  // why `session` keeps an in-memory mirror of the keystore value.
+  getToken: getAccessToken,
   onError: (info) => {
     // Visible in dev, silent in release. A fallback is not an error the user
     // should see, but it must not vanish either.
@@ -148,7 +152,10 @@ export default function App() {
   const [hydrated, setHydrated] = React.useState(false);
   React.useEffect(() => {
     let cancelled = false;
-    Promise.all([hydrateCms(), hydrateContent()])
+    // `restoreSession` rotates a stored token pair so a returning user is still
+    // signed in on the first frame. Like the content hydrators it never rejects:
+    // an expired or revoked session simply clears itself and the app opens as a guest.
+    Promise.all([hydrateCms(), hydrateContent(), restoreSession()])
       .catch(() => undefined)
       .finally(() => {
         if (!cancelled) setHydrated(true);

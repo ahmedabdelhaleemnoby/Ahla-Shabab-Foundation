@@ -7,6 +7,7 @@ import { Icon, IconName } from './Icon';
 import { navRef } from '../navigation/ref';
 import { useDrawerOpen, closeDrawer } from '../store/drawer';
 import { useAppState, appState } from '../store/appState';
+import { endSession } from '../store/session';
 import { getMenu, getSettings } from '../store/cms';
 
 const DRAWER_W = 296;
@@ -122,6 +123,10 @@ export function AppDrawer() {
             {loggedIn ? (
               <Pressable
                 onPress={() => {
+                  // Revoke the refresh token server-side, then drop the local
+                  // session. `endSession` never rejects — a failed revoke must
+                  // not trap the user in a signed-in state on this device.
+                  void endSession();
                   appState.logout();
                   closeDrawer();
                 }}
