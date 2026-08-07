@@ -174,13 +174,37 @@ mid/senior full-stack engineer familiar with this codebase.
   counts 0, «لا توجد حجوزات مطابقة», and **0 bundle hits** for every fabricated row id/name.
   Evidence `final-delivery-audit/reports/T-16-no-silent-seed-fallback.md`.
 
-### T-18 · Filter dropdowns still populated from bundled lists — NEW (found during T-16)
-- Module Admin · Dashboard · **P2** · Effort 0.5d · Files `pages/Bookings.tsx`, `pages/Services.tsx`
-- Provider/category/governorate filter options come from bundled reference arrays, so a filter can
-  offer an option that does not exist server-side. They are options rather than rows presented as
-  live records, so they sit outside T-16's acceptance — but they are the last bundled data visible
-  in an admin view.
-- **Acceptance** Filter options are sourced from the API.
+### T-18 · Reference data (and one whole page) off bundled seeds — ✅ DONE & VERIFIED
+- Module Admin · Dashboard · **P2** · Effort 0.5d · Files `pages/*`, `store/useReference.ts`
+- **Scope grew twice on inspection.** Beyond the filters: (1) `Reports.tsx` rendered
+  **«نسب تمويل الحالات والمشروعات المنشورة»** from the **bundled `cases`/`projects` arrays** —
+  invented raised/target fundraising totals shown as live figures, the most damaging number a
+  charity dashboard can fake — and counted providers from the seed; (2) **`Providers.tsx` never
+  called the API at all**: rows came from the seed and create/edit/toggle produced
+  `pr-${Date.now()}` ids that vanished on refresh (the same G-01/G-02 defect T-02/T-03 fixed
+  elsewhere, missed by the audit); (3) `blankService()` defaulted `providerId` to a **bundled seed
+  id that was then POSTed to the server**.
+- **Done** new `useGovernorateNames()` (public `GET /governorates`, empty rather than bundled on
+  failure); filters + the case-editor governorate select from the API; Reports on live
+  cases/projects/providers with a divide-by-zero guard; Providers wired to `/admin/providers` with
+  create/update/toggle persisting and rolling back; typed `AdminProviderRow`; Donations' payment KPI
+  from the CMS document. `rating`/`reviews` deliberately never sent — derived server-side.
+- **Acceptance** Filter options are sourced from the API — **MET**, verified in a browser: with
+  reads failing all three Bookings filters collapse to their "all" option (were 5/11/28 bundled),
+  and Providers reads **مقدمو الخدمة (0)** with an error (was 4 fabricated providers). The public
+  governorates endpoint was confirmed through a temporary proxy to return 27 rows of `{id,name}` —
+  exactly what the hook maps. Bundle 419.27 → **399.66 kB** across T-16+T-18.
+  Evidence `final-delivery-audit/reports/T-18-reference-data-from-api.md`.
+
+### T-19 · Provider scheduling is still local — NEW (found during T-18)
+- Module Admin · Dashboard→API · **P2** · Effort 1d · File `pages/Providers.tsx`
+- Working days, time slots and unavailable dates are edited locally and never saved. The server
+  models availability as `{weekday, startTime, endTime, slotMinutes}` (`PATCH
+  /admin/providers/:id/schedule`) while the editor uses day indexes plus Arabic slot labels
+  (`'10:00 ص'`), so the two need a real translation layer — deliberately not half-wired.
+- The editor now **discloses** this rather than appearing to save:
+  «مواعيد العمل والأيام لا تُحفظ على الخادم بعد — تُحفظ بيانات المقدّم الأساسية فقط.»
+- **Acceptance** Editing a provider's schedule persists and drives real booking availability.
 
 ---
 

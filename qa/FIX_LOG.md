@@ -510,6 +510,56 @@ acceptance — but they are the last bundled data visible in an admin view.
 
 ---
 
+## T-18 — Reference data (and one whole page) off bundled seeds ✅ DONE, verified in a browser
+
+**Filed as** "filter dropdowns are populated from bundled lists". Two larger problems sat behind it,
+both of the family T-16 addressed.
+
+**1. Report figures computed from demo data.** `Reports.tsx` rendered a section headed
+**«نسب تمويل الحالات والمشروعات المنشورة»** — *funding progress of published cases and projects* —
+from the **bundled `cases` and `projects` arrays**, presenting invented `raisedAmount / targetAmount`
+pairs as live fundraising totals. On a charity dashboard that is the most damaging figure it is
+possible to fake. «إجمالي مقدمي الخدمة» and «متوسط الحجوزات لكل مقدم» likewise counted the seed.
+
+**2. `Providers.tsx` never called the API at all.** Rows came from
+`useState(seed.map(...))`, and create/edit/toggle produced `pr-${Date.now()}` ids that vanished on
+refresh — the same G-01/G-02 defect T-02 and T-03 fixed elsewhere. **The audit missed this page
+entirely**; `/admin/providers` has had full CRUD throughout.
+
+**3. A bundled id was written to the server.** `blankService()` defaulted `providerId` to
+`providers[0].id` from the seed, so creating a service posted a provider id that need not exist.
+
+**Files.** `store/useReference.ts` *(new)* — `useGovernorateNames()` from the public
+`GET /governorates`, empty rather than bundled on failure; `Bookings`, `Users`, `Content` (the
+governorate **form** select, which *writes*), `Reports` (live cases/projects/providers, plus a
+divide-by-zero guard), `Providers` (API rows, persisted create/update/toggle with rollback),
+`Services` (`blankService(categoryId, providerId)`), `Donations` (payment KPI from the CMS
+document), `store/adminApi.ts` (typed `AdminProviderRow`, provider CRUD). `rating`/`reviews` are
+deliberately never sent — they are derived server-side.
+
+**Retest.** `tsc` and build clean. Provider seed markers return **0 hits** in `dist`; pages now
+import only formatters, types and constants from the shared package. Bundle **419.27 → 399.66 kB**
+across T-16 and T-18.
+
+Verified **in a browser** with reads failing: all three Bookings filters collapse to their "all"
+option — `[{كل الفئات,1},{كل المقدمين,1},{كل المحافظات,1}]`, previously 5 / 11 / 28 bundled entries
+— and Providers reads **مقدمو الخدمة (0)** with an explicit error, where it previously showed four
+fabricated providers. For the success path, CORS blocks `localhost:5173` against production (an
+environment limit, not a defect — and the error log itself proves the app now *requests*
+`/api/v1/governorates`); through a temporary Vite proxy the endpoint returned
+`{"count":27,"first":"أسوان","shapeKeys":["id","name"]}`, exactly what the hook maps. The proxy and
+`.env.local` were reverted, leaving only the intended source files changed.
+
+**Result.** Acceptance met and exceeded. No requirement row changes status — this hardened rows 13,
+36 and 42 rather than adding surface, so the tally holds at 67%.
+
+**Not done → T-19 (P2).** Provider **scheduling** (days, slots, unavailable dates) is still local:
+the server models it as `{weekday, startTime, endTime, slotMinutes}` while the editor uses day
+indexes and Arabic slot labels, so it needs a real translation layer rather than a half-wire. The
+editor now **discloses** it: «مواعيد العمل والأيام لا تُحفظ على الخادم بعد».
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:
