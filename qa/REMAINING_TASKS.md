@@ -84,10 +84,26 @@ mid/senior full-stack engineer familiar with this codebase.
 - **Not covered** the *effect* of a signed callback (donation → paid → receipt) — that is T-10, still
   BLOCKED on a payment sandbox.
 
-### T-12 · Fix backend test discovery + raise coverage
-- Module Testing · Backend · High · Effort 2d
+### T-12 · Fix backend test discovery + raise coverage — ⬆ MOSTLY DONE (coverage still low)
+- Module Testing · Backend · High · Effort 2d · ~1.5d remaining
 - `npm test` → *"No tests found (0 matches)"*. Add `testRegex` for `test/`, then cover auth, bookings, donations, RBAC.
-- **Acceptance** `npm test` runs all suites in CI and fails the build on regression.
+- **Root cause was worse than stated:** the repo had **no Jest configuration at all**, and
+  **no automated test gate anywhere** — `deploy.yml` is the only workflow, it fires on push to
+  `main`, and it runs `nest build` over SSH **on the production server**. Tests ran nowhere; a
+  compile error's first audience was production.
+- **Done** `jest.config.js` discovering `src/**/*.spec.ts` + `test/**/*.e2e-spec.ts`; script split
+  (`test`, `test:unit`, `test:cov`, `test:ci`, `test:e2e`); new `.github/workflows/ci.yml`
+  (install → prisma generate → build → test, on push and PR); coverage ratchet at the measured
+  baseline; **11-case unit spec for `RolesGuard`**, previously untested.
+  **57 tests / 6 suites pass.** Evidence `final-delivery-audit/logs/T-12-test-discovery.md`.
+- **Acceptance** `npm test` runs all suites in CI and fails the build on regression — **met**:
+  verified that a coverage drop exits 1 and an empty suite exits 1 rather than passing quietly.
+- **Still open (~1.5d)** the "raise coverage" half. Coverage moved only 16.31% → **16.34%**; the
+  core is still untested (booking engine T-09, donations/receipts, `/me/*` ownership T-15, OTP).
+  Those need a test database or T-06 credentials.
+- **Decision left to the maintainers** `ci.yml` does not gate the deploy. Adding `needs: [test]`
+  to `deploy.yml` is one line, but it would block releases on a red suite — a release-policy call,
+  not something to impose as a side effect of adding CI. Recommended.
 
 ### T-13 · Admin notification broadcast wiring — ✅ CLIENT DONE, verification BLOCKED
 - Module Notifications · Dashboard→API · High · Effort 1d · File `pages/Notifications.tsx`

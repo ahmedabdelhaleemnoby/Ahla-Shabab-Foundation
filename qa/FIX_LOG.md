@@ -312,6 +312,64 @@ proves the endpoint's *authentication*, not the *effect* of a confirmed payment 
 
 ---
 
+## T-11 follow-up — the deployment risk resolved itself, and was verified
+
+The T-11 entry warned that production would refuse to boot if `WEBHOOK_SECRET` were shorter than
+16 characters, and that its length could not be checked from outside. Pushing that commit answered
+the question: `deploy.yml` fires on push to `main`, so run `31202890048` deployed it and restarted
+the API.
+
+Verified after the fact: `/foundation`, `/governorates`, `/cases` all return **200**, and the live
+Swagger at `/api/docs-json` carries the **new** description
+(*"Fails closed whenever WEBHOOK_SECRET is not set, unless ALLOW_UNSIGNED_WEBHOOKS=true…"*),
+which proves the new build is the one running. A booted app means `validateEnv` passed, so
+**production's `WEBHOOK_SECRET` exists and is ≥16 characters.** The warning is closed, empirically.
+
+Worth stating anyway: this was luck, not process. The push went straight to production with no
+gate in front of it — which is precisely what T-12 addresses.
+
+---
+
+## T-12 — Backend tests actually run, and now run in CI ⬆ MOSTLY DONE
+
+**Before.** `npm test` reported *"499 files checked … 0 matches"*. The stated cause (specs live in
+`test/` and only run under `jest-e2e.json`) understated it: **the repo had no Jest configuration at
+all** — no `jest` key, no `jest.config.*`. Bare `jest` fell back to its default `?(*.)+(spec|test).ts`
+pattern, which cannot match `*.e2e-spec.ts` because the character before `spec` is `-`, not `.`.
+
+**The bigger finding.** There was **no automated test gate anywhere**. `deploy.yml` is the only
+workflow; it fires on push to `main` and runs `git pull → npm install → nest build → prisma db push
+→ prisma db seed → pm2 restart` **over SSH on the production server**. Tests ran nowhere, and the
+typecheck's first execution was on the production box. That is the mechanism that let the stale
+donation fixture survive until T-11 tripped over it.
+
+**Files.**
+- `jest.config.js` (new) — discovers `src/**/*.spec.ts` **and** `test/**/*.e2e-spec.ts`; coverage
+  collection; thresholds set at today's measured numbers as a ratchet.
+- `package.json` — `test`, `test:unit`, `test:cov`, `test:ci`, `test:e2e`.
+- `.github/workflows/ci.yml` (new) — install → prisma generate → build → test, on push **and PR**.
+- `src/common/guards/roles.guard.spec.ts` (new) — 11 cases on the authorization guard.
+
+**Retest.** `npx jest --listTests` finds 5 suites (was 0); `npm test` **57 passed / 6 suites**;
+`test:unit` 11; `test:e2e` 46; `test:ci` exit 0; build exit 0. The gate was checked for teeth, not
+assumed: raising the threshold 1pt fails with *"not met: 16.34%"* (**exit 1**), and a suite matching
+nothing **exits 1** rather than passing quietly.
+
+**Coverage, stated plainly.** 16.31% → **16.34%** statements; functions unchanged at 8.73%. The
+percentage barely moved because the guard is ~40 lines against 2,808 statements. **The "raise
+coverage" half of T-12 is only partially met** and about 1.5d remains; the core (booking engine,
+donations/receipts, `/me/*` ownership, OTP) is still untested and needs a test database or T-06.
+The 11 new cases were chosen for risk rather than percentage: `RolesGuard` had no tests at all,
+against the audit's own rule *"never mark security completed without authorization tests."* They pin,
+among others, that a permission must be literally `true` and not merely truthy, and that there is
+**no implicit superadmin bypass**.
+
+**Deliberately not done.** `ci.yml` does not gate the deploy. Adding `needs: [test]` to `deploy.yml`
+is one line, but it would block production releases on a red suite — a release-policy decision for
+the maintainers, not a side effect of adding CI. Recommended, not imposed.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

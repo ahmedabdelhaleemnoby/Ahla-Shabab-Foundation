@@ -51,13 +51,13 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 31 | Contact | Messages submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 32 | Volunteers | Applications submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 33 | Media | Upload endpoint + library | PASS | PARTIAL | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | CMS media → server upload |
-| 34 | RBAC | Roles + permission guards | PASS | — | PARTIAL | — | BLOCKED | BLOCKED | **PARTIAL** | 403 matrix test |
+| 34 | RBAC | Roles + permission guards | PASS | — | PARTIAL | — | PARTIAL | BLOCKED | **PARTIAL** | guard logic now unit-tested (T-12, 11 cases); live 403 matrix still BLOCKED |
 | 35 | Audit log | actor/action/entity/prev/new/ip/UA | PASS | — | PASS | — | BLOCKED | BLOCKED | **PARTIAL** | verify writes on mutations |
 | 36 | Reports | Aggregates + date filters | PASS | — | PASS | — | BLOCKED | BLOCKED | **PARTIAL** | compare vs SQL |
 | 37 | Exports | CSV / print | — | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | client-side only |
 | 38 | Deployment | nginx conf + GitHub Actions deploy | PARTIAL | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | documented runbook |
 | 39 | Responsive/RTL | 320/390/430/tablet + dashboard breakpoints | — | PARTIAL | PARTIAL | — | — | MISSING | **PARTIAL** | re-verify this build |
-| 40 | Testing | Backend automated tests | PARTIAL | — | — | — | — | PARTIAL | **PARTIAL** | default runner finds 0 tests |
+| 40 | Testing | Backend automated tests | PASS | — | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | T-12: `npm test` runs 57 tests/6 suites + CI gate; coverage still 16% |
 | 41 | Auth E2E | Mobile login actually authenticates | PASS | PASS | — | — | PASS | PARTIAL | **PASS** ✅ | wired `60e3417`; wrong code proven rejected live. Inbox-based happy path BLOCKED |
 | 42 | Admin writes | Any admin mutation persists | PASS | — | PASS | — | PASS | PARTIAL | **PASS** ✅ | status `a797361` + content/services CRUD `f87bd35`; live proof needs a token |
 | 43 | Broadcast | Admin sends notification | PASS | — | PASS | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired T-13; send not executed — would push to real users on prod |
