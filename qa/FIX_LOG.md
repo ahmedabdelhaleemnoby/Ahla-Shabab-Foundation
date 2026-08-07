@@ -178,6 +178,54 @@ account screens also still read local stores — that is T-05, not this task.
 
 ---
 
+## T-05 — Account screens read `/me/*` ✅ DONE (client), live proof BLOCKED
+
+**Before.** Bookings, donations, receipts, favorites, notifications and
+preferences all rendered bundled or local rows — `const mine = donations`,
+`appointments.slice(0, 5)`, "Mock favorites". A reviewer clicking through saw
+convincing records that belonged to no one (finding N-02).
+
+**Root cause.** Same shape as G-01/G-02: these screens predate the API and were
+never reconnected once `/me/*` shipped.
+
+**Files changed** (`Ahla-Shabab-Foundation`, commit `c85f9ed`)
+- `shared/src/api/endpoints.ts` — the `/me` surface (12 functions)
+- `mobile/src/hooks/useMyData.ts` *(new)* — loading / error / empty / guest + retry
+- `mobile/src/components/AccountState.tsx` *(new)* — one consistent rendering of those states
+- The six account screens, plus an `App.tsx` session/appState sync fix
+
+**Notable decisions.**
+- **No fallback for account data.** Every other read in the app degrades to
+  bundled content; these deliberately do not. An empty list with a reason is
+  honest; someone else's sample bookings are not.
+- **Receipts derive from donations** — there is no `/me/receipts` endpoint; a
+  receipt *is* a donation.
+- **Favorites resolve locally.** The server returns `{entityType, entityId}`
+  pairs, matched against the already-loaded content stores — no N+1 round-trip.
+- **Preferences toggle optimistically and revert on failure**, because a
+  preference that silently failed to save is worse than one that visibly did not.
+- **Bug found and fixed while wiring:** `restoreSession()` (added in T-04)
+  restored the token but never told `appState`, so a returning user would hold a
+  valid session while every `LoginGate` still treated them as a guest.
+
+**Retest**
+
+| Check | Before | After |
+|---|---|---|
+| Screens calling their `/me` endpoint | 0 / 6 | **6 / 6** |
+| Bundled arrays used as "my" data | 3 | **0** |
+| Mobile typecheck | pass | ✅ pass |
+| `expo export` bundle | pass | ✅ pass |
+
+**Result.** ✅ **RESOLVED** at the client layer.
+
+**Still BLOCKED (T-06).** No bearer token exists here, so the authenticated happy
+path — real rows rendering, cross-account isolation (User A must not see User B's
+bookings/receipts) — remains unproven. The wiring, the guest path and the failure
+path are verified.
+
+---
+
 ## Corrections to the baseline audit
 
 Two findings in the first report were wrong and are withdrawn/corrected:
@@ -189,6 +237,7 @@ Two findings in the first report were wrong and are withdrawn/corrected:
 
 ## Status of the delivery decision
 
-Unchanged: **NOT READY — REMAINING CORE TASKS.** Four P0 items are closed (T-01, T-02, T-03,
-T-04); two remain — **T-05** (`/me/*` wiring) and **T-06** (credentials, which gates the
-remaining verification).
+**NOT READY — REMAINING CORE TASKS**, but every P0 that engineering can close is now closed:
+T-01, T-02, T-03, T-04 and T-05. The single remaining P0 is **T-06 — credentials and a
+staging environment** — which is procurement, not code, and gates all remaining verification
+(IDOR, RBAC 403, booking race, payment webhook, OTP delivery, reports vs SQL).

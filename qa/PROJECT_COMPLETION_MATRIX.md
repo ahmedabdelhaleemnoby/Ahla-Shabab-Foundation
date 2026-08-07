@@ -1,8 +1,8 @@
 # PROJECT COMPLETION MATRIX
 
 > **Updated 2026-08-07 after remediation.** T-01 (row 45) and T-03 moved. See `FIX_LOG.md`.
-> New tally after T-01…T-04: PASS 17 · PARTIAL 26 · FAIL 1 · MISSING 3 · BLOCKED 5
-> → **(17+13)/47 = 64%** (baseline was 57%).
+> New tally after T-01…T-05: PASS 18 · PARTIAL 26 · FAIL 0 · MISSING 3 · BLOCKED 5
+> → **(18+13)/47 = 66%** (baseline was 57%). **No requirement is FAIL any more.**
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -29,19 +29,19 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 15 | Auth | Email OTP request/verify endpoints | PASS | PASS | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | wired; live delivery still BLOCKED |
 | 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | BLOCKED | **PARTIAL** | live 3-case test |
 | 17 | Auth | Admin login (`POST /admin/auth/login`) | PASS | — | PASS | — | BLOCKED | MISSING | **PARTIAL** | live login proof |
-| 18 | User flow | History/receipts/bookings/favorites/notifications for signed-in user | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | mobile `/me/*` wiring |
+| 18 | User flow | History/receipts/bookings/favorites/notifications for signed-in user | PASS | PASS | — | — | PASS | BLOCKED | **PASS** ✅ | wired `c85f9ed`; live proof needs a token |
 | 19 | Cases | Urgent + sponsorship: list/detail/publish/feature | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 20 | Projects | CRUD, stages, updates, ordering | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 21 | News | Articles CRUD, publish, pin | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 22 | Services | Categories + services CRUD, activate | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 23 | Consultations | Submit request → stored | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | mobile submits locally |
 | 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | **FAIL** | PARTIAL | **PARTIAL** | **key mismatch + missing consent** |
-| 25 | Bookings | Engine + Serializable-tx concurrency | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring; race test |
+| 25 | Bookings | Engine + Serializable-tx concurrency | PASS | PASS | PASS | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | my-bookings wired; race test BLOCKED |
 | 26 | Donations | Create; server owns status | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring |
-| 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | mobile wiring; IDOR test |
-| 28 | Notifications | In-app feed, unread, mark read | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | wire both clients |
-| 29 | Notifications | Preferences per type | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | mobile wiring |
-| 30 | Favorites | Add/remove, per-user | PASS | FAIL | — | — | FAIL | BLOCKED | **PARTIAL** | mobile wiring (currently mock) |
+| 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired; IDOR test still BLOCKED |
+| 28 | Notifications | In-app feed, unread, mark read | PASS | PASS | FAIL | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | mobile wired `c85f9ed`; admin broadcast still T-13 |
+| 29 | Notifications | Preferences per type | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired `c85f9ed` |
+| 30 | Favorites | Add/remove, per-user | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | list wired `c85f9ed`; heart toggle still local |
 | 31 | Contact | Messages submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 32 | Volunteers | Applications submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 33 | Media | Upload endpoint + library | PASS | PARTIAL | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | CMS media → server upload |
