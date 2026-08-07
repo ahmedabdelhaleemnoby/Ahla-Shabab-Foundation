@@ -7,13 +7,16 @@ import { Card, Button } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, row } from '../theme';
 
-/* §13 — visual placeholder only: explains how payment confirmation will work
-   in the production build. No server logic exists in this demo. */
+/* Explains how a donation is confirmed. There is NO online payment gateway:
+   the donor pays externally (bank/InstaPay, Fawry, Vodafone Cash), sends the
+   proof over WhatsApp, and the admin approves it. Nothing is ever confirmed
+   automatically from the app. */
 
 const STEPS: { icon: IconName; title: string; body: string }[] = [
-  { icon: 'smartphone', title: 'تدفع من التطبيق', body: 'تختار المبلغ ووسيلة الدفع، وتُسجَّل عمليتك فوراً بحالة «قيد التأكيد» أو «قيد المراجعة».' },
-  { icon: 'server', title: 'الخادم يتحقق', body: 'بوابة الدفع تُخطر خادم الجمعية مباشرة بنتيجة العملية عبر اتصال آمن ومشفّر.' },
-  { icon: 'check-circle', title: 'يُعتمد التبرع', body: 'بعد تأكيد الخادم — أو مراجعة الإدارة للتحويلات اليدوية — تتحول حالة الإيصال إلى «مكتمل» ويصلك إشعار.' },
+  { icon: 'smartphone', title: 'تختار من التطبيق', body: 'تحدّد وجهة التبرع والمبلغ ووسيلة الدفع، ويُسجَّل طلبك بحالة «قيد المراجعة».' },
+  { icon: 'credit-card', title: 'تُتم التحويل خارج التطبيق', body: 'تحوّل على حساب الجمعية في CIB أو إنستاباي، أو تدفع بكود فوري 74000، أو عبر فودافون كاش. لا يتم أي خصم داخل التطبيق.' },
+  { icon: 'message-circle', title: 'ترسل إثبات التحويل', body: 'أرسل صورة الإيصال عبر واتساب لخدمة العملاء ليتم ربطها بتبرعك.' },
+  { icon: 'check-circle', title: 'الإدارة تعتمد التبرع', body: 'بعد مراجعة الإثبات تتحول حالة الإيصال إلى «مكتمل» ويصلك إشعار. لا يمكن للتطبيق اعتماد أي تبرع من تلقاء نفسه.' },
 ];
 
 export default function PaymentInfoScreen() {

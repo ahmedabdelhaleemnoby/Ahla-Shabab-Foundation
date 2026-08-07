@@ -1,3 +1,4 @@
+import { paymentMethods } from '../data';
 import type {
   Article,
   ArticleCategory,
@@ -202,11 +203,13 @@ function inferConsultationType(specialty: string): ConsultationType {
  * method the app cannot label correctly must not appear in the donate flow.
  */
 const PAYMENT_ID_MAP: Record<string, PaymentMethod> = {
-  card: 'بطاقة بنكية',
   fawry: 'فوري',
-  instapay: 'إنستاباي',
   vodafone: 'فودافون كاش',
   bank: 'تحويل بنكي',
+  // InstaPay is the same CIB account as the bank transfer — fold it in rather
+  // than offering it twice. `card` is deliberately absent: card payment is not
+  // supported, so a backend still serving it is dropped by the caller.
+  instapay: 'تحويل بنكي',
 };
 
 const PAYMENT_GROUP_MAP: Record<string, PaymentMethodInfo['group']> = {
@@ -225,11 +228,22 @@ export function mapPaymentMethod(w: Record<string, any>): PaymentMethodInfo | nu
   // Already-Arabic ids (a seeded/updated backend) pass straight through.
   const resolved = id ?? (Object.values(PAYMENT_ID_MAP).includes(rawId as PaymentMethod) ? (rawId as PaymentMethod) : null);
   if (!resolved) return null;
+  // Instructions/labels come from the bundled approved set: they are contract
+  // detail (account numbers, donation codes) that must not drift with the wire
+  // payload, and a backend that predates them would otherwise render an empty card.
+  const approved = paymentMethods.find((m: PaymentMethodInfo) => m.id === resolved);
   return {
     id: resolved,
-    group: PAYMENT_GROUP_MAP[str(w.group)] ?? 'دفع إلكتروني',
-    description: str(w.description),
+    label: str(w.label) || approved?.label || resolved,
+    group: PAYMENT_GROUP_MAP[str(w.group)] ?? approved?.group ?? 'دفع إلكتروني',
+    description: str(w.description) || approved?.description || '',
     availability: oneOf(w.availability, AVAILABILITIES, 'متاحة'),
+    instructions: Array.isArray(w.instructions) && w.instructions.length
+      ? w.instructions.map((line: unknown) => str(line))
+      : approved?.instructions ?? [],
+    copyables: Array.isArray(w.copyables) && w.copyables.length
+      ? w.copyables.map((c: any) => ({ label: str(c.label), value: str(c.value) }))
+      : approved?.copyables,
     // Defaults to manual (admin review) when absent: the safer of the two, since
     // it never claims a payment succeeded without confirmation.
     manual: w.manual ?? true,

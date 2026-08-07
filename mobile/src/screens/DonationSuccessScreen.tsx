@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Share } from 'react-native';
+import { View, Text, Share, Pressable, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
@@ -7,24 +7,25 @@ import { Card, Button, Pill } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
 import { Icon, IconName } from '../components/Icon';
 import { colors, font, num, row, rowBetween } from '../theme';
+import { donationSupport } from '@ahla/shared';
 import type { RootProps } from '../navigation/types';
 
 /**
- * Status-aware donation receipt. The app NEVER renders a final "success" on
- * its own: gateway payments stay «قيد التأكيد» until the server confirms,
- * and manual methods (bank transfer / InstaPay) stay «قيد المراجعة» until an
- * admin approves them in the dashboard.
+ * Status-aware donation receipt. The app NEVER renders a final "success" on its
+ * own. There is no payment gateway: every method is completed outside the app,
+ * so a new donation is «قيد المراجعة» until an admin approves it — which is why
+ * this screen's main action is sending the transfer proof over WhatsApp.
  */
 const STATUS_UI: Record<string, { icon: IconName; color: string; soft: string; title: string; note: string }> = {
   'قيد التأكيد': {
     icon: 'clock', color: colors.navy700, soft: '#EAF0F8',
     title: 'تم استلام طلب التبرع',
-    note: 'جارٍ تأكيد عملية الدفع مع بوابة الدفع. سيصلك إشعار فور اعتماد التبرع.',
+    note: 'بانتظار تأكيد العملية. سيصلك إشعار فور اعتماد التبرع.',
   },
   'قيد المراجعة': {
     icon: 'file-text', color: '#B9791A', soft: colors.goldSoft,
     title: 'تم استلام طلب التبرع',
-    note: 'تبرعات التحويل البنكي/إنستاباي تُعتمد بعد مراجعة الإدارة. سيصلك إشعار فور الاعتماد.',
+    note: 'أرسل صورة إيصال التحويل عبر واتساب ليعتمد فريق الجمعية تبرعك. سيصلك إشعار فور الاعتماد.',
   },
   مكتمل: {
     icon: 'check', color: colors.green, soft: colors.greenSoft,
@@ -34,7 +35,7 @@ const STATUS_UI: Record<string, { icon: IconName; color: string; soft: string; t
   فشل: {
     icon: 'x', color: colors.red, soft: colors.redSoft,
     title: 'تعذّر إتمام العملية',
-    note: 'لم تكتمل عملية الدفع. لم يُخصم أي مبلغ — يمكنك المحاولة مرة أخرى.',
+    note: 'لم يكتمل التبرع. إن كنت قد حوّلت المبلغ بالفعل، أرسل الإيصال عبر واتساب لمراجعته.',
   },
 };
 
@@ -62,6 +63,25 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
         </StickyFooter>
       }
     >
+      {/* Send transfer proof — the donor's actual next step after an external transfer */}
+      {(status === 'قيد المراجعة' || status === 'فشل') && (
+        <>
+          <Pressable
+            onPress={() => Linking.openURL(donationSupport.whatsappUrl).catch(() => {})}
+            style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#25D366', borderRadius: 100, paddingVertical: 14, marginTop: 16 }}
+          >
+            <Icon name="message-circle" size={18} color="#fff" />
+            <Text style={[font('800'), { fontSize: 13.5, color: '#fff' }]}>{donationSupport.proofCta}</Text>
+          </Pressable>
+          <Text style={[font('600'), num, { fontSize: 10.5, color: colors.muted, textAlign: 'center', marginTop: 6, writingDirection: 'ltr' }]}>
+            {donationSupport.whatsappNumber}
+          </Text>
+          <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, textAlign: 'center', marginTop: 8, lineHeight: 16 }]}>
+            {donationSupport.keepReceiptNote}
+          </Text>
+        </>
+      )}
+
       {/* Status mark */}
       <View style={{ alignItems: 'center', marginTop: 22 }}>
         <View style={{ width: 92, height: 92, borderRadius: 46, backgroundColor: ui.soft, alignItems: 'center', justifyContent: 'center' }}>

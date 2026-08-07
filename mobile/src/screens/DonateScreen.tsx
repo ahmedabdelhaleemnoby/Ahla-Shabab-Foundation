@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, TextInput } from 'react-native';
+import { View, Text, Pressable, TextInput, Linking } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
@@ -13,6 +14,7 @@ import {
   isValidDonationAmount,
   pct,
   egp,
+  donationSupport,
   type PaymentMethod,
 } from '@ahla/shared';
 import { getCases, getProjects } from '../store/content';
@@ -35,12 +37,10 @@ const DESTINATIONS: { id: string; label: string; hint: string; icon: IconName; p
 const AMOUNTS = ['مبلغ آخر', '250', '500', '1000'];
 
 /** Brand visuals per method — availability/behaviour comes from the CMS payment methods. */
-const BRAND: Record<PaymentMethod, { brand?: string; brandColor?: string; icon?: 'credit-card' | 'smartphone' | 'home' }> = {
-  'بطاقة بنكية': { icon: 'credit-card' },
-  فوري: { brand: 'fawry', brandColor: colors.fawryNavy },
-  إنستاباي: { brand: 'instaPAY', brandColor: colors.instapay },
-  'فودافون كاش': { brand: 'Vodafone', brandColor: colors.vodafone },
+const BRAND: Partial<Record<PaymentMethod, { brand?: string; brandColor?: string; icon?: IconName }>> = {
   'تحويل بنكي': { icon: 'home' },
+  فوري: { brand: 'fawry', brandColor: colors.fawryNavy },
+  'فودافون كاش': { brand: 'Vodafone', brandColor: colors.vodafone },
 };
 
 export default function DonateScreen() {
@@ -54,7 +54,19 @@ export default function DonateScreen() {
   const [amount, setAmount] = useState('500');
   const [custom, setCustom] = useState('');
   const [recurring, setRecurring] = useState(false);
-  const [method, setMethod] = useState<PaymentMethod>('بطاقة بنكية');
+  const [method, setMethod] = useState<PaymentMethod>('تحويل بنكي');
+  /** Value most recently copied — drives the "تم النسخ" confirmation. */
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyValue = async (value: string, _label: string) => {
+    try {
+      await Clipboard.setStringAsync(value);
+      setCopied(value);
+      setTimeout(() => setCopied((c) => (c === value ? null : c)), 1800);
+    } catch {
+      /* clipboard unavailable — the value stays visible and selectable */
+    }
+  };
   const [err, setErr] = useState<string | null>(null);
 
   // Deep entries: «تبرع للحالة» / «دعم المشروع» land here preselected, on the amount step.
@@ -282,49 +294,112 @@ export default function DonateScreen() {
         </>
       )}
 
-      {/* Step 3 — payment method */}
+      {/* Step 3 — payment method (no gateway: every method is completed outside the app) */}
       {step === 3 && (
         <>
           <Label text="اختر طريقة الدفع" />
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 10 }}>
             {getPaymentMethods().map((m) => {
               const on = method === m.id;
               const available = m.availability === 'متاحة';
-              const b = BRAND[m.id];
+              const b = BRAND[m.id] ?? {};
               return (
                 <Pressable
                   key={m.id}
                   disabled={!available}
                   onPress={() => setMethod(m.id)}
-                  style={[row, { gap: 10, borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#fff', alignItems: 'flex-start', opacity: available ? 1 : 0.55 }]}
+                  style={{
+                    borderWidth: on ? 1.5 : 1,
+                    borderColor: on ? colors.navy700 : colors.line,
+                    borderRadius: 16,
+                    backgroundColor: '#fff',
+                    padding: 13,
+                    opacity: available ? 1 : 0.55,
+                  }}
                 >
-                  <View style={[styles_rd, { marginTop: 3 }, on && { borderColor: colors.navy700 }]}>
-                    {on && <View style={styles_rdDot} />}
-                  </View>
-                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                    <View style={[row, { gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }]}>
-                      <Text style={[font('700'), { fontSize: 13, color: colors.ink }]}>{m.id}</Text>
-                      <StatusChip
-                        label={m.availability}
-                        bg={available ? colors.greenSoft : m.availability === 'قيد التفعيل' ? colors.goldSoft : colors.paper2}
-                        fg={available ? colors.greenDark : m.availability === 'قيد التفعيل' ? '#B9791A' : colors.muted}
-                      />
-                      {m.manual && <StatusChip label="بمراجعة الإدارة" bg="#EAF0F8" fg={colors.navy700} />}
+                  {/* Header: radio · title · brand */}
+                  <View style={[row, { gap: 10, alignItems: 'flex-start' }]}>
+                    <View style={[styles_rd, { marginTop: 3 }, on && { borderColor: colors.navy700 }]}>
+                      {on && <View style={styles_rdDot} />}
                     </View>
-                    <Text style={[font('400'), { fontSize: 10, color: colors.slate, marginTop: 3, textAlign: 'right', lineHeight: 14 }]}>{m.description}</Text>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                      <View style={[row, { gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }]}>
+                        <Text style={[font('800'), { fontSize: 13.5, color: colors.navy700 }]}>{m.label ?? m.id}</Text>
+                        <StatusChip label="بمراجعة الإدارة" bg="#EAF0F8" fg={colors.navy700} />
+                      </View>
+                      <Text style={[font('400'), { fontSize: 10.5, color: colors.slate, marginTop: 3, textAlign: 'right', lineHeight: 15 }]}>
+                        {m.description}
+                      </Text>
+                    </View>
+                    {b.brand ? (
+                      <Text style={[font('800'), { color: b.brandColor, fontSize: 11, marginTop: 3 }]}>{b.brand}</Text>
+                    ) : (
+                      <Icon name={b.icon ?? 'home'} size={16} color={colors.navy700} />
+                    )}
                   </View>
-                  {b.brand ? (
-                    <Text style={[font('800'), { color: b.brandColor, fontSize: 11, marginTop: 4 }]}>{b.brand}</Text>
-                  ) : (
-                    <Icon name={b.icon ?? 'credit-card'} size={16} color={colors.navy700} />
+
+                  {/* Instructions + copyable values — only for the selected method */}
+                  {on && (
+                    <View style={{ marginTop: 11, borderTopWidth: 1, borderTopColor: colors.line2, paddingTop: 11 }}>
+                      {(m.instructions ?? []).map((line, i) => (
+                        <View key={i} style={[row, { gap: 7, alignItems: 'flex-start', marginBottom: 6 }]}>
+                          <Text style={[font('800'), num, { fontSize: 10.5, color: colors.navy500, marginTop: 1 }]}>{i + 1}.</Text>
+                          <Text style={[font('400'), { flex: 1, fontSize: 11.5, color: colors.slate, textAlign: 'right', lineHeight: 18 }]}>{line}</Text>
+                        </View>
+                      ))}
+
+                      {(m.copyables ?? []).map((c) => (
+                        <View
+                          key={c.label}
+                          style={[rowBetween, { backgroundColor: colors.paper2, borderRadius: 12, paddingVertical: 9, paddingHorizontal: 11, marginTop: 7 }]}
+                        >
+                          <Pressable
+                            onPress={() => copyValue(c.value, c.label)}
+                            hitSlop={8}
+                            style={[row, { gap: 5 }]}
+                            accessibilityLabel={`نسخ ${c.label}`}
+                          >
+                            <Icon name={copied === c.value ? 'check' : 'copy'} size={14} color={copied === c.value ? colors.green : colors.navy700} />
+                            <Text style={[font('700'), { fontSize: 10.5, color: copied === c.value ? colors.green : colors.navy700 }]}>
+                              {copied === c.value ? 'تم النسخ' : 'نسخ'}
+                            </Text>
+                          </Pressable>
+                          <View style={{ alignItems: 'flex-end', flex: 1 }}>
+                            <Text style={[font('400'), { fontSize: 9.5, color: colors.muted }]}>{c.label}</Text>
+                            {/* LTR so account numbers and codes never reorder in RTL */}
+                            <Text style={[font('800'), num, { fontSize: 13.5, color: colors.navy700, writingDirection: 'ltr' }]}>{c.value}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
                   )}
                 </Pressable>
               );
             })}
           </View>
 
+          {/* Keep the receipt */}
+          <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: colors.goldSoft }]}>
+            <Icon name="alert-triangle" size={15} color="#B9791A" />
+            <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
+              {donationSupport.keepReceiptNote}
+            </Text>
+          </Card>
+
+          {/* Send proof over WhatsApp */}
+          <Pressable
+            onPress={() => Linking.openURL(donationSupport.whatsappUrl).catch(() => {})}
+            style={[row, { gap: 8, justifyContent: 'center', backgroundColor: '#25D366', borderRadius: 100, paddingVertical: 13, marginTop: 10 }]}
+          >
+            <Icon name="message-circle" size={17} color="#fff" />
+            <Text style={[font('800'), { fontSize: 13, color: '#fff' }]}>{donationSupport.proofCta}</Text>
+          </Pressable>
+          <Text style={[font('600'), num, { fontSize: 10.5, color: colors.muted, textAlign: 'center', marginTop: 6, writingDirection: 'ltr' }]}>
+            {donationSupport.whatsappNumber}
+          </Text>
+
           <Pressable onPress={() => nav.navigate('PaymentInfo')} style={[row, { gap: 8, marginTop: 12, justifyContent: 'flex-end' }]}>
-            <Text style={[font('700'), { fontSize: 11, color: colors.navy500 }]}>كيف يتم تأكيد الدفع؟ ‹</Text>
+            <Text style={[font('700'), { fontSize: 11, color: colors.navy500 }]}>كيف يتم تأكيد التبرع؟ ‹</Text>
             <Icon name="info" size={13} color={colors.navy500} />
           </Pressable>
         </>

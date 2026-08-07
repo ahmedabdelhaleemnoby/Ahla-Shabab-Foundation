@@ -6,20 +6,21 @@ import {
   isMethodUsable,
   isValidDonationAmount,
 } from '../rules';
-import { paymentMethods, cases, projects } from '../data';
+import { paymentMethods, donationSupport, cases, projects } from '../data';
 import { providers, buildAvailableDays, makeBookingRef } from '../services';
 import type { PaymentMethod } from '../types';
 
 /* ───────────── Donation security rules ───────────── */
 describe('donation status rules', () => {
-  it('manual methods (bank transfer / InstaPay) default to قيد المراجعة (admin approval required)', () => {
-    expect(initialDonationStatus('تحويل بنكي')).toBe('قيد المراجعة');
-    expect(initialDonationStatus('إنستاباي')).toBe('قيد المراجعة');
+  it('every offered method defaults to قيد المراجعة — there is no payment gateway', () => {
+    for (const m of paymentMethods) {
+      expect(initialDonationStatus(m.id)).toBe('قيد المراجعة');
+    }
   });
 
-  it('gateway methods default to قيد التأكيد (server callback required)', () => {
-    expect(initialDonationStatus('بطاقة بنكية')).toBe('قيد التأكيد');
-    expect(initialDonationStatus('فوري')).toBe('قيد التأكيد');
+  it('legacy/unknown methods also fall back to قيد المراجعة, never to a confirmed-looking status', () => {
+    expect(initialDonationStatus('بطاقة بنكية')).toBe('قيد المراجعة');
+    expect(initialDonationStatus('إنستاباي')).toBe('قيد المراجعة');
   });
 
   it('the client can NEVER produce مكتمل for any method', () => {
@@ -35,9 +36,33 @@ describe('donation status rules', () => {
     void bad;
   });
 
-  it('unavailable methods cannot be used (فودافون كاش is قيد التفعيل)', () => {
-    expect(isMethodUsable('فودافون كاش')).toBe(false);
-    expect(isMethodUsable('بطاقة بنكية')).toBe(true);
+  it('card payment is not offered and cannot be used', () => {
+    expect(paymentMethods.some((m) => m.id === 'بطاقة بنكية')).toBe(false);
+    expect(isMethodUsable('بطاقة بنكية')).toBe(false);
+  });
+
+  it('only the three client-approved methods are offered, all available', () => {
+    expect(paymentMethods.map((m) => m.id).sort()).toEqual(
+      ['تحويل بنكي', 'فوري', 'فودافون كاش'].sort(),
+    );
+    for (const m of paymentMethods) expect(isMethodUsable(m.id)).toBe(true);
+  });
+
+  it('the approved account number and donation codes are exactly as the client supplied', () => {
+    const val = (id: string, label: string) =>
+      paymentMethods.find((m) => m.id === id)?.copyables?.find((c) => c.label === label)?.value;
+    expect(val('تحويل بنكي', 'رقم الحساب')).toBe('100063461509');
+    expect(val('تحويل بنكي', 'اسم الحساب')).toBe('khawaterahlashabab');
+    expect(val('فوري', 'كود التبرع')).toBe('74000');
+    expect(val('فودافون كاش', 'كود التبرع')).toBe('#237*9*');
+    expect(donationSupport.whatsappUrl).toBe('https://wa.me/201050900710');
+  });
+
+  it('every offered method carries instructions the donor can follow', () => {
+    for (const m of paymentMethods) {
+      expect(m.label.length).toBeGreaterThan(0);
+      expect(m.instructions.length).toBeGreaterThan(0);
+    }
   });
 
   it('every payment method has a valid availability + manual flag', () => {
@@ -45,9 +70,9 @@ describe('donation status rules', () => {
       expect(['متاحة', 'قيد التفعيل', 'غير متاحة حالياً']).toContain(m.availability);
       expect(typeof m.manual).toBe('boolean');
     }
-    // every manual method must be a transfer-family method
-    for (const m of paymentMethods.filter((x) => x.manual)) {
-      expect(m.group).toBe('تحويل بنكي');
+    // no gateway remains: every offered method is completed outside the app
+    for (const m of paymentMethods) {
+      expect(m.manual).toBe(true);
     }
   });
 

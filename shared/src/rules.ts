@@ -21,7 +21,11 @@ export type ClientDonationStatus = 'قيد التأكيد' | 'قيد المرا�
  */
 export function initialDonationStatus(method: PaymentMethod): ClientDonationStatus {
   const info = paymentMethods.find((m) => m.id === method);
-  return info?.manual ? 'قيد المراجعة' : 'قيد التأكيد';
+  // There is no online gateway: every offered method is completed outside the
+  // app, so a new donation is ALWAYS «قيد المراجعة» until an admin approves it.
+  // Unknown/legacy methods fall through to the same safe answer — the client
+  // must never be able to produce a confirmed-looking status.
+  return info?.manual === false ? 'قيد التأكيد' : 'قيد المراجعة';
 }
 
 /** A method can be used for a new donation only when it is 'متاحة'. */

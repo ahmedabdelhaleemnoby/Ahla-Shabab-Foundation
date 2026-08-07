@@ -81,11 +81,14 @@ export interface Consultant {
 }
 
 export type PaymentMethod =
-  | 'بطاقة بنكية'
+  /* Offered methods — all are manual/external. There is NO online gateway. */
+  | 'تحويل بنكي'
   | 'فوري'
-  | 'إنستاباي'
   | 'فودافون كاش'
-  | 'تحويل بنكي';
+  /* Legacy values kept so historical donation rows still type-check.
+     They are never offered for a new donation (not in `paymentMethods`). */
+  | 'إنستاباي'
+  | 'بطاقة بنكية';
 
 export type PaymentAvailability = 'متاحة' | 'قيد التفعيل' | 'غير متاحة حالياً';
 
@@ -93,8 +96,14 @@ export interface PaymentMethodInfo {
   id: PaymentMethod;
   /** Method family shown to the user. */
   group: 'دفع إلكتروني' | 'تحويل بنكي' | 'محفظة إلكترونية';
+  /** Card title shown to the donor (may differ from the stored id). */
+  label: string;
   description: string;
   availability: PaymentAvailability;
+  /** Step-by-step instructions rendered inside the method card. */
+  instructions: string[];
+  /** Values the donor can copy with one tap (account number, donation code…). */
+  copyables?: { label: string; value: string }[];
   /**
    * true = manual method (bank transfer / InstaPay): the donation stays
    * "قيد المراجعة" until an admin approves it. false = gateway method:

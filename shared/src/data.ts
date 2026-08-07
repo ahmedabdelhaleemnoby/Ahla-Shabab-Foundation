@@ -16,13 +16,70 @@ import type {
  * Payment methods with live availability + confirmation mode (Offer/UX v2).
  * TODO(backend): serve from GET /config so the admin can toggle availability.
  */
+/**
+ * Client-approved donation methods (2026-08). There is **no online payment
+ * gateway**: every method is completed by the donor outside the app, so every
+ * one is `manual: true` and every donation stays «قيد المراجعة» until the
+ * admin approves it. Card payment was removed — it was never supported.
+ */
 export const paymentMethods: PaymentMethodInfo[] = [
-  { id: 'بطاقة بنكية', group: 'دفع إلكتروني', description: 'فيزا / ماستركارد — تأكيد فوري من بوابة الدفع', availability: 'متاحة', manual: false },
-  { id: 'فوري', group: 'دفع إلكتروني', description: 'ادفع بكود فوري من أقرب منفذ', availability: 'متاحة', manual: false },
-  { id: 'إنستاباي', group: 'تحويل بنكي', description: 'حوِّل عبر إنستاباي — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
-  { id: 'فودافون كاش', group: 'محفظة إلكترونية', description: 'الدفع عبر المحفظة الإلكترونية', availability: 'قيد التفعيل', manual: false },
-  { id: 'تحويل بنكي', group: 'تحويل بنكي', description: 'تحويل على حساب الجمعية — يُعتمد بعد مراجعة الإدارة', availability: 'متاحة', manual: true },
+  {
+    id: 'تحويل بنكي',
+    label: 'تحويل بنكي / إنستاباي',
+    group: 'تحويل بنكي',
+    description: 'حوِّل إلى حساب الجمعية في بنك CIB من أي تطبيق بنكي أو عبر إنستاباي.',
+    availability: 'متاحة',
+    manual: true,
+    copyables: [
+      { label: 'اسم الحساب', value: 'khawaterahlashabab' },
+      { label: 'رقم الحساب', value: '100063461509' },
+    ],
+    instructions: [
+      'البنك: CIB — البنك التجاري الدولي',
+      'اسم الحساب: khawaterahlashabab',
+      'رقم الحساب: 100063461509',
+      'يمكنك التحويل من تطبيق البنك أو من إنستاباي على نفس الحساب.',
+    ],
+  },
+  {
+    id: 'فوري',
+    label: 'فوري',
+    group: 'دفع إلكتروني',
+    description: 'ادفع من أقرب منفذ فوري باستخدام كود التبرع.',
+    availability: 'متاحة',
+    manual: true,
+    copyables: [{ label: 'كود التبرع', value: '74000' }],
+    instructions: [
+      'توجّه إلى أقرب منفذ فوري.',
+      'اطلب خدمة التبرعات وأدخل كود التبرع: 74000',
+      'تأكد من ظهور الاسم: جمعية خواطر أحلى شباب',
+    ],
+  },
+  {
+    id: 'فودافون كاش',
+    label: 'فودافون كاش',
+    group: 'محفظة إلكترونية',
+    description: 'تبرّع من محفظة فودافون كاش بكود التبرع أو عبر «ميجا خير».',
+    availability: 'متاحة',
+    manual: true,
+    copyables: [{ label: 'كود التبرع', value: '#237*9*' }],
+    instructions: [
+      'اطلب كود التبرع من هاتفك: #237*9*',
+      'أو من تطبيق «أنا فودافون»: اختر التبرعات ثم «ميجا خير»، ثم جمعية خواطر أحلى شباب.',
+    ],
+  },
 ];
+
+/**
+ * Customer-service channel used to send transfer proof. The donor completes the
+ * payment externally, then sends the screenshot here so the admin can approve.
+ */
+export const donationSupport = {
+  whatsappNumber: '+20 105 090 0710',
+  whatsappUrl: 'https://wa.me/201050900710',
+  proofCta: 'إرسال إثبات التحويل عبر واتساب',
+  keepReceiptNote: 'احتفظ بلقطة شاشة أو إيصال التحويل — ستحتاجها لإرسال الإثبات وتأكيد تبرعك.',
+} as const;
 
 /** Editable from the dashboard (إعدادات التطبيق). TODO(backend): GET /config. */
 export const appConfig: AppConfig = {
@@ -288,18 +345,18 @@ export const consultationTypes: { type: Consultant['type']; label: string }[] = 
 ];
 
 export const donations: Donation[] = [
-  { id: 'd-1', donorName: 'أحمد محمد', cause: 'كفالة أسرة محتاجة', amount: 250, method: 'بطاقة بنكية', date: '2025-05-12', recurring: true, status: 'مكتمل' },
-  { id: 'd-2', donorName: 'أحمد محمد', cause: 'دعم مشروع سقيا الماء', amount: 300, method: 'إنستاباي', date: '2025-05-05', recurring: false, status: 'مكتمل' },
+  { id: 'd-1', donorName: 'أحمد محمد', cause: 'كفالة أسرة محتاجة', amount: 250, method: 'تحويل بنكي', date: '2025-05-12', recurring: true, status: 'مكتمل' },
+  { id: 'd-2', donorName: 'أحمد محمد', cause: 'دعم مشروع سقيا الماء', amount: 300, method: 'تحويل بنكي', date: '2025-05-05', recurring: false, status: 'مكتمل' },
   { id: 'd-3', donorName: 'أحمد محمد', cause: 'مساهمة في صندوق الزكاة', amount: 150, method: 'فودافون كاش', date: '2025-05-01', recurring: false, status: 'مكتمل' },
-  { id: 'd-4', donorName: 'سلمى فاروق', cause: 'محطة تحلية مياه', amount: 1000, method: 'بطاقة بنكية', date: '2025-05-14', recurring: false, status: 'مكتمل' },
+  { id: 'd-4', donorName: 'سلمى فاروق', cause: 'محطة تحلية مياه', amount: 1000, method: 'تحويل بنكي', date: '2025-05-14', recurring: false, status: 'مكتمل' },
   { id: 'd-5', donorName: 'عمر حسن', cause: 'علاج الحاج أبو محمد', amount: 500, method: 'فوري', date: '2025-05-13', recurring: false, status: 'قيد المعالجة' },
-  { id: 'd-6', donorName: 'ليلى سمير', cause: 'دعم الطلاب', amount: 200, method: 'إنستاباي', date: '2025-05-11', recurring: true, status: 'مكتمل' },
+  { id: 'd-6', donorName: 'ليلى سمير', cause: 'دعم الطلاب', amount: 200, method: 'تحويل بنكي', date: '2025-05-11', recurring: true, status: 'مكتمل' },
   { id: 'd-7', donorName: 'يوسف كامل', cause: 'مطابخ أحلى شباب', amount: 750, method: 'تحويل بنكي', date: '2025-05-10', recurring: false, status: 'مكتمل' },
-  { id: 'd-8', donorName: 'هبة علي', cause: 'كفالة الطالبة نور', amount: 600, method: 'بطاقة بنكية', date: '2025-05-09', recurring: true, status: 'مكتمل' },
+  { id: 'd-8', donorName: 'هبة علي', cause: 'كفالة الطالبة نور', amount: 600, method: 'تحويل بنكي', date: '2025-05-09', recurring: true, status: 'مكتمل' },
   { id: 'd-9', donorName: 'كريم ماهر', cause: 'ترميم مسكن أسرة', amount: 400, method: 'فوري', date: '2025-05-08', recurring: false, status: 'فشل' },
   { id: 'd-10', donorName: 'نورهان أشرف', cause: 'الحالات الإنسانية', amount: 300, method: 'فودافون كاش', date: '2025-05-07', recurring: false, status: 'مكتمل' },
   { id: 'd-11', donorName: 'شريف عادل', cause: 'محطة تحلية مياه', amount: 2500, method: 'تحويل بنكي', date: '2025-05-15', recurring: false, status: 'قيد المراجعة' },
-  { id: 'd-12', donorName: 'آية مصطفى', cause: 'كفالة أسرة محتاجة', amount: 900, method: 'إنستاباي', date: '2025-05-15', recurring: true, status: 'قيد المراجعة' },
+  { id: 'd-12', donorName: 'آية مصطفى', cause: 'كفالة أسرة محتاجة', amount: 900, method: 'تحويل بنكي', date: '2025-05-15', recurring: true, status: 'قيد المراجعة' },
 ];
 
 export const appointments: Appointment[] = [
