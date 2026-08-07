@@ -741,6 +741,46 @@ them is in the evidence file; running it needs database access (T-06).
 
 ---
 
+## T-08 — Authorization suite over real HTTP ✅ DONE
+
+**"Blocked on T-06" was wrong — the third time.** T-08 was filed as needing "one admin + two user
+tokens" from T-06. T-06 is about **external** services: SMTP, a payment sandbox, an FCM key. Tokens
+are not external. This suite owns the test database and the JWT secret, so it creates its own users
+and admins and signs its own tokens with the same `JWT_ACCESS_SECRET` the strategy verifies against.
+**T-09, T-15 and T-08** were all mis-filed the same way — "needs a database or a token" was treated
+as the same category as "needs a third-party account".
+
+**How real it is.** The entire `AppModule` is booted and listens on a port. `common.module.ts`
+registers `JwtAuthGuard` and `RolesGuard` as `APP_GUARD`, so every request travels the production
+authorization stack behind the real `api/v1` prefix, and every assertion is on an HTTP status code.
+
+**What is proven — 31 tests.** Guest → 401 on 7 `/me/*` and 7 `/admin/*` routes. Wrong-secret and
+expired tokens → 401. A user token never reaches an admin route, and **cannot self-promote**: a token
+signed with the *real* secret claiming `type: 'admin'` is still refused, because `sub` is a user id
+and the `adminUser` lookup finds nothing — a valid signature does not confer a role. An admin holding
+only `portfolio:read` reaches portfolio (200) and gets **403** on users, roles, donations and
+bookings, plus **403 on a WRITE** to the very module it may read, so read access does not leak write
+access. A blocked user is refused per-request despite an unexpired token. For IDOR, A's `/me/bookings`
+and `/me/donations` contain neither B's ids nor B's phone — **and B's own requests do return them**,
+without which the first two assertions would pass on an empty list and prove nothing.
+
+**Mutation-checked.** Three guards broken independently — `RolesGuard` always-allow, blocked-user
+check removed, `userId` filter dropped — failed **11 tests, exactly the ones covering each**, while
+20 unrelated tests still passed.
+
+**Retest.** 31 in the new suite; **51 integration / 4 suites**; **101 unit / 10 suites**; integration
+re-run consecutively with no leakage; build clean; **CI green on GitHub's runner** (`31216558201`).
+
+**Result.** Row 34 → **PASS**; recounted tally **PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED
+5 = 71%**.
+
+**Honest limits.** Fourteen routes are asserted, not every route — the guard is global so the
+mechanism is proven, but a per-route sweep is mechanical and worth doing before launch. "A cannot
+read B's" is proven at list level because `/me/*` takes no id; the one id-addressable receipt path is
+deliberately public and is covered by T-15's unguessable reference instead.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

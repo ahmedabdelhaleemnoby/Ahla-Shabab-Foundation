@@ -15,8 +15,11 @@
 >
 > Tally after the integration harness (row 25 → PASS): PASS 21 · PARTIAL 23 · FAIL 0 · MISSING 3 · BLOCKED 5 → 69%.
 >
-> **Tally after T-15** (row 27 → PASS): PASS 22 · PARTIAL 22 · FAIL 0 · MISSING 3 · BLOCKED 5
-> → **(22+11)/47 = 70%** (baseline 57%). Counts re-derived from the rows, not carried forward.
+> Tally after T-15 (row 27 → PASS): PASS 22 · PARTIAL 22 · FAIL 0 · MISSING 3 · BLOCKED 5 → 70%.
+>
+> **Tally after T-08** (row 34 → PASS, 403 matrix + IDOR proven over HTTP):
+> PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 5
+> → **(23+10.5)/47 = 71%** (baseline 57%). Counts re-derived from the rows, not carried forward.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -59,7 +62,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 31 | Contact | Messages submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 32 | Volunteers | Applications submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 33 | Media | Upload endpoint + library | PASS | PARTIAL | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | CMS media → server upload |
-| 34 | RBAC | Roles + permission guards | PASS | — | PARTIAL | — | PARTIAL | BLOCKED | **PARTIAL** | guard logic now unit-tested (T-12, 11 cases); live 403 matrix still BLOCKED |
+| 34 | RBAC | Roles + permission guards | PASS | — | PASS | — | PASS | PASS | **PASS** ✅ | T-08: 31 HTTP tests — 403 matrix, no self-promotion, blocked-user, IDOR; mutation-checked |
 | 35 | Audit log | actor/action/entity/prev/new/ip/UA | PASS | — | PASS | — | BLOCKED | BLOCKED | **PARTIAL** | verify writes on mutations |
 | 36 | Reports | Aggregates + date filters | PASS | — | PASS | — | BLOCKED | BLOCKED | **PARTIAL** | compare vs SQL |
 | 37 | Exports | CSV / print | — | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | client-side only |

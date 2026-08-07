@@ -86,9 +86,29 @@ mid/senior full-stack engineer familiar with this codebase.
   deliberately, run one deploy with `SEED_OVERWRITE_CONTENT=true` (it resets admin edits), or make
   the change in the dashboard — now the durable path.
 
-### T-08 · Authorization test suite (RBAC 403 + IDOR)
-- Module Security · Backend · High · Depends T-06 · Effort 2d
-- **Acceptance** Automated tests prove: guest→401 on all `/me/*` and `/admin/*`; User A cannot read B's bookings/receipts/donations/notifications/favorites (404/403, never 200); each role gets 403 on modules outside its matrix.
+### T-08 · Authorization test suite (RBAC 403 + IDOR) — ✅ DONE over real HTTP
+- Module Security · Backend · High · ~~Depends T-06~~ · Effort 2d
+- **"Blocked on T-06" was wrong, for the third time.** T-06 is about *external* services (SMTP,
+  payment sandbox, FCM key). Tokens are not external: this suite owns the test database and the JWT
+  secret, so it creates its own users and admins and signs its own tokens with the same secret the
+  access strategy verifies. T-09, T-15 and now T-08 were all mis-filed the same way.
+- **How real it is** the entire `AppModule` is booted and listens on a port; `APP_GUARD` registers
+  `JwtAuthGuard` and `RolesGuard`, so requests travel the production authorization stack behind the
+  real `api/v1` prefix. Assertions are on HTTP status codes.
+- **Acceptance MET — 31 tests.** Guest → 401 on 7 `/me/*` and 7 `/admin/*` routes. Wrong-secret and
+  expired tokens → 401. A user token never reaches an admin route, and **cannot self-promote** by
+  claiming `type:admin` (signed with the real secret, but `sub` is a user id). An admin holding only
+  `portfolio:read` gets 200 on portfolio and **403** on users/roles/donations/bookings — and 403 on a
+  **write** to the module it may read. A blocked user is refused per-request despite a valid token.
+  IDOR: A's lists never contain B's booking id or phone, **and B's own requests do** — so the check
+  is not vacuously passing on an empty list.
+- **Mutation-checked** breaking three guards independently (RolesGuard always-allow, blocked-check
+  removed, ownership filter dropped) failed **11 tests — exactly the ones covering each**.
+- **Honest limits** 14 routes asserted, not every route (the guard is global, so the mechanism is
+  proven; a per-route sweep is mechanical and worth doing before launch). "A cannot read B's" is
+  proven at list level because `/me/*` takes no id — the one id-addressable receipt path is
+  deliberately public and is covered by T-15's unguessable reference instead.
+- Evidence `final-delivery-audit/security/T-08-authorization-suite.md`.
 
 ### T-09 · Booking concurrency proof + DB constraint — ✅ PROVEN (constraint recommended, not applied)
 - Module Bookings · Backend · High · ~~Depends T-06~~ · Effort 1d
