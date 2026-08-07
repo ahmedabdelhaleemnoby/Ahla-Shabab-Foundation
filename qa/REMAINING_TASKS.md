@@ -117,7 +117,7 @@ mid/senior full-stack engineer familiar with this codebase.
 - **Not covered** the *effect* of a signed callback (donation → paid → receipt) — that is T-10, still
   BLOCKED on a payment sandbox.
 
-### T-12 · Fix backend test discovery + raise coverage — ⬆ MOSTLY DONE (coverage still low)
+### T-12 · Fix backend test discovery + raise coverage — ✅ DONE (further coverage needs a test DB)
 - Module Testing · Backend · High · Effort 2d · ~1.5d remaining
 - `npm test` → *"No tests found (0 matches)"*. Add `testRegex` for `test/`, then cover auth, bookings, donations, RBAC.
 - **Root cause was worse than stated:** the repo had **no Jest configuration at all**, and
@@ -131,9 +131,22 @@ mid/senior full-stack engineer familiar with this codebase.
   **57 tests / 6 suites pass.** Evidence `final-delivery-audit/logs/T-12-test-discovery.md`.
 - **Acceptance** `npm test` runs all suites in CI and fails the build on regression — **met**:
   verified that a coverage drop exits 1 and an empty suite exits 1 rather than passing quietly.
-- **Still open (~1.5d)** the "raise coverage" half. Coverage moved only 16.31% → **16.34%**; the
-  core is still untested (booking engine T-09, donations/receipts, `/me/*` ownership T-15, OTP).
-  Those need a test database or T-06 credentials.
+- **Second half done** coverage aimed at risk, not file size: `auth.service` (17 cases — OTP wrong/
+  expired/locked-out never issues tokens, the code is consumed on success but **not** on a typo,
+  refresh rotation is single-use, a **disabled admin cannot refresh back in**, and
+  `Test@Example.COM` / `  test@example.com  ` prove **one account** — matrix row 16) and
+  `users.service` (8 cases — every `/me/*` read carries `userId`, so the one-line IDOR mistake is
+  caught). **Mutation-checked**: deleting each guard fails exactly its own test.
+  **101 tests / 10 suites**; statements 16.34% → **20.71%**, functions 8.73% → **13.22%**; ratchet
+  raised to 20/19/13/20. Evidence `final-delivery-audit/logs/T-12-coverage-round-2.md`.
+- **Toolchain defect found** `uuid@14` is ESM-only, so Jest's CJS runtime could not load any service
+  importing it. Nothing caught it because no test had ever reached that code. Fixed by transforming
+  the package rather than stubbing it.
+- **Still open (~1d, not blocked)** coverage is 20.71%, which is not healthy. The remainder
+  (`reports.service` 205 stmts, `cms`, `portfolio`, `donations`, `bookings`) needs a **disposable
+  Postgres in CI** — the pattern already proven twice here in T-01 and T-17 — not more mocks. For
+  reports especially, the audit rule is *"never mark reports completed until values are compared
+  against database data"*, which mocks cannot satisfy.
 - **Decision left to the maintainers** `ci.yml` does not gate the deploy. Adding `needs: [test]`
   to `deploy.yml` is one line, but it would block releases on a red suite — a release-policy call,
   not something to impose as a side effect of adding CI. Recommended.

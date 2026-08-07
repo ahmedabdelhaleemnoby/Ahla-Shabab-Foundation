@@ -9,8 +9,10 @@
 >
 > Tally after T-13: PASS 18 · PARTIAL 26 · FAIL 0 · MISSING 3 · BLOCKED 5 → (18+13)/47 = 66%.
 >
-> **Tally after T-07** (row 24 verified live at 47/47): PASS 19 · PARTIAL 25 · FAIL 0 · MISSING 3 · BLOCKED 5
-> → **(19+12.5)/47 = 67%** (baseline 57%). No requirement is FAIL — accurate as of T-13, not before.
+> Tally after T-07 (row 24 verified live at 47/47): PASS 19 · PARTIAL 25 · FAIL 0 · MISSING 3 · BLOCKED 5 → 67%.
+>
+> **Tally after T-12 round 2** (row 40 → PASS): PASS 20 · PARTIAL 24 · FAIL 0 · MISSING 3 · BLOCKED 5
+> → **(20+12)/47 = 68%** (baseline 57%). Counts re-derived from the rows, not carried forward.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -35,7 +37,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 13 | Admin reads | All dashboard lists read the live API | PASS | — | PASS | — | PASS | PASS | **PASS** ✅ | T-16: fallback removed; failure shows an explicit error, verified in-browser |
 | 14 | Admin CMS write | `PUT /admin/cms` persists CMS edits | PASS | — | PASS | — | PASS | PARTIAL | **PASS** | — |
 | 15 | Auth | Email OTP request/verify endpoints | PASS | PASS | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | wired; live delivery still BLOCKED |
-| 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | BLOCKED | **PARTIAL** | live 3-case test |
+| 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | PASS | **PARTIAL** ⬆ | T-12: 3 variants proven to resolve to one account (unit); live 3-case test still BLOCKED |
 | 17 | Auth | Admin login (`POST /admin/auth/login`) | PASS | — | PASS | — | BLOCKED | MISSING | **PARTIAL** | live login proof |
 | 18 | User flow | History/receipts/bookings/favorites/notifications for signed-in user | PASS | PASS | — | — | PASS | BLOCKED | **PASS** ✅ | wired `c85f9ed`; live proof needs a token |
 | 19 | Cases | Urgent + sponsorship: list/detail/publish/feature | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
@@ -59,7 +61,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 37 | Exports | CSV / print | — | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | client-side only |
 | 38 | Deployment | nginx conf + GitHub Actions deploy | PARTIAL | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | documented runbook |
 | 39 | Responsive/RTL | 320/390/430/tablet + dashboard breakpoints | — | PARTIAL | PARTIAL | — | — | MISSING | **PARTIAL** | re-verify this build |
-| 40 | Testing | Backend automated tests | PASS | — | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | T-12: `npm test` runs 57 tests/6 suites + CI gate; coverage still 16% |
+| 40 | Testing | Backend automated tests | PASS | — | — | — | PASS | PASS | **PASS** ✅ | T-12: 101 tests/10 suites, CI gate, mutation-checked; coverage 20.7% and ratcheted |
 | 41 | Auth E2E | Mobile login actually authenticates | PASS | PASS | — | — | PASS | PARTIAL | **PASS** ✅ | wired `60e3417`; wrong code proven rejected live. Inbox-based happy path BLOCKED |
 | 42 | Admin writes | Any admin mutation persists | PASS | — | PASS | — | PASS | PARTIAL | **PASS** ✅ | status `a797361` + content/services CRUD `f87bd35`; live proof needs a token |
 | 43 | Broadcast | Admin sends notification | PASS | — | PASS | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired T-13; send not executed — would push to real users on prod |

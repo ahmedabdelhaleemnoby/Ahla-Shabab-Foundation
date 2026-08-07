@@ -606,6 +606,47 @@ five-minute check once staging exists, not more work. No requirement row changes
 
 ---
 
+## T-12 round 2 — coverage on the code that decides who you are ✅ DONE
+
+**Before.** The first half of T-12 fixed discovery and added a CI gate but left coverage at
+**16.34%**, with the "raise coverage" clause explicitly open at ~1.5d.
+
+**Chosen by risk, not by size.** The largest untested files are `reports.service` (205 statements),
+`cms.service` (128) and `portfolio.service` (87). None was chosen. The tests went to
+`auth.service` — which decides who is signed in and had **no tests at all** — and to
+`users.service`, whose `userId` filter is the only thing standing between each user and everyone
+else's data.
+
+**What is pinned.** Wrong OTP → no tokens, attempt counted, **code not consumed** (consuming on a
+typo locks out a real user; not counting makes brute force free — it must do exactly one). Expired
+code → rejected *and burned*. Five attempts → locked out **even when the code is finally right**.
+Success consumes the code, so it cannot be replayed. Refresh rotation is single-use, a revoked token
+stays dead, and **a disabled admin cannot refresh back into a session**. `Test@Example.COM`,
+`  test@example.com  ` and `TEST@EXAMPLE.com` are proven to be **one account** — matrix row 16, which
+the audit left PARTIAL. On the `/me/*` side, every read carries `userId` into the `where` clause.
+
+**Mutation-checked.** Deleting the OTP expiry check, the 5-attempt lockout, the `revoked` check and
+the `userId` filter on `getUserDonations` each failed exactly its own test — and for the last one,
+also the "never queries without a userId filter — the IDOR shape" case. Sources restored after.
+
+**Toolchain defect found.** The auth spec would not compile: `uuid@14` ships **ESM only**, so Jest's
+CommonJS runtime cannot load any service importing it. Nothing had caught this because **no test had
+ever reached that code** — a fair summary of where coverage stood. Fixed by transforming the package
+rather than stubbing the module.
+
+**Result.** **101 tests / 10 suites** (was 57 / 6). Statements 16.34% → **20.71%**, branches 15.88% →
+**19.24%**, functions 8.73% → **13.22%**. Ratchet raised to 20/19/13/20 and re-verified: `test:ci`
+passes, a one-point raise fails. Row 40 → **PASS**; recounted tally **PASS 20 · PARTIAL 24 · FAIL 0 ·
+MISSING 3 · BLOCKED 5 = 68%**.
+
+**Still open, stated plainly.** 20.71% is not a healthy number. The remainder needs a **disposable
+Postgres in CI** — the pattern already proven twice here (T-01, T-17) — not more mocks. For
+`reports.service` especially, the audit's own rule is *"never mark reports completed until values are
+compared against database data"*, which mocked assertions cannot satisfy: they would prove the
+arithmetic, not the answer. Roughly a day, and not blocked on T-06.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:
