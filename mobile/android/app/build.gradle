@@ -95,8 +95,8 @@ android {
         // Keep in sync with mobile/app.json (expo.version / expo.android.versionCode).
         // This is a bare workflow — android/ is committed, so `expo prebuild` does not
         // run and app.json's values are NOT applied to native builds automatically.
-        versionCode 8
-        versionName "1.4.0"
+        versionCode 9
+        versionName "1.4.1"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
