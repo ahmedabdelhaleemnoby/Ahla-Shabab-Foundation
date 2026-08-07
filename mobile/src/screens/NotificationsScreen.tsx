@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { fetchMyNotifications, markNotificationRead, markAllNotificationsRead } from '@ahla/shared';
+import { hasSession } from '../store/session';
 import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { type AppNotification, type NotificationKind } from '@ahla/shared';
@@ -25,7 +27,37 @@ const FILTERS = ['الكل', 'غير مقروء', 'تبرعات', 'حجوزات'
 
 export default function NotificationsScreen() {
   const nav = useNavigation<any>();
-  const items = useNotifications();
+  const localItems = useNotifications();
+  const [serverItems, setServerItems] = useState<AppNotification[] | null>(null);
+
+  /**
+   * Signed-in users see their own server feed; guests keep the local/bundled
+   * one (there is nothing addressed to them yet). A failure falls back to the
+   * local list rather than emptying the screen.
+   */
+  React.useEffect(() => {
+    if (!hasSession()) return;
+    let cancelled = false;
+    fetchMyNotifications()
+      .then(({ items: rows }) => {
+        if (cancelled) return;
+        setServerItems(
+          rows.map((r) => ({
+            id: String(r.id ?? ''),
+            kind: (r.kind ?? 'system') as AppNotification['kind'],
+            title: String(r.title ?? ''),
+            body: String(r.body ?? ''),
+            time: String(r.createdAt ?? '').slice(0, 10),
+            read: !!r.read,
+            targetId: r.entityId ?? undefined,
+          })),
+        );
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
+  const items = serverItems ?? localItems;
   const [filter, setFilter] = useState('الكل');
   const unread = items.filter((n) => !n.read).length;
 
@@ -38,6 +70,12 @@ export default function NotificationsScreen() {
   /** Tap-through — every notification leads somewhere meaningful. */
   const open = (n: AppNotification) => {
     notificationStore.markRead(n.id);
+    // Persist for signed-in users; the local store already updated the badge,
+    // and a failed sync must not block navigating to the target screen.
+    if (hasSession()) {
+      void markNotificationRead(n.id).catch(() => undefined);
+      setServerItems((prev) => prev?.map((x) => (x.id === n.id ? { ...x, read: true } : x)) ?? prev);
+    }
     switch (n.kind) {
       case 'case':
         return nav.navigate(n.targetId ? 'CaseDetail' : 'UrgentCases', n.targetId ? { id: n.targetId } : undefined);
@@ -74,7 +112,15 @@ export default function NotificationsScreen() {
             <Text style={[font('700'), { fontSize: 11.5, color: colors.navy500 }]}>إعدادات الإشعارات</Text>
           </Pressable>
           {unread > 0 ? (
-            <Pressable onPress={notificationStore.markAllRead}>
+            <Pressable
+              onPress={() => {
+                notificationStore.markAllRead();
+                if (hasSession()) {
+                  void markAllNotificationsRead().catch(() => undefined);
+                  setServerItems((prev) => prev?.map((x) => ({ ...x, read: true })) ?? prev);
+                }
+              }}
+            >
               <Text style={[font('700'), { fontSize: 11.5, color: colors.navy700 }]}>تعليم الكل كمقروء ({unread})</Text>
             </Pressable>
           ) : (

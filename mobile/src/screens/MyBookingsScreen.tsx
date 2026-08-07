@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { appointments, type Appointment, type AppointmentStatus } from '@ahla/shared';
+import { appointments, fetchMyBookings, type Appointment, type AppointmentStatus } from '@ahla/shared';
+import { useMyData } from '../hooks/useMyData';
+import { AccountState } from '../components/AccountState';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill } from '../components/ui';
@@ -20,15 +22,45 @@ const modeIcon: Record<Appointment['mode'], IconName> = {
   'محادثة نصية': 'message-square',
 };
 
-// Treat these mock appointments as "mine" for the demo.
-const mine = appointments.slice(0, 5);
+/**
+ * Server rows -> the Appointment shape this screen renders. The bundled
+ * `appointments` array is no longer used as data: it stays only as the type
+ * reference. Account data is never faked from bundled content (audit N-02).
+ */
+const mapBooking = (r: Record<string, any>): Appointment => ({
+  id: String(r.id ?? r.reference ?? ''),
+  clientName: String(r.applicantName ?? ''),
+  consultantName: String(r.provider?.name ?? r.providerName ?? ''),
+  type: (r.service?.category?.name ?? r.service?.name ?? 'نفسية') as Appointment['type'],
+  date: String(r.date ?? '').slice(0, 10),
+  time: String(r.timeSlotLabel ?? r.timeSlot ?? ''),
+  mode: 'مكالمة فيديو',
+  status: (r.status ?? 'قيد الانتظار') as AppointmentStatus,
+});
+void appointments;
 
 export default function MyBookingsScreen() {
   const nav = useNavigation<any>();
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const { items, loading, error, reload } = useMyData(fetchMyBookings, mapBooking);
 
-  const list = mine.filter((a) =>
+  const list = items.filter((a) =>
     tab === 'upcoming' ? UPCOMING.includes(a.status) : !UPCOMING.includes(a.status)
+  );
+
+  const state = (
+    <AccountState
+      isGuest={false}
+      loading={loading}
+      error={error}
+      isEmpty={items.length === 0}
+      emptyIcon="calendar"
+      emptyTitle="لا توجد حجوزات بعد"
+      emptyHint="احجز خدمة مجانية وستظهر هنا."
+      guestHint="سجّل دخولك لمتابعة مواعيدك القادمة وسجل جلساتك السابقة."
+      onSignIn={() => nav.navigate('EmailAuth')}
+      onRetry={reload}
+    />
   );
 
   return (
@@ -38,6 +70,9 @@ export default function MyBookingsScreen() {
       benefits={['متابعة مواعيدك القادمة وتذكيرات بها', 'سجل جلساتك السابقة ومرجع كل حجز', 'إعادة الجدولة والإلغاء بسهولة']}
     >
     <Screen header={<AppBar title="حجوزاتي" onBack={() => nav.goBack()} onBell={undefined} />}>
+      {state}
+      {!state && (
+      <>
       {/* Tabs */}
       <View style={{ flexDirection: 'row-reverse', backgroundColor: colors.paper2, borderRadius: 12, padding: 4, marginBottom: 4 }}>
         {(['upcoming', 'past'] as const).map((t) => {
@@ -97,6 +132,8 @@ export default function MyBookingsScreen() {
         </View>
       )}
       <View style={{ height: 12 }} />
+      </>
+      )}
     </Screen>
     </LoginGate>
   );

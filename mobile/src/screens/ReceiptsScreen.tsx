@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { donations, donorProfile } from '@ahla/shared';
+import { donations, donorProfile, fetchMyDonations } from '@ahla/shared';
+import { useMyData } from '../hooks/useMyData';
+import { AccountState } from '../components/AccountState';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill, EmptyState, Button } from '../components/ui';
@@ -28,6 +30,35 @@ const tone = (s: Receipt['status']) => (s === 'مكتمل' ? 'green' : s === 'ف
 export default function ReceiptsScreen() {
   const nav = useNavigation<any>();
   const { receipts } = useAppState();
+  // There is no /me/receipts endpoint: a receipt IS a donation, so the list is
+  // derived from the same server rows.
+  const { items: serverDonations, loading, error, reload } = useMyData(
+    fetchMyDonations,
+    (r) => ({
+      reference: String(r.reference ?? r.id ?? ''),
+      date: String(r.createdAt ?? '').slice(0, 10),
+      amount: `${Number(r.amount ?? 0)} ج.م`,
+      cause: String(r.cause ?? ''),
+      method: r.method,
+      recurring: !!r.recurring,
+      status: r.status ?? 'قيد المراجعة',
+    }),
+  );
+  const state = (
+    <AccountState
+      isGuest={false}
+      loading={loading}
+      error={error}
+      isEmpty={serverDonations.length === 0 && receipts.length === 0}
+      emptyIcon="file-text"
+      emptyTitle="لا توجد إيصالات بعد"
+      emptyHint="يصدر الإيصال بعد اعتماد تبرعك."
+      guestHint="سجّل دخولك لعرض إيصالات تبرعاتك."
+      onSignIn={() => nav.navigate('EmailAuth')}
+      onRetry={reload}
+    />
+  );
+  void donations;
   const all = [...receipts, ...history];
 
   return (
@@ -37,6 +68,9 @@ export default function ReceiptsScreen() {
       benefits={['أرشيف كامل لكل إيصالات تبرعاتك', 'متابعة حالة كل تبرع حتى اعتماده', 'مشاركة وحفظ الإيصالات في أي وقت']}
     >
     <Screen header={<AppBar title="إيصالاتي" onBack={() => nav.goBack()} onBell={undefined} />}>
+      {state}
+      {!state && (
+      <>
       <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', marginBottom: 10, marginHorizontal: 2, lineHeight: 18 }]}>
         كل إيصالات تبرعاتك في مكان واحد. الإيصالات قيد التأكيد/المراجعة تُعتمد بعد تأكيد الدفع أو مراجعة الإدارة.
       </Text>
@@ -79,6 +113,8 @@ export default function ReceiptsScreen() {
         </>
       )}
       <View style={{ height: 12 }} />
+      </>
+      )}
     </Screen>
     </LoginGate>
   );

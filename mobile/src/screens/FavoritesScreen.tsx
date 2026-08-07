@@ -7,6 +7,9 @@ import {
   egp,
 } from '@ahla/shared';
 import { getProjects, getCases } from '../store/content';
+import { fetchMyFavorites } from '@ahla/shared';
+import { useMyData } from '../hooks/useMyData';
+import { AccountState } from '../components/AccountState';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, ProgressBar, Pill, EmptyState } from '../components/ui';
@@ -14,13 +17,37 @@ import { Icon } from '../components/Icon';
 import { LoginGate } from '../components/LoginGate';
 import { colors, font, num, row, rowBetween } from '../theme';
 
-/** Mock favorites: first two getProjects() + first sponsorable case. TODO(backend): GET /me/favorites. */
-const favProjects = getProjects().slice(0, 2);
-const favCases = getCases().filter((c) => c.sponsorable).slice(0, 1);
-
 export default function FavoritesScreen() {
   const nav = useNavigation<any>();
+  /**
+   * Real favorites for the signed-in user. The server returns
+   * { entityType, entityId } pairs, which are resolved against the already
+   * loaded content stores — no second round-trip per row.
+   */
+  const { items: rows, loading, error, reload } = useMyData(fetchMyFavorites, (r) => ({
+    entityType: String(r.entityType ?? ''),
+    entityId: String(r.entityId ?? ''),
+  }));
+  const favProjects = getProjects().filter((p) =>
+    rows.some((f) => f.entityType === 'project' && f.entityId === p.id));
+  const favCases = getCases().filter((c) =>
+    rows.some((f) => f.entityType === 'case' && f.entityId === c.id));
   const empty = favProjects.length + favCases.length === 0;
+
+  const state = (
+    <AccountState
+      isGuest={false}
+      loading={loading}
+      error={error}
+      isEmpty={empty}
+      emptyIcon="heart"
+      emptyTitle="لا توجد عناصر مفضلة"
+      emptyHint="اضغط على أيقونة القلب في أي حالة أو مشروع لحفظه هنا"
+      guestHint="سجّل دخولك لحفظ الحالات والمشروعات ومتابعتها."
+      onSignIn={() => nav.navigate('EmailAuth')}
+      onRetry={reload}
+    />
+  );
 
   return (
     <LoginGate
@@ -29,8 +56,8 @@ export default function FavoritesScreen() {
       benefits={['احفظ الحالات والمشروعات لمتابعتها', 'تنبيهات عند اقتراب أهدافها من الاكتمال', 'وصول سريع من أي جهاز بعد تسجيل الدخول']}
     >
     <Screen header={<AppBar title="المفضلة" onBack={() => nav.goBack()} onBell={undefined} />}>
-      {empty ? (
-        <EmptyState icon="heart" title="لا توجد عناصر مفضلة" hint="اضغط على أيقونة القلب في أي حالة أو مشروع لحفظه هنا" />
+      {state ? (
+        state
       ) : (
         <>
           {[...favProjects.map((p) => ({ kind: 'project' as const, p })), ...favCases.map((c) => ({ kind: 'case' as const, c }))].map((f) => {

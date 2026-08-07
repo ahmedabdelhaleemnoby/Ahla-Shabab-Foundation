@@ -303,3 +303,55 @@ export const logoutSession = (refreshToken: string) =>
 
 /** The signed-in user's profile — the cheapest proof a token is valid. */
 export const fetchMe = () => request<Record<string, any>>('me');
+
+
+/* ------------------------------------------------------------- /me (account)
+ * Every call here requires a bearer token and none falls back to bundled data:
+ * showing someone else's sample bookings as if they were yours is worse than
+ * an empty list with an error.
+ */
+
+export const fetchMyBookings = (query: Record<string, unknown> = {}) =>
+  requestList<Record<string, any>>('me/bookings', query);
+
+export const fetchMyDonations = (query: Record<string, unknown> = {}) =>
+  requestList<Record<string, any>>('me/donations', query);
+
+export const fetchMyConsultations = (query: Record<string, unknown> = {}) =>
+  requestList<Record<string, any>>('me/consultations', query);
+
+export const fetchMyFavorites = (query: Record<string, unknown> = {}) =>
+  requestList<Record<string, any>>('me/favorites', query);
+
+export type FavoriteEntity = 'project' | 'case' | 'service';
+
+export const addFavorite = (entityType: FavoriteEntity, entityId: string) =>
+  request<Record<string, any>>('me/favorites', { method: 'POST', body: { entityType, entityId } });
+
+/** Note: this DELETE carries a body — the pair identifies the row, not a URL id. */
+export const removeFavorite = (entityType: FavoriteEntity, entityId: string) =>
+  request<Record<string, any>>('me/favorites', { method: 'DELETE', body: { entityType, entityId } });
+
+export const fetchMyNotifications = (query: Record<string, unknown> = {}) =>
+  requestList<Record<string, any>>('me/notifications', query);
+
+export const markNotificationRead = (id: string) =>
+  request<Record<string, any>>(`me/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
+
+export const markAllNotificationsRead = () =>
+  request<Record<string, any>>('me/notifications/read-all', { method: 'POST' });
+
+export interface NotificationPreferences {
+  donations?: boolean;
+  cases?: boolean;
+  projects?: boolean;
+  bookings?: boolean;
+  news?: boolean;
+  system?: boolean;
+}
+
+export const fetchNotificationPreferences = () =>
+  request<NotificationPreferences>('me/notification-preferences');
+
+export const updateNotificationPreferences = (prefs: NotificationPreferences) =>
+  request<NotificationPreferences>('me/notification-preferences', { method: 'PUT', body: prefs });

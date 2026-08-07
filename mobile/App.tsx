@@ -17,7 +17,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { configureApi } from '@ahla/shared';
-import { getAccessToken, restoreSession } from './src/store/session';
+import { getAccessToken, restoreSession, getSessionEmail } from './src/store/session';
+import { appState } from './src/store/appState';
 import { hydrateCms } from './src/store/cms';
 import { hydrateContent } from './src/store/content';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -155,7 +156,16 @@ export default function App() {
     // `restoreSession` rotates a stored token pair so a returning user is still
     // signed in on the first frame. Like the content hydrators it never rejects:
     // an expired or revoked session simply clears itself and the app opens as a guest.
-    Promise.all([hydrateCms(), hydrateContent(), restoreSession()])
+    Promise.all([
+      hydrateCms(),
+      hydrateContent(),
+      // Restoring the keystore session must also re-enter it into appState, or
+      // the app would hold a valid token while every LoginGate still treated
+      // the user as a guest.
+      restoreSession().then((ok) => {
+        if (ok) appState.login(getSessionEmail() ?? '');
+      }),
+    ])
       .catch(() => undefined)
       .finally(() => {
         if (!cancelled) setHydrated(true);

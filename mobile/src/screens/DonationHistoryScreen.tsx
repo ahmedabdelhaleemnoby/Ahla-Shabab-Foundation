@@ -2,7 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { donations, egp } from '@ahla/shared';
+import { donations, egp, fetchMyDonations, type Donation } from '@ahla/shared';
+import { useMyData } from '../hooks/useMyData';
+import { AccountState } from '../components/AccountState';
 import { useAppState } from '../store/appState';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
@@ -11,8 +13,18 @@ import { Icon } from '../components/Icon';
 import { LoginGate } from '../components/LoginGate';
 import { colors, font, num, row, rowBetween } from '../theme';
 
-// Broaden to all donations so the demo history has depth.
-const mine = donations;
+/** Server row -> the Donation shape this screen renders. */
+const mapDonation = (r: Record<string, any>): Donation => ({
+  id: String(r.id ?? ''),
+  donorName: String(r.donorName ?? ''),
+  cause: String(r.cause ?? ''),
+  amount: Number(r.amount ?? 0),
+  method: r.method,
+  date: String(r.createdAt ?? r.date ?? '').slice(0, 10),
+  recurring: !!r.recurring,
+  status: r.status ?? 'قيد المراجعة',
+});
+void donations; // bundled array kept for types only — never shown as "my" data
 
 const statusTone = (s: string) => (s === 'مكتمل' ? 'green' : s === 'فشل' ? 'red' : 'gold');
 const FILTERS = ['الكل', 'مكتمل', 'قيد المعالجة', 'شهري'] as const;
@@ -21,6 +33,21 @@ export default function DonationHistoryScreen() {
   const nav = useNavigation<any>();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('الكل');
   const { receipts } = useAppState();
+  const { items: mine, loading, error, reload } = useMyData(fetchMyDonations, mapDonation);
+  const state = (
+    <AccountState
+      isGuest={false}
+      loading={loading}
+      error={error}
+      isEmpty={mine.length === 0 && receipts.length === 0}
+      emptyIcon="credit-card"
+      emptyTitle="لا توجد تبرعات بعد"
+      emptyHint="تبرعك الأول سيظهر هنا مع إيصاله."
+      guestHint="سجّل دخولك لعرض سجل تبرعاتك وإيصالاتها."
+      onSignIn={() => nav.navigate('EmailAuth')}
+      onRetry={reload}
+    />
+  );
 
   // Session donations (pending until backend/admin confirms) shown on top.
   const combined = useMemo(
@@ -58,6 +85,9 @@ export default function DonationHistoryScreen() {
       benefits={['سجل كامل بكل تبرعاتك وكفالاتك', 'متابعة التبرعات الشهرية المتكررة', 'إحصاءات أثرك عبر الشهور']}
     >
     <Screen header={<AppBar title="سجل التبرعات" onBack={() => nav.goBack()} onBell={undefined} />}>
+      {state}
+      {!state && (
+      <>
       {/* Summary */}
       <LinearGradient colors={[colors.navy800, colors.navy900]} start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }} style={{ borderRadius: 18, padding: 18 }}>
         <View style={rowBetween}>
@@ -102,6 +132,8 @@ export default function DonationHistoryScreen() {
         </Card>
       ))}
       <View style={{ height: 16 }} />
+      </>
+      )}
     </Screen>
     </LoginGate>
   );
