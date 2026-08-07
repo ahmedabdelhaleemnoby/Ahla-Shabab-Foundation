@@ -48,7 +48,7 @@ mid/senior full-stack engineer familiar with this codebase.
 
 ## P1 — must complete before production (9 tasks, ≈16d)
 
-### T-07 · Fix consultation-type key mismatch + missing consent field — ✅ DONE in code, UNVERIFIED in prod
+### T-07 · Fix consultation-type key mismatch + missing consent field — ✅ DONE & VERIFIED LIVE
 - Module Consultations · Backend+Data · High · Effort 1d · Files `backend/prisma/seed/**`, `src/cms/**`
 - Backend seeds `psychological, legal, family, social, educational`; the app expects the five Arabic keys, and backend types carry **no consent field**. Evidence: `verify-api-layer.log`.
 - **Third defect, not in the original finding:** the consent box was typed `checkbox`, and the app
@@ -60,9 +60,10 @@ mid/senior full-stack engineer familiar with this codebase.
   seed imports it; **new CMS migration 10 → 11** repairs already-deployed rows (8 → 9 left intact
   on purpose); `CMS_SCHEMA_VERSION` → 11; seed stops hardcoding the version; Swagger example fixed.
   Backend 63 tests / shared 43 tests pass. Evidence `final-delivery-audit/api/T-07-consultation-contract.md`.
-- **Acceptance** `verify-api-layer.ts` reports 47/47 with zero known defects — **NOT YET MET**: still
-  45/47, because the script probes the **live** API and production still serves the old seed. Re-run
-  after the next deploy; both the seed and the on-read migration converge on the canonical set.
+- **Acceptance** `verify-api-layer.ts` reports 47/47 with zero known defects — **MET**. Deployed
+  (run `31205490644`) and re-run against live: **45/47 → 47/47**, the known-defects block is gone.
+  The live API serves the five Arabic keys with `consent`-typed required fields, disclaimers, and
+  options on every choice field. CI on the same commit: 63 tests / 6 suites. Row 24 → **PASS**.
 
 ### T-17 · Every deploy overwrites the admin's CMS content — NEW (found during T-07)
 - Module CMS · Backend/Deploy · **High** · Effort 0.25d · File `prisma/seed/cms-state.ts`

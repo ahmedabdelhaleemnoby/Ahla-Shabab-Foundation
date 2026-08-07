@@ -370,7 +370,7 @@ the maintainers, not a side effect of adding CI. Recommended, not imposed.
 
 ---
 
-## T-07 — Consultation types speak the app's contract ✅ DONE in code, UNVERIFIED in prod
+## T-07 — Consultation types speak the app's contract ✅ DONE, VERIFIED LIVE
 
 **Before.** The backend seeded `psychological, legal, family, social, educational`; the app routes
 consultations by five **Arabic** keys (`نفسية، دينية، طبية، أسرية، أعمال`), which are route
@@ -402,10 +402,13 @@ replaces types only when they are not already canonical, so a deliberate dashboa
 the form from the API** — a server-side label edit survives into the rendered form — while the old
 shape is still rejected into fallback, so the safety net stays.
 
-**Acceptance NOT yet met.** T-07 asks for `verify-api-layer.ts` at 47/47. It still reports **45/47**
-with the same two KNOWN entries, because the script probes the **live** API and production still
-serves the old seed. This is DONE-in-code and UNVERIFIED-in-production until the deploy lands and
-the script is re-run.
+**Acceptance MET.** Committed, pushed, deployed (run `31205490644`), then `verify-api-layer.ts`
+re-run against live: **45/47 → 47/47, zero known defects** — the known-backend-defects block is gone.
+The live API now serves the five Arabic keys with `consent`-typed required fields, disclaimers and
+options on every choice field. CI on the same commit: 63 tests / 6 suites. **Row 24 → PASS**, moving
+the project to **67%**. Because every API type is now full-fidelity, the mapper takes the form from
+the API instead of the bundled fallback — so a dashboard edit to a consultation form finally reaches
+the app, which was the silent breakage all along.
 
 **⚠️ Separate finding — recorded as T-17.** `seedCmsState` upserts with a populated `update:` branch,
 and `deploy.yml` runs `prisma db seed` on **every** push to `main`. **Every deploy therefore

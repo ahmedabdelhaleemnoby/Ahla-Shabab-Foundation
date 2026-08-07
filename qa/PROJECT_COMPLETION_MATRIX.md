@@ -7,8 +7,10 @@
 > The true tally after T-01…T-05 was PASS 18 · PARTIAL 25 · **FAIL 1** · MISSING 3 · BLOCKED 5
 > → (18+12.5)/47 = **65%**. The claim was reported to the client before it was true.
 >
-> Tally after T-13: PASS 18 · PARTIAL 26 · FAIL 0 · MISSING 3 · BLOCKED 5
-> → **(18+13)/47 = 66%** (baseline 57%). No requirement is FAIL — accurate as of T-13, not before.
+> Tally after T-13: PASS 18 · PARTIAL 26 · FAIL 0 · MISSING 3 · BLOCKED 5 → (18+13)/47 = 66%.
+>
+> **Tally after T-07** (row 24 verified live at 47/47): PASS 19 · PARTIAL 25 · FAIL 0 · MISSING 3 · BLOCKED 5
+> → **(19+12.5)/47 = 67%** (baseline 57%). No requirement is FAIL — accurate as of T-13, not before.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -41,7 +43,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 21 | News | Articles CRUD, publish, pin | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 22 | Services | Categories + services CRUD, activate | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 23 | Consultations | Submit request → stored | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | mobile submits locally |
-| 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | PARTIAL | PASS | **PARTIAL** ⬆ | T-07: keys+consent fixed in code; 47/47 pending deploy |
+| 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | T-07 `8edf040`; verified live — **47/47, zero known defects** |
 | 25 | Bookings | Engine + Serializable-tx concurrency | PASS | PASS | PASS | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | my-bookings wired; race test BLOCKED |
 | 26 | Donations | Create; server owns status | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring |
 | 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired; IDOR test still BLOCKED |
