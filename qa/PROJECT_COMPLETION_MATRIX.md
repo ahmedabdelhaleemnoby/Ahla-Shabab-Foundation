@@ -17,9 +17,14 @@
 >
 > Tally after T-15 (row 27 → PASS): PASS 22 · PARTIAL 22 · FAIL 0 · MISSING 3 · BLOCKED 5 → 70%.
 >
-> **Tally after T-08** (row 34 → PASS, 403 matrix + IDOR proven over HTTP):
-> PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 5
-> → **(23+10.5)/47 = 71%** (baseline 57%). Counts re-derived from the rows, not carried forward.
+> Tally after T-08 (row 34 → PASS): PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 5 → 71%.
+>
+> **Tally after T-10** (row 48 BLOCKED → **NOT APPLICABLE**: the client ruled out a payment gateway,
+> so it is not work that is waiting — it is work that should not be done):
+> PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 4 · N/A 1
+> → **(23+10.5)/47 = 71%** — *unchanged*, because BLOCKED and N/A are both excluded from the
+> denominator. The number did not move; what moved is that one item left the "waiting on the client"
+> pile for good. Counts re-derived from the rows, not carried forward.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -76,7 +81,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 45 | Database | Migration history | **PASS** | — | — | — | — | PASS | **PASS** ✅ | done `a1cd48a`; CI switch pending prod baseline |
 | 46 | Monitoring | Sentry/APM/error tracking | **MISSING** | MISSING | MISSING | — | — | MISSING | **MISSING** | choose + wire |
 | 47 | iOS | iOS build | — | **MISSING** | — | — | — | MISSING | **MISSING** | Apple account + build |
-| 48 | Payments | Live gateway (create + confirm) | PARTIAL | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | provider credentials |
+| 48 | Payments | Live gateway (create + confirm) | PARTIAL | — | — | — | PARTIAL | PASS | **NOT APPLICABLE** | client ruled out a gateway; webhook path pinned by 11 tests (T-10). Re-open only if a gateway is adopted |
 | 49 | Push | FCM delivery | PARTIAL | MISSING | — | — | BLOCKED | BLOCKED | **BLOCKED** | FCM key |
 | 50 | Email | Real OTP email delivery | PASS | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | SMTP creds + inbox |
 | 51 | Manual transfer | Proof upload → admin approval | PARTIAL | PARTIAL | FAIL | — | BLOCKED | BLOCKED | **BLOCKED** | admin token to test |

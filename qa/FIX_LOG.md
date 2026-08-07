@@ -781,6 +781,52 @@ deliberately public and is covered by T-15's unguessable reference instead.
 
 ---
 
+## T-10 — Payment confirmation path ✅ RE-SCOPED & DONE
+
+**The task as written conflicts with the client's own instruction.** T-10 says *"payment gateway
+end-to-end (sandbox)"*. The client said: *"There is currently NO online payment gateway and the app
+must NOT simulate instant payment success."* All three approved methods are completed outside the app
+and approved by an admin. **Integrating a sandbox would build the thing that was explicitly ruled
+out** — the wrong work, whether or not credentials existed. So the task is re-scoped rather than
+executed as written.
+
+**What was done instead.** `handleWebhook` exists and would run the moment any gateway is connected,
+so its behaviour is pinned by **11 tests**, three of them over real HTTP with a genuine HMAC. This
+closes a loop `webhook-security.e2e-spec.ts` left open: that suite stubs the service, so it proved
+the signature check but never that a callback actually moves money. Now proven: a signed callback
+moves the donation to «مكتمل» and records the gateway id; an unsigned one returns 401 and changes
+nothing; a **tampered amount** returns 401 because the signature covers the body; **redelivery is
+idempotent** — two callbacks with the same `gatewayTxId`, with two same-amount donations pending,
+complete exactly one; `failed` marks «فشل»; a late `failed` cannot undo a completion.
+
+**⚠️ Finding 1 — the webhook matches by AMOUNT, not by reference.** The lookup is
+`{ status: PENDING_CONFIRMATION, amount, gatewayTxId: null }`, oldest first. No donation reference is
+carried through the payment, so two donors giving the same amount are indistinguishable and the
+**oldest** is confirmed — a real payment attached to the wrong person's receipt, with the actual
+payer left pending. Latent today, but a trap for whoever connects a gateway. Recorded as a test that
+documents the behaviour rather than endorsing it; the fix is to match on the donation reference.
+
+**Finding 2 — the `FINAL_STATES` "never regress" guard is dead code.** The query already excludes
+final rows, so that branch has never run. The protection holds by a different route (404), but anyone
+changing the query later would be relying on something untested.
+
+**Interaction with T-15.** Every donation is now created «قيد المراجعة», and the webhook only matches
+«قيد التأكيد», so the confirmation path is unreachable in practice. That is the correct posture for a
+system with no gateway — it was previously *worse*, with two of three methods stranded in
+«قيد التأكيد» awaiting a callback that could never arrive. **Connecting a gateway later requires
+re-populating `GATEWAY_METHODS`, and Finding 1 becomes live at that moment.**
+
+**Retest.** 11 in the new suite; **62 integration / 5 suites**; **101 unit / 10 suites**; build clean;
+**CI green** (`31217277934`). `WEBHOOK_SECRET` added to the CI env — without it the three HTTP tests
+fail, because the endpoint correctly fails closed (T-11). Throwaway CI value, not the production one.
+
+**Result.** Row 48 moves **BLOCKED → NOT APPLICABLE**: it is not work waiting on the client, it is
+work that should not be done. The score stays at **71%** — both statuses are excluded from the
+denominator — so nothing was gained numerically; what changed is that one item left the "waiting"
+pile permanently.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

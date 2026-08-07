@@ -128,9 +128,30 @@ mid/senior full-stack engineer familiar with this codebase.
   which cannot be checked without database access. **Recommended, after that check.**
 - Evidence `final-delivery-audit/database/T-09-and-integration-harness.md`.
 
-### T-10 · Payment gateway end-to-end (sandbox)
-- Module Payments · Backend · High · Depends T-06 · Effort 2.5d
-- **Acceptance** Server-created payment, correct amount/currency, signed webhook accepted, **invalid signature rejected**, duplicate webhook idempotent, failed/cancelled handled; status only ever set server-side.
+### T-10 · Payment confirmation path — ✅ RE-SCOPED & DONE (sandbox deliberately not integrated)
+- Module Payments · Backend · High · Effort 2.5d
+- **The task as written conflicts with the client's instruction.** They stated: *"There is currently
+  NO online payment gateway and the app must NOT simulate instant payment success."* All three
+  approved methods are completed outside the app and approved by an admin. **Integrating a sandbox
+  would build the thing that was explicitly ruled out** — wrong work, credentials or not.
+- **Done instead** `handleWebhook` exists and would run the day a gateway is connected, so its
+  behaviour is pinned: **11 tests**, 3 over real HTTP with a genuine HMAC — signed callback moves the
+  donation to «مكتمل»; unsigned → 401 with the donation untouched; **tampered amount → 401** (the
+  signature covers the body); redelivery is **idempotent** (two callbacks, two same-amount donations
+  pending → exactly one completed); `failed` marks «فشل»; a late `failed` cannot undo a completion.
+- **⚠️ Finding 1 — matches by AMOUNT, not by reference.** The lookup carries no donation reference, so
+  two donors giving the same amount are indistinguishable and the **oldest** is confirmed. A real
+  payment would attach to the wrong person's receipt. Latent today, but it is a trap for whoever
+  connects a gateway — **fix by matching on the donation reference first**.
+- **Finding 2 — the `FINAL_STATES` "never regress" guard is unreachable**: the query already filters
+  to `PENDING_CONFIRMATION`. The protection holds (404), but the branch has never run.
+- **Interaction with T-15** every donation is now «قيد المراجعة», so the webhook path is unreachable
+  in practice — correct for a system with no gateway. **Connecting one later requires re-populating
+  `GATEWAY_METHODS`, at which point Finding 1 becomes live.**
+- **Still genuinely blocked** a real provider integration (merchant account + the provider's actual
+  callback shape and signature scheme). That needs T-06 **and** a client decision to adopt a gateway.
+  Today it is not merely blocked — it is not wanted.
+- Evidence `final-delivery-audit/api/T-10-payment-confirmation.md`.
 
 ### T-11 · Harden webhook secret handling — ✅ DONE
 - Module Payments · Backend · High · Effort 0.25d · File `src/donations/donations-webhook.controller.ts`
