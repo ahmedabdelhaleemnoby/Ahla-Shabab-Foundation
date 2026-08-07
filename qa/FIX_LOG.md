@@ -872,6 +872,50 @@ would fix the confusion — noted as a follow-up rather than papered over.
 
 ---
 
+## T-20 — Approved donations move the fundraising total ✅ DONE (needs an APK to take effect)
+
+**You chose derivation over restoring manual entry.** Implementing it showed the chain was broken in
+**three** places, not one. For a progress bar to move, a donation must reach the server, carry the
+case, and credit it — none of those worked.
+
+1. **The app never recorded donations at all.** `confirm()` built a receipt with a locally invented
+   reference, pushed it into local state and navigated to the success screen. No API call. **A donor
+   saw a confirmation, with a reference, for a donation recorded nowhere** — the admin never saw it
+   and support could not look the code up. This is the audit's row 26, still open.
+2. **The case was dropped.** `CaseDetailScreen` and `ProjectDetailScreen` navigated to Donate with no
+   params, so tapping «تبرع» on a specific case lost the case.
+3. **Nothing credited the case.** `donation.completed` fed only notifications; a Donation had a
+   free-text `cause` and no `caseId`.
+
+**Fix.** `Donation.caseId`/`projectId` (nullable, `onDelete: SetNull`, additive migration). The credit
+runs in the **same transaction** as the status change — approved-but-uncounted is worse than either
+failure alone. It is an **increment, not a recompute**: hand-entered totals survive as the starting
+point, so **no backfill is needed and no historical figure is destroyed**, where a recompute would
+have zeroed every total the charity entered by hand. Mobile now calls `submitDonation` with the id and
+uses the **server's** reference, showing an error rather than a fake success — telling a donor their
+gift is recorded when the server never received it is the one outcome to avoid.
+
+**Retest.** 10 integration tests: amount and supporter added; a hand-entered 1000 becomes 1500 rather
+than being wiped; projects identical; several donors accumulate; pending, rejected and unlinked
+donations move nothing; re-approval refused so nothing double-counts; a deleted case detaches rather
+than orphans; the public detail shows the new total. **Mutation-checked** — removing the credit fails
+6 of the 10. 91 integration / 101 unit / 43 shared; CI green; the **deployed Swagger confirms the live
+API accepts `caseId`/`projectId`**.
+
+**Deliberately not done:** no test donation was created in production to watch a real total move —
+that would write junk into the charity's live records.
+
+**Result.** Row 26 gains PASS across every layer column but the final verdict **stays PARTIAL**,
+because the mobile half only reaches donors in a **new APK**. Calling it PASS today would overstate
+what users actually have. Tally unchanged at **71%**.
+
+**Known limits.** Historical donations have no `caseId` and cannot be retro-attributed (`cause` is
+free text) — their money is already inside the hand-entered totals, so nothing is lost or
+double-counted. And there is no decrement path, because reversing an approved donation is currently
+impossible; if reversal is ever allowed, the credit must be reversed with it.
+
+---
+
 ## Corrections to the baseline audit
 
 Four findings in the first report were wrong and are withdrawn/corrected:

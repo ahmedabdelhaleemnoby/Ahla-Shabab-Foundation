@@ -65,20 +65,29 @@ mid/senior full-stack engineer familiar with this codebase.
   The live API serves the five Arabic keys with `consent`-typed required fields, disclaimers, and
   options on every choice field. CI on the same commit: 63 tests / 6 suites. Row 24 → **PASS**.
 
-### T-20 · Fundraising totals are not linked to donations — NEW (found extending coverage)
-- Module Donations/Portfolio · Backend+Dashboard · **High** · Effort 0.5d (manual) or 2d (derived)
-- Nothing derives `raisedAmount`: `donation.completed` feeds only notifications, and a `Donation`
-  carries a free-text `cause` with **no `caseId`**. A completed donation leaves the case progress bar
-  at 0 — proven by an integration test.
-- **This corrects an earlier decision of mine.** T-02 stopped the dashboard sending `raisedAmount` on
-  the reasoning that it was "derived server-side". It is not, so that change removed the only way to
-  set it: **the dashboard currently cannot update a fundraising total at all.**
-- **Two ways forward — a product decision, not a technical one:**
-  (a) restore manual editing in the dashboard (smallest change, totals stay hand-maintained);
-  (b) add `caseId` to `Donation`, set it at creation, recompute `raisedAmount` on approval — correct,
-  but a schema change plus a backfill for existing rows whose `cause` is only a string.
-- **Acceptance** an approved donation is reflected in the case/project total the app displays, by
-  whichever mechanism is chosen.
+### T-20 · Fundraising totals derived from approved donations — ✅ DONE (needs an APK to take effect)
+- Module Donations/Portfolio · Backend+Mobile · **High** · Effort 2d
+- **You chose derivation over restoring manual entry.** Implementing it exposed that the chain was
+  broken in **three** places, not one:
+  1. **the app never recorded donations at all** — `confirm()` built a receipt with an invented
+     reference and navigated to success, so a donor saw a confirmation for something recorded
+     nowhere (the audit's row 26, still open);
+  2. `CaseDetailScreen`/`ProjectDetailScreen` navigated to Donate with **no params**, dropping the
+     case entirely;
+  3. nothing credited the case on approval.
+- **Done** `Donation.caseId`/`projectId` (nullable, `SetNull`, additive migration); the credit runs in
+  the **same transaction** as the status change; it is an **increment, not a recompute**, so
+  hand-entered totals survive and **no backfill is needed**; mobile now calls `submitDonation` with
+  the id and uses the **server's** reference, showing an error rather than a fake success on failure.
+- **10 integration tests**, mutation-checked (removing the credit fails 6). 91 integration / 101 unit
+  / 43 shared. CI green; the deployed Swagger confirms the live API accepts `caseId`/`projectId`.
+- **⚠️ Gating step: a new APK.** The mobile half only reaches donors in a new build — until then the
+  installed app still records locally and the derivation has no source.
+- **Known limits** historical donations have no `caseId` and cannot be retro-attributed (`cause` is
+  free text); their money is already in the hand-entered totals, so nothing is lost or double-counted.
+  And there is no decrement path, because reversing an approved donation is currently impossible — if
+  reversal is ever allowed, the credit must be reversed with it.
+- Evidence `final-delivery-audit/reports/T-20-fundraising-totals.md`.
 
 ### T-21 · Merge unit and integration coverage reporting — NEW
 - Module Testing · Backend · **P3** · Effort 0.25d

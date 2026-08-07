@@ -59,7 +59,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 23 | Consultations | Submit request → stored | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | mobile submits locally |
 | 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | T-07 `8edf040`; verified live — **47/47, zero known defects** |
 | 25 | Bookings | Engine + Serializable-tx concurrency | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | race PROVEN on a real DB (2-way + 5-way); P2034 → 409 fixed; partial unique index recommended |
-| 26 | Donations | Create; server owns status | PASS | FAIL | FAIL | — | FAIL | BLOCKED | **PARTIAL** | mobile+admin wiring |
+| 26 | Donations | Create; server owns status | PASS | PASS | PASS | — | PASS | PASS | **PARTIAL** ⬆ | T-20: mobile now records on the server with case links; totals derive on approval. **Needs a new APK to reach donors** |
 | 27 | Receipts | Server-generated, unique ref, owner-scoped | PASS | PASS | — | — | PASS | PASS | **PASS** ✅ | T-15: references made unguessable (900k → 1.15e18), 0 collisions, PII trimmed; 9 DB-backed tests |
 | 28 | Notifications | In-app feed, unread, mark read | PASS | PASS | FAIL | — | PARTIAL | BLOCKED | **PARTIAL** ⬆ | mobile wired `c85f9ed`; admin broadcast wired T-13, send unverified |
 | 29 | Notifications | Preferences per type | PASS | PASS | — | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired `c85f9ed` |
