@@ -66,10 +66,23 @@ mid/senior full-stack engineer familiar with this codebase.
 - Module Payments · Backend · High · Depends T-06 · Effort 2.5d
 - **Acceptance** Server-created payment, correct amount/currency, signed webhook accepted, **invalid signature rejected**, duplicate webhook idempotent, failed/cancelled handled; status only ever set server-side.
 
-### T-11 · Harden webhook secret handling
-- Module Payments · Backend · High · Effort 0.25d · File `src/donations/donations-webhook.controller.ts:87`
-- Signature check is **skipped with a warning** when `WEBHOOK_SECRET` is unset. Must hard-fail in production.
-- **Acceptance** Boot fails (or endpoint 503s) in `NODE_ENV=production` without the secret.
+### T-11 · Harden webhook secret handling — ✅ DONE
+- Module Payments · Backend · High · Effort 0.25d · File `src/donations/donations-webhook.controller.ts`
+- ~~Signature check is **skipped with a warning** when `WEBHOOK_SECRET` is unset.~~
+  **This finding was wrong.** Line 87 is the warning; a production branch throwing 503 already sat
+  three lines above it, added in `d420546` *before* the audit baseline. A live probe also disproved
+  the related claim that production had no secret — an unsigned call returns **401**.
+- **Real gaps found and fixed instead:** the bypass keyed on `NODE_ENV !== 'production'` while
+  `NODE_ENV` **defaults to `'development'` when unset**, so a deploy that forgot it left the route
+  public; and production could boot with no secret at all.
+- **Acceptance** Boot fails (or endpoint 503s) in `NODE_ENV=production` without the secret — **met**:
+  boot now fails, and the endpoint fails closed in every configuration except an explicit
+  `ALLOW_UNSIGNED_WEBHOOKS=true` outside production. 15/15 tests, mutation-checked.
+  Evidence `final-delivery-audit/security/T-11-webhook-hardening.md`.
+- **⚠️ Before the next deploy** confirm the live `WEBHOOK_SECRET` is ≥16 chars, or production will
+  refuse to start. Its length could not be verified from outside.
+- **Not covered** the *effect* of a signed callback (donation → paid → receipt) — that is T-10, still
+  BLOCKED on a payment sandbox.
 
 ### T-12 · Fix backend test discovery + raise coverage
 - Module Testing · Backend · High · Effort 2d

@@ -111,6 +111,13 @@ Each with the evidence that justifies PASS.
 1. **Public content API** — live probes returned `200` for `/cases`, `/projects`, `/articles`, `/services`, `/governorates`, `/providers`, `/foundation`, `/cms`. Evidence: `qa/final-delivery-audit/api/`.
 2. **CMS delivery + consumption** — live `GET /cms` returns a 10-key document (`settings, menu, home, pages, media, paymentMethods, consultations, …`); mobile consumes it via `fetchCmsTagged` reporting `source=api`. Evidence: `verify-api-layer.log`.
 3. **HTTP security posture** — verified live: HSTS `max-age=15552000; includeSubDomains`, full CSP, `x-content-type-options: nosniff`, `x-frame-options: SAMEORIGIN`, `x-ratelimit-limit: 100`, **no** `x-powered-by`.
+3b. **Payment webhook authentication (T-11)** — production verified to **fail closed**: an unsigned
+   `POST /webhooks/payment` returns `401 Missing webhook signature`, which is reachable only when a
+   secret is configured. The guard was additionally hardened to fail closed when `NODE_ENV` is unset
+   (it previously bypassed verification in that case), and production now refuses to **boot** without
+   a ≥16-char `WEBHOOK_SECRET`. 15/15 webhook tests, mutation-checked. Evidence:
+   `final-delivery-audit/security/T-11-webhook-hardening.md`. Note this does **not** move row 48 —
+   the *effect* of a confirmed payment is still BLOCKED on a sandbox (T-10).
 4. **Foundation info**, 5. **Governorates/work areas**, 6. **Home configuration** — served by API and rendered by both clients.
 7. **Shared business rules** — 32/32 vitest pass, including the compile-proof that a client cannot set donation status `مكتمل`.
 8. **Android release build** — `ahla-shabab-v1.4.0-demo.apk` present; `tsc` typecheck exit 0.

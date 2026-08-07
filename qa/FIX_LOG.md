@@ -266,9 +266,55 @@ FCM fan-out and preference filtering stay unverified until T-06 provides staging
 
 ---
 
+## T-11 — Payment webhook fails closed by default ✅ DONE
+
+**The finding was wrong; the fix is real.** T-11 claimed the signature check was "skipped with a
+warning" when `WEBHOOK_SECRET` is unset, citing `donations-webhook.controller.ts:87`. Line 87 is the
+warning — a production branch throwing `ServiceUnavailableException` already sat three lines above it,
+added in `d420546`, *before* the audit baseline. A live probe also disproved the companion claim that
+production had no secret: an unsigned `POST /webhooks/payment` returns **401 Missing webhook
+signature**, which only the `secret` branch can produce. Two code comments asserting the opposite were
+corrected in place.
+
+**Before (the genuine defects, found while checking the claim).**
+1. The bypass keyed on `NODE_ENV !== 'production'`, and `envSchema` declares
+   `NODE_ENV: …default('development')`. A deployment that forgets `NODE_ENV` — routine under Docker,
+   PM2, systemd — silently resolves to `'development'`, leaving a route that can **mark donations
+   paid** completely unauthenticated with only a log line. The security posture defaulted to open.
+2. Production could **boot** with no secret. The 503 was correct but late: the operator learns of the
+   misconfiguration only once real gateway callbacks are already failing.
+
+**Files.**
+- `src/config/app.config.ts` — `superRefine` requires `WEBHOOK_SECRET` (≥16 chars) in production, so
+  `validateEnv` throws and the app does not start; added `ALLOW_UNSIGNED_WEBHOOKS` (default `false`).
+- `src/donations/donations-webhook.controller.ts` — inverted to fail closed: a missing secret is a 503
+  **unless** `ALLOW_UNSIGNED_WEBHOOKS=true` is explicitly set, and production ignores that flag.
+- `.env.example` — both variables documented with their consequences.
+
+**Retest.** `webhook-security.e2e-spec.ts` 15/15; full e2e suite **46/46 across 5 suites**;
+`nest build` clean; the **compiled** `dist/config/app.config` refuses a production boot with an empty
+secret. **Mutation-checked**: re-running the new tests against the old fail-open logic fails exactly
+the two cases that matter (`NODE_ENV` unset, and `development`), so the tests are not vacuous.
+
+**Regression found and fixed in passing.** The full suite surfaced a failure that pre-dated this task
+and was **caused by my own earlier donation-methods change**: `body-validation.e2e-spec.ts` posted
+`method: 'إنستاباي'`, which `CreateDonationSchema` no longer accepts, so a "valid body" case had been
+silently asserting a 400. It went unnoticed because bare `npm test` discovers 0 tests (T-12) and the
+e2e config was not re-run after that change. Fixture updated to `تحويل بنكي`. **T-12 is now clearly
+higher priority than its P1 ranking suggests** — it is what let this sit unnoticed.
+
+**⚠️ Deployment risk introduced.** Production will now refuse to start unless `WEBHOOK_SECRET` is at
+least 16 characters. The live secret is known to exist but its length **cannot be checked from
+outside**. Verify it before the next deploy.
+
+**Result.** No requirement row changes status: row 48 (payments) stays **BLOCKED**, because this
+proves the endpoint's *authentication*, not the *effect* of a confirmed payment (T-10, needs a sandbox).
+
+---
+
 ## Corrections to the baseline audit
 
-Three findings in the first report were wrong and are withdrawn/corrected:
+Four findings in the first report were wrong and are withdrawn/corrected:
 
 1. **G-15 "dead code" — WITHDRAWN.** `dashboard/src/shared/` is aliased as `@ahla/shared` by
    both `vite.config.ts` and `tsconfig.json`. It is the live shared package, not a stray copy.
@@ -278,6 +324,11 @@ Three findings in the first report were wrong and are withdrawn/corrected:
    Row 43 (admin broadcast) was still FAIL at that point. The correct post-T-05 tally was
    PASS 18 · PARTIAL 25 · **FAIL 1** · MISSING 3 · BLOCKED 5 → **65%**, not 66%. The claim
    was stated to the client one task early; it became true only with T-13.
+4. **T-11 "signature check is skipped with a warning" — WRONG.** The production hard-fail already
+   existed at the baseline (`d420546`); the cited line 87 was the warning inside the non-production
+   branch. The companion claim that production had no `WEBHOOK_SECRET` was disproved by a live 401.
+   Real defects did exist nearby (fail-open when `NODE_ENV` is unset; boot allowed without a secret)
+   and are fixed under T-11 — but the finding as written was not accurate.
 
 ## Status of the delivery decision
 
