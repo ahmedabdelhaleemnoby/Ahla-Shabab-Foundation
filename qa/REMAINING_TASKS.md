@@ -277,9 +277,12 @@ mid/senior full-stack engineer familiar with this codebase.
   list) are tested instead. A live 403 matrix over HTTP is still **T-08**, blocked on T-06.
 - 9 integration tests on a real database, mutation-checked. Evidence
   `final-delivery-audit/security/T-15-receipts-and-references.md`.
-- **⚠️ ACTION FOR OPS** existing production donations by فوري/فودافون كاش are likely stuck in
-  «قيد التأكيد» and invisible to the review queue. Query to find them is in the evidence file; the
-  update needs database access (T-06).
+- **~~ACTION FOR OPS~~ — VOID.** This said production donations by فوري/فودافون كاش were likely
+  stuck in «قيد التأكيد». **Checked on 2026-08-08: production holds ZERO donations**, so nothing was
+  stranded and no migration is needed. The code defect was real; the inference about production
+  *data* was not checked before being asserted. Also corrected: those rows were never "invisible" —
+  the dashboard lists them under «الكل» and counts them in a KPI. What is true is that no
+  approve/reject control renders for them, so they would be **unactionable** rather than unseen.
 
 ### T-16 · Remove silent seed fallback in dashboard reads — ✅ DONE & VERIFIED IN A BROWSER
 - Module Admin · Dashboard · High · Effort 0.75d · File `store/useAdminRows.ts`

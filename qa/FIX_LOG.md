@@ -112,6 +112,9 @@ success, **adopting the id the server returned**. Failures keep the modal open
 with the reason on screen. Two deliberate decisions:
 - `raisedAmount` is **not** sent — it is derived from approved donations
   server-side, so the dashboard cannot inflate a fundraising total.
+  *(Correction: that was **false when written**. Nothing derived it, so this change
+  removed the only way to set it. It became true only with T-20, which implemented
+  the derivation.)*
 - Optional fields are omitted rather than sent as `''`, because the Zod DTOs
   reject an empty string where they expect a URL.
 
@@ -735,9 +738,14 @@ integration + 43 shared** all pass.
 **Result.** Row 27 → **PASS**; recounted tally **PASS 22 · PARTIAL 22 · FAIL 0 · MISSING 3 · BLOCKED
 5 = 70%**.
 
-**⚠️ ACTION FOR OPS.** Existing production donations by فوري or فودافون كاش are likely sitting in
-«قيد التأكيد», invisible to the review queue. The fix corrects new donations only. The query to find
-them is in the evidence file; running it needs database access (T-06).
+**~~ACTION FOR OPS~~ — VOID, and a correction.** This entry claimed production donations by فوري or
+فودافون كاش were sitting stranded and "invisible to the review queue". **Both halves were wrong.**
+A read-only count on 2026-08-08 returned **zero donations in production, in any status** — nothing was
+stranded. And they were never invisible: the dashboard lists every donation under «الكل» and counts
+these in a KPI; what it lacks is an approve/reject control for them, so they would be *unactionable*.
+The code defect was real and is fixed; the claim about production **data** was inferred from the code
+rather than checked, which the T-20 finding (the app never called the API before v1.6.0) should have
+flagged immediately.
 
 ---
 
@@ -918,7 +926,7 @@ impossible; if reversal is ever allowed, the credit must be reversed with it.
 
 ## Corrections to the baseline audit
 
-Four findings in the first report were wrong and are withdrawn/corrected:
+Six findings are wrong and are withdrawn/corrected — four from the first report, two of my own:
 
 1. **G-15 "dead code" — WITHDRAWN.** `dashboard/src/shared/` is aliased as `@ahla/shared` by
    both `vite.config.ts` and `tsconfig.json`. It is the live shared package, not a stray copy.
@@ -928,7 +936,17 @@ Four findings in the first report were wrong and are withdrawn/corrected:
    Row 43 (admin broadcast) was still FAIL at that point. The correct post-T-05 tally was
    PASS 18 · PARTIAL 25 · **FAIL 1** · MISSING 3 · BLOCKED 5 → **65%**, not 66%. The claim
    was stated to the client one task early; it became true only with T-13.
-4. **T-11 "signature check is skipped with a warning" — WRONG.** The production hard-fail already
+4. **"Production donations are stranded in «قيد التأكيد»" — WRONG, and repeated.** Asserted in the
+   T-15 entry and in several summaries. A read-only count on 2026-08-08 found **zero donations in
+   production, in any status**. The *code* defect was real; the conclusion about production **data**
+   was inferred from it and never checked. The T-20 finding — the app never called the API before
+   v1.6.0 — should have surfaced this immediately. The companion claim that such rows were
+   "invisible to the review queue" was also wrong: the dashboard lists them under «الكل» and counts
+   them in a KPI; it simply offers no approve/reject control, making them *unactionable*, not unseen.
+5. **T-02's "`raisedAmount` is derived server-side" — FALSE when written.** Nothing derived it, so
+   removing it from the dashboard payload removed the only way to set it. Made true retroactively by
+   T-20.
+6. **T-11 "signature check is skipped with a warning" — WRONG.** The production hard-fail already
    existed at the baseline (`d420546`); the cited line 87 was the warning inside the non-production
    branch. The companion claim that production had no `WEBHOOK_SECRET` was disproved by a live 401.
    Real defects did exist nearby (fail-open when `NODE_ENV` is unset; boot allowed without a secret)
