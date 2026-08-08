@@ -1024,9 +1024,93 @@ Six findings are wrong and are withdrawn/corrected — four from the first repor
    Real defects did exist nearby (fail-open when `NODE_ENV` is unset; boot allowed without a secret)
    and are fixed under T-11 — but the finding as written was not accurate.
 
+## T-06 — Credentials & a safe test environment ✅ DONE
+
+**Before.** Filed as the last P0, "1.5d, mostly waiting" on the client, and treated throughout this
+log as procurement rather than code.
+
+**Root cause of the mis-scoping.** Provisioning credentials was read as *obtaining* them. Nobody
+looked at the ones already in the tree.
+
+### 🔴 The production super-admin password was published on GitHub
+
+`prisma/seed/admin-users.ts` hashed a hardcoded `admin123` and printed it. The repository is **public**;
+`deploy.yml` runs `prisma db seed` on every push to main; the account holds «مدير عام» — every
+permission over donations, beneficiaries, bookings and national IDs.
+
+Verified once against production, non-destructively: `POST /admin/auth/login` → **200 with tokens**.
+The session was rotated and revoked immediately (`/auth/logout` → 200). Nothing was read or written.
+
+Worse, it could not be rotated: there is **no admin password-change endpoint, no dashboard screen and
+no admin account management of any kind**. `AdminUser` rows come from the seed or from psql.
+
+**Fix.** The seed never touches an existing admin (no password reset, no reactivation of a disabled
+account) and never creates one without `SEED_ADMIN_PASSWORD` — in production a missing value creates
+nothing, loudly, because creating none is recoverable and creating one with a published password is
+not. New `POST /api/v1/admin/auth/change-password` verifies the current password, rotates it, and
+**revokes every refresh token for that admin** so sessions opened with a leaked password die rather
+than surviving the 30-day refresh TTL. The audit entry is written in the service, not by
+`ActivityLogInterceptor` — the interceptor stores `newValue: request.body`, which would have put both
+passwords in the activity log in plain text.
+
+### 🔴 Every rate limit was a single global bucket
+
+`request.ip` keys the rate limiter and the activity log's `ip` column. Express derives it from
+`X-Forwarded-For` only when the proxy chain is trusted, and nothing set `trust proxy` — while the API
+answers through Cloudflare and an nginx. Proven live: `x-ratelimit-remaining` keeps falling whatever
+`X-Forwarded-For` says.
+
+So: 100 requests a minute **for the whole platform**; five admin login attempts per ten minutes shared
+by every administrator (any stranger could lock out the foundation, indefinitely, with five wrong
+guesses every ten minutes); five OTP requests per ten minutes for the entire mobile user base; and an
+audit log recording the proxy's address for every action ever taken.
+
+**Fix.** `TRUST_PROXY`, applied in `main.ts` and **announced at boot** — a silent default is how this
+stayed invisible. Left at `false`: trusting a hop that does not exist lets a caller write their own
+header and skip the limits entirely, and the correct count depends on the nginx config on the server.
+
+### 🟠 The OTP endpoint reported success when nothing was sent
+
+`EmailService.sendOtp` caught every error and returned normally, so `POST /auth/otp/request` answered
+200 with «تم إرسال رمز التحقق» whether or not a byte left the server — which, with no SMTP configured,
+was every request. The dev fallback that printed the code was gated on `NODE_ENV === 'development'`, so
+staging and test logged nothing and had no way in at all. Production now returns 503; non-production
+logs the code.
+
+### 🟡 The merged test run passed by luck
+
+`maxWorkers: 1` and `testTimeout: 30000` sat inside the `projects[]` entry, where Jest's project schema
+does not define them — `testTimeout` produced an "Unknown option" warning and both were dropped. The
+merged run held together on CI only because a GitHub runner has few enough cores to serialise by
+accident: on a 10-core machine, **53 of 227 tests failed**. Serialised at the CLI, timeout moved to a
+setup file.
+
+**Files changed** (`ahlashabab_backend_app`)
+- `prisma/seed/admin-users.ts`, `src/auth/auth.service.ts`, `src/auth/admin-auth.controller.ts`,
+  `src/auth/dto/admin-change-password.dto.ts` *(new)*
+- `src/common/utils/trust-proxy.util.ts` *(new)*, `src/main.ts`, `src/config/app.config.ts`
+- `src/email/email.service.ts`
+- `scripts/qa-env.ts`, `scripts/disposable-postgres.ts`, `scripts/with-db.ts` *(all new)*
+- `test/seed-admin-credentials.e2e-spec.ts`, `test/otp-delivery-failure.e2e-spec.ts`,
+  `test/trust-proxy.e2e-spec.ts`, `test/integration/admin-password.int-spec.ts`,
+  `test/integration/jest.setup.ts` *(all new)*
+- `jest.config.js`, `package.json`, `.env.example`
+
+**Retest.** 227 tests / 23 suites green; coverage **57.36%** (was 55.83), thresholds ratcheted.
+`npm run qa:env -- --smoke` passes every check. Five mutation checks, including setting
+`TRUST_PROXY=false` — production's actual state — which fails **7 of 10** tests in the new suite.
+
+**Result.** Row 17 (admin login) PARTIAL → **PASS**, proven live. Row 3 (security headers + rate
+limiting) **PASS → PARTIAL**, a deliberate downgrade. They cancel: **73%, unchanged** — which is the
+point worth reporting. The two most serious defects found in this engagement moved the score by zero.
+
 ## Status of the delivery decision
 
-**NOT READY — REMAINING CORE TASKS**, but every P0 that engineering can close is now closed:
-T-01, T-02, T-03, T-04 and T-05. The single remaining P0 is **T-06 — credentials and a
-staging environment** — which is procurement, not code, and gates all remaining verification
-(IDOR, RBAC 403, booking race, payment webhook, OTP delivery, reports vs SQL).
+**NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed
+as procurement and was not. What remains genuinely external is narrower than the audit stated:
+production SMTP (delivery only — QA can complete an OTP login without it), the FCM key, and a host for
+the staging environment.
+
+Two things need the client before launch and neither is engineering work: **change the live admin
+password** (the endpoint now exists) and **set `TRUST_PROXY`** to the hop count the nginx config
+implies.

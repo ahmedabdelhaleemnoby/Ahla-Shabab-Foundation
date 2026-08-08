@@ -31,6 +31,20 @@
 > the proof lives outside the system — nothing links a donation to its evidence):
 > PASS 24 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED **3** · N/A 1
 > → **(24+10.5)/47 = 73%** (baseline 57%). Counts re-derived from the rows, not carried forward.
+>
+> **Tally after T-06 — unchanged at 73%, and that is the finding.** Two rows moved in opposite
+> directions and cancelled out:
+> row 17 (admin login) PARTIAL → **PASS**, proven live; row 3 (security headers + rate limiting)
+> **PASS → PARTIAL**, a deliberate downgrade — the rate limits were real but keyed on the proxy's
+> address, so the platform shared **one** bucket: 100 requests a minute in total, and five admin login
+> attempts per ten minutes for every administrator together.
+> PASS 24 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 3 · N/A 1 → **73%**.
+>
+> T-06 was the last P0 and was filed as "mostly waiting" on the client. Looking at the credentials
+> instead of waiting for them turned up a **super-admin password published in a public repository and
+> working on production**, with no way to change it through the product, and a rate limiter that any
+> stranger could use to lock every administrator out of the dashboard. Neither is visible in the score.
+> See `final-delivery-audit/security/T-06-credentials-and-qa-environment.md`.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -42,7 +56,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Content API | Public reads: cases, projects, articles, services, providers, governorates, foundation | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
 | 2 | CMS | CMS document served + consumed (menu/home/pages) | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
-| 3 | Security | Headers (HSTS/CSP/nosniff/frame), rate limiting, no `x-powered-by` | PASS | — | — | — | PASS | PASS | **PASS** | — |
+| 3 | Security | Headers (HSTS/CSP/nosniff/frame), rate limiting, no `x-powered-by` | PASS | — | — | — | PASS | PARTIAL | **PARTIAL** ⬇ | T-06: headers pass; **rate limiting was one global bucket** — no `trust proxy` behind Cloudflare+nginx, so every caller shared 100 req/min and 5 login attempts/10min. `TRUST_PROXY` added; **set it on the server** |
 | 4 | Foundation | About/foundation info | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
 | 5 | Governorates | Governorates + work areas | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
 | 6 | Home config | Home sections ordered/toggled from CMS | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
@@ -56,7 +70,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 14 | Admin CMS write | `PUT /admin/cms` persists CMS edits | PASS | — | PASS | — | PASS | PARTIAL | **PASS** | — |
 | 15 | Auth | Email OTP request/verify endpoints | PASS | PASS | — | — | PASS | PARTIAL | **PARTIAL** ⬆ | wired; live delivery still BLOCKED |
 | 16 | Auth | Email normalization → one account | PASS | FAIL | — | — | BLOCKED | PASS | **PARTIAL** ⬆ | T-12: 3 variants proven to resolve to one account (unit); live 3-case test still BLOCKED |
-| 17 | Auth | Admin login (`POST /admin/auth/login`) | PASS | — | PASS | — | BLOCKED | MISSING | **PARTIAL** | live login proof |
+| 17 | Auth | Admin login (`POST /admin/auth/login`) | PASS | — | PASS | — | PASS | PASS | **PASS** ⬆ | T-06: proven live (200 + tokens, session revoked after). Found the credential was **published in a public repo** and unrotatable — seed fixed, `change-password` endpoint added, 10 HTTP tests |
 | 18 | User flow | History/receipts/bookings/favorites/notifications for signed-in user | PASS | PASS | — | — | PASS | BLOCKED | **PASS** ✅ | wired `c85f9ed`; live proof needs a token |
 | 19 | Cases | Urgent + sponsorship: list/detail/publish/feature | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 20 | Projects | CRUD, stages, updates, ordering | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |

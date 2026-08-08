@@ -112,7 +112,25 @@ SMS_ENABLED=false             # feature flag
 CORS_ORIGINS=https://dashboard.ahlashabab.com
 RATE_LIMIT_WINDOW=60
 RATE_LIMIT_MAX=100
+TRUST_PROXY=2                 # REQUIRED behind a proxy — see below
+WEBHOOK_SECRET=...            # required at boot in production (T-11)
+SEED_ADMIN_PASSWORD=          # only to create the FIRST admin; never resets an existing one
 ```
+
+**`TRUST_PROXY` is not optional here.** The rate limiter buckets on `request.ip`, and so does the
+`ip` column of the admin activity log. Express derives that from `X-Forwarded-For` only when the proxy
+chain is trusted; otherwise it is the socket peer, which behind a proxy is **the same address for
+every visitor**. This deployment answers through Cloudflare and an nginx with the setting absent, so
+the limits applied to the whole platform at once: 100 requests a minute in total, five admin login
+attempts per ten minutes shared by every administrator, five OTP requests per ten minutes for the
+entire mobile user base. Set it to the number of proxies that rewrite the header — too high is its own
+bug, because a caller can then write it themselves and skip the limits. The effective value is printed
+at boot.
+
+**Admin credentials.** The seed used to hash a hardcoded password in a public repository. It now
+refuses to create an account without `SEED_ADMIN_PASSWORD`, and never touches an existing one — so a
+deploy cannot reset a changed password or re-enable a disabled account. Rotate through
+`POST /api/v1/admin/auth/change-password`, which also revokes every refresh token for that admin.
 
 Per Offer pricing note: hosting, domains, gateway/SMS/FCM accounts are the foundation's responsibility — the code must read all such credentials from env, never hard-code them.
 

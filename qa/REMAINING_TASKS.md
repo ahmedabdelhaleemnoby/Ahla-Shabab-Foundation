@@ -39,10 +39,46 @@ mid/senior full-stack engineer familiar with this codebase.
 - **Why** Seven screens show believable local demo data instead of the user's real records (N-02).
 - **Acceptance** Each screen renders server data with loading/empty/error states; no local fallback for user-scoped data.
 
-### T-06 · Provision credentials & a safe test environment
-- **Module** Ops · **Layer** External · **Severity** Critical · **Depends on** none · **Effort** 1.5d (mostly waiting)
-- **Why** Unblocks E-01…E-05: SMTP + test inbox, `WEBHOOK_SECRET`, payment sandbox, FCM key, and one admin + two user tokens on staging.
-- **Acceptance** A staging environment with seeded data and issued tokens that QA can hit without touching production.
+### T-06 · Provision credentials & a safe test environment — ✅ DONE (2 critical defects found)
+- Module Ops · External · Critical · Effort 1.5d "mostly waiting" — **it was not waiting.**
+- **"Mostly waiting on the client" was wrong.** Provisioning credentials means *looking at* the
+  credentials, and the first thing that turned up is the worst defect in this engagement.
+- 🔴 **The production super-admin password was published on GitHub.** The seed hashed a hardcoded
+  `admin123`; the repository is **public**; `deploy.yml` seeds production on every push; the role is
+  «مدير عام» — every permission. **Verified live: 200 + tokens.** The session was revoked immediately.
+  And there was **no way to change it** — no endpoint, no dashboard screen, no admin account
+  management at all.
+  **Fixed:** the seed never creates an account without `SEED_ADMIN_PASSWORD` (in production, a missing
+  value creates nothing, loudly) and never touches an existing one; new
+  `POST /admin/auth/change-password` verifies the current password, rotates it and **revokes every
+  refresh token** so leaked sessions die with it. The audit row is written in the service, because
+  `ActivityLogInterceptor` stores `request.body` and would have logged both passwords in plain text.
+  **⚠️ The live password is still the published one — change it.**
+- 🔴 **Every rate limit was one global bucket.** No `trust proxy`, behind Cloudflare + nginx, so
+  `request.ip` was the proxy for every caller: 100 requests/minute for the whole platform, **5 admin
+  login attempts per 10 minutes shared by every administrator** (five wrong guesses from anyone on the
+  internet locked out the foundation), 5 OTP requests per 10 minutes for the entire mobile user base,
+  and an activity log that recorded the proxy's IP for every action ever taken. Proven live: the
+  counter ignores `X-Forwarded-For`. `TRUST_PROXY` added and announced at boot; **left at `false`**
+  because the wrong hop count is spoofable — **check the nginx config and set it**.
+- 🟠 **`POST /auth/otp/request` answered 200 when nothing was sent.** `sendOtp` swallowed every error,
+  so with no SMTP configured the app told users to check an inbox nothing was coming to. Production
+  now returns 503; non-production logs the code (the gate was `NODE_ENV === 'development'`, so staging
+  and test had no way in at all).
+- 🟡 **The merged test run passed by luck.** `maxWorkers`/`testTimeout` inside a `projects[]` entry are
+  not part of Jest's project schema and were silently dropped; the run only held together on CI
+  because a GitHub runner has few enough cores to serialise by accident. 53 of 227 tests failed on a
+  10-core machine. Serialised where Jest honours it.
+- **Acceptance MET.** `npm run qa:env` brings up a disposable, migrated, seeded environment with an
+  API, and issues one admin and two user tokens **through the shipped login routes** — including the
+  full OTP exchange, read back from a built-in SMTP sink. No Docker, no mail account, nothing touching
+  production. `--smoke` proves it and tears down. Also: `npm run test:int:local`,
+  `scripts/disposable-postgres.ts`.
+- **227 tests / 23 suites, coverage 57.36%** (was 55.83). Five mutation checks, including setting
+  `TRUST_PROXY=false` — production's actual state — which fails **7 of 10** tests in the new suite.
+- Evidence `final-delivery-audit/security/T-06-credentials-and-qa-environment.md`.
+- **Still external:** production SMTP (delivery only — QA no longer needs it), the FCM key, and a
+  hosted URL for the staging environment. The payment sandbox is moot (T-10).
 
 ---
 
