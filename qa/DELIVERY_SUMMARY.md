@@ -3,6 +3,8 @@
 **جمعية خواطر أحلى شباب** · 8 August 2026
 Backend API · Mobile app (Android) · Admin dashboard
 
+> Arabic version of this document: `DELIVERY_SUMMARY.ar.md`
+
 ---
 
 ## Where the platform stands
