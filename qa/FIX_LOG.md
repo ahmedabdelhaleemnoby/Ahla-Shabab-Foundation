@@ -1347,6 +1347,44 @@ Dashboard typecheck and production build clean.
 **Row 23's admin column is now true rather than merely scored.** The Final column stays PARTIAL —
 the mobile app still submits locally — so the tally does not move: **70%**.
 
+## Consultant portal, phase 2 — scheduling ✅ DONE
+
+**Before.** `consultationsService.schedule()` set `providerId`, `date` and `timeSlot`, and **no
+controller route exposed it**. Meanwhile `PATCH :id/status` took `@Body('status') status: string` with
+no validation and wrote whatever it was handed. Two consequences:
+
+- a request could be marked **«تم تحديد موعد» with `providerId`, `date` and `timeSlot` all null** — a
+  status announcing an appointment that recorded nothing about who with or when. Exactly the
+  half-truth the phase 1 button could produce;
+- `{"status":"anything"}` **stored "anything"**, so every list, filter and badge downstream could hold
+  a value nobody had defined.
+
+**Fix.** The status route validates against the five statuses from decision 7 and **refuses
+«تم تحديد موعد»**, pointing at `PATCH :id/schedule`, which takes all three fields. `schedule()` also
+checks the provider exists — an unknown id was a foreign-key error and a 500 when it is the caller's
+mistake — and refuses a cancelled request.
+
+The dashboard button became a form: a real provider dropdown (active only), a date, a time, confirm
+disabled until all three are present. If no provider is active it says so rather than offering an
+empty select.
+
+**Retest.** 13 integration tests over real HTTP, plus the whole loop driven through the browser
+against a disposable API:
+
+| Step | Result |
+|---|---|
+| Request submitted through the public endpoint | 201 |
+| Moved to review, then scheduled from the UI | `PATCH …/schedule` → **200** |
+| Database read back | status «تم تحديد موعد», provider **set**, date **2026-11-20**, slot **15:45** |
+
+Those last three fields were previously impossible to set through the API at all.
+
+**273 tests / 28 suites, coverage 59.76%.**
+
+**Phases 3–5 remain blocked on Q1–Q4** of `CONSULTANT_PORTAL_SCOPE.md`, and Q4 (what a consultant may
+read of a beneficiary's written summary, and whether they see requests assigned to others) should be
+answered in writing before any consultant-facing surface is built.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed
