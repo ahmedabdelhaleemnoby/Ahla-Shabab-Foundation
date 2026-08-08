@@ -2,9 +2,33 @@
 
 Backend requirements for **جمعية خواطر أحلى شباب**, derived from the Technical Offer (§5–§8) and the already-built frontend (`mobile/` app + `dashboard/`). Every entity and endpoint below maps to a real screen or module that already consumes it via mock data in `@ahla/shared` — the job of the backend is to replace those mocks with a real REST API + database, changing nothing about the UI contracts.
 
-> Status: **an implementation now exists and is deployed** — `https://portfolio.27lashabab.com/api/v1` (Swagger: `/api/docs`). 113 endpoints, bearer auth, covering most of this spec.
+> ## Status — 2026-08-08
 >
-> **The app has not been wired to it.** The mobile app and dashboard still run entirely on `@ahla/shared` mock data (app **v1.4.0**), and the QA acceptance report's "zero external requests" finding describes that state. Integration is a separate piece of work — see **§18** for the field-level differences that must be settled first.
+> **Built, deployed, and wired.** `https://portfolio.27lashabab.com/api/v1` (Swagger `/api/docs`) —
+> NestJS 10 + Prisma + PostgreSQL, 39 controllers / **143 routes** / 38 models, behind a CI gate
+> running **192 tests** (unit + integration against a real database, 54% merged coverage).
+>
+> **The clients are now wired to it.** The "runs entirely on mock data" note below is obsolete: the
+> mobile app (**v1.6.0**) does real email-OTP login, reads `/me/*`, renders CMS content and records
+> donations server-side; the dashboard reads and writes the live API on every screen.
+>
+> **Where this spec and the running code disagree, the code and [`qa/`](qa/) win.** This file is the
+> design record. Notable divergences settled during delivery:
+>
+> - **Payment methods narrowed to three** — تحويل بنكي / إنستاباي، فوري، فودافون كاش. `بطاقة بنكية`
+>   and `إنستاباي` as a separate method are **retired**; they survive only so historical rows and
+>   report filters resolve, and `CreateDonationSchema` rejects them.
+> - **No payment gateway, by client instruction.** Every donation is created «قيد المراجعة» and only
+>   an admin can approve it. `GATEWAY_METHODS` is deliberately empty.
+> - **Consultation types are keyed in Arabic** (نفسية، دينية، طبية، أسرية، أعمال), not
+>   `psychological/legal/...`, and the consent field is typed `consent`, not `checkbox`.
+> - **`Donation` gained `caseId` / `projectId`**, and approving a donation now credits that case's
+>   `raisedAmount` — nothing derived it before.
+> - **References are 60-bit crypto-random base32**, not six digits. The old format was enumerable and
+>   collided (51 duplicates per 10,000).
+>
+> For status use [`qa/PROJECT_COMPLETION_MATRIX.md`](qa/PROJECT_COMPLETION_MATRIX.md); for what is
+> left, [`qa/REMAINING_TASKS.md`](qa/REMAINING_TASKS.md).
 >
 > **Updated 2026-07-05** to cover the newer mobile screens: in-app Notifications + preferences, News/Articles feed, Volunteer applications, Contact-us messages, My Bookings, Donation history/receipts, Account settings, Zakat calculator (nisab config), FAQ, Onboarding. Sections marked **(v1.1)** are those additions.
 >
@@ -145,7 +169,9 @@ Entities mirror `@ahla/shared` (`types.ts`, `services.ts`, `admin.ts`, `cms/cmsT
 
 ### Donations (mobile checkout)
 - **donations** — `id, reference (AS-######), donor_name, user_id (nullable), cause, amount, method, recurring, status, created_at`
-  - `method ∈ {بطاقة بنكية, فوري, إنستاباي, فودافون كاش, تحويل بنكي}`
+  - `method ∈ {تحويل بنكي, فوري, فودافون كاش}` — **the three the client approved.**
+    `بطاقة بنكية` and `إنستاباي` are legacy: kept so historical rows and report filters still resolve,
+    but **rejected by `CreateDonationSchema`** for new donations.
   - `reference` shown on the mobile receipt (DonationSuccess) and in donation history.
 
 ### Engagement & content **(v1.1)**

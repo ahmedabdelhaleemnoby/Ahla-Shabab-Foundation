@@ -6,14 +6,27 @@ The admin dashboard used to live here as a third workspace; it now has its own r
 
 Built from the approved `Ahla-Shabab-App-Design.html` spec and refined against the official brand identity at [ahlashabab.com](https://ahlashabab.com) — the same royal-blue palette, Cairo type scale, spacing, and components drive both apps.
 
-> **Demo build (v1.2.1).** This is a UI/UX presentation on mock data — no backend, payment gateway, database, or auth server. Every donation, receipt, and consultation flow is a realistic demo, clearly labeled «نسخة عرض». The backend is fully specced in [BACKEND.md](BACKEND.md) but not built.
+> **Current build: v1.6.0** (versionCode 11) — see [Releases](https://github.com/ahmedabdelhaleemnoby/Ahla-Shabab-Foundation/releases).
+>
+> **This is no longer a mock demo.** A NestJS + PostgreSQL backend is live at
+> `https://portfolio.27lashabab.com/api/v1`, and the app reads and writes real data: passwordless
+> email-OTP login issues real JWTs, account screens read `/me/*`, content comes from the CMS, and
+> donations are recorded on the server.
+>
+> **There is still no payment gateway, deliberately.** All three donation methods — تحويل بنكي /
+> إنستاباي، فوري، فودافون كاش — are completed outside the app and approved by an admin, so every
+> donation stays «قيد المراجعة» until then. The app never marks a donation successful by itself.
+>
+> Delivery status, evidence and the remaining work live in [`qa/`](qa/) —
+> start with [`qa/FINAL_PROJECT_DELIVERY_AUDIT.md`](qa/FINAL_PROJECT_DELIVERY_AUDIT.md).
 
 ## Monorepo layout
 
 ```
 .
-├── shared/        @ahla/shared — design tokens, TS types, mock data, business rules, API client
+├── shared/        @ahla/shared — design tokens, TS types, API client, business rules, offline fallback content
 └── mobile/        Expo + React Native app (39 screens, RTL, sidebar navigation)
+└── qa/            delivery audit — status matrix, fix log, remaining tasks, evidence
 ```
 
 The mobile app imports tokens/data from `@ahla/shared`. The dashboard repo holds a
@@ -46,9 +59,21 @@ Then scan the QR code with **Expo Go** (Android) or the Camera app (iOS). Press 
 
 **Main areas:** Home (hero + work-area chips + urgent case + اكفل أسرة + featured project + news + consultations) · خدماتنا (services sections) · التبرع (5-step donation wizard) · أخبارنا (news feed) · حسابي (account). Plus dedicated pages for **حالات عاجلة** (urgent cases), **اكفل أسرة** (monthly family sponsorship), المشروعات, per-type consultation request forms, a full notification center, and account-only screens (تبرعاتي / الإيصالات / حجوزاتي / المفضلة) gated behind an email login prompt.
 
-**Login:** passwordless **email** — enter your email → 6-digit verification code (mock, any code works in the demo) → signed in. Browsing and starting a donation work without login; only personal screens (receipts, bookings, favorites, notifications) prompt you to sign in.
+**Login:** passwordless **email** — enter your email → the server emails a 6-digit code → signed in
+with a real JWT pair held in the OS keystore (`expo-secure-store`). A wrong code is rejected by the
+server; there is no bypass. Browsing and starting a donation work without login; only personal
+screens (receipts, bookings, favorites, notifications) prompt you to sign in.
 
-**Donation journey (demo):** الوجهة → اختيار الحالة/المشروع → المبلغ + مرة واحدة/شهري → طريقة الدفع → الملخص → **pending receipt**. Payment methods show live states (متاحة / قيد التفعيل / بمراجعة الإدارة); a donation is **never** marked مكتمل by the app — only the dashboard's admin approval or a future server callback can do that.
+> ⚠️ **OTP email delivery is not configured yet**, so a tester may not receive the code. The app
+> staying on the code screen is the correct behaviour, not a bug — see `qa/REMAINING_TASKS.md` T-06.
+
+**Donation journey:** الوجهة → اختيار الحالة/المشروع → المبلغ + مرة واحدة/شهري → طريقة الدفع →
+الملخص → **receipt**. The donation is **recorded on the server**, and the reference on the receipt is
+the server's, so support can look it up. When it is made from a case or project screen, that id
+travels with it — approving the donation then moves that case's fundraising total.
+
+A donation is **never** marked مكتمل by the app. Only an admin approving it in the dashboard can do
+that.
 
 **Free Services Booking module (Technical Offer §4):** the transactional core.
 - `احجز خدمة مجانية` entry on Home → **ServicesBrowse**, which has a toggle:
@@ -73,14 +98,10 @@ cd ahla-shabab-dashboard && npm install && npm run dev
 
 Open http://localhost:5173.
 
-To run both on **one origin** — which is what makes a CMS edit in the dashboard
-visible in the app, since browsers partition localStorage per origin:
-
-```bash
-cd ../ahla-shabab-dashboard && DEMO_BASE=/admin/ npm run build
-cd -  && npm run demo:build
-ADMIN_DIR=../ahla-shabab-dashboard/dist npm run demo
-```
+The single-origin trick that used to be needed here is **obsolete**: the CMS lived in
+`localStorage`, which browsers partition per origin, so the dashboard and the app had to be served
+together for an edit to be visible. Both now read and write the CMS through the API, so they can run
+anywhere. `PUT /admin/cms` persists an edit; the app picks it up on its next `GET /cms`.
 
 Built with **React + Vite + TypeScript + Tailwind CSS** (RTL). The Tailwind palette maps to the CSS variables injected from `@ahla/shared`, so it stays identical to the mobile app. It is the CMS + booking-operations tool from Technical Offer §5:
 
@@ -93,7 +114,16 @@ Built with **React + Vite + TypeScript + Tailwind CSS** (RTL). The Tailwind pale
 - **التقارير** (Reports, §5-G) — bookings by category/provider/governorate, status distribution, utilization, Excel/PDF export.
 - **الأدوار والصلاحيات** (Roles, §5-F) — role cards, permission matrix, activity log.
 
-Charts are dependency-free inline SVG; icons are lucide-react (same outline family as the app's Feather set).
+Charts are dependency-free inline SVG; icons are lucide-react (same outline family as the app's
+Feather set).
+
+**Every one of those screens now reads and writes the live API.** Earlier builds rendered bundled
+sample rows and mutated React state only, so an admin's change looked successful and vanished on
+refresh. Reads that fail now show an explicit error instead of demo rows, and writes roll back with
+the server's reason on screen.
+
+Add a `.env.local` with `VITE_API_BASE=https://portfolio.27lashabab.com/api/v1` to point a local
+dashboard at production, and sign in with a real admin account.
 
 ## Type-check everything
 
@@ -115,6 +145,10 @@ The dashboard injects these colors as CSS custom properties at runtime (`--navy7
 
 ## Notes
 
-- **Data is mock** (`shared/src/data.ts`) — realistic Arabic sample cases, projects, donations, consultants, and appointments. Swap this module for real API calls when a backend is ready; the UI already reads everything through it.
+- **Data comes from the API.** `shared/src/api/` holds the client; `shared/src/data.ts` remains only
+  as the offline fallback for *public* content (cases, projects, articles) so a backend outage costs
+  a slower boot rather than a blank app. **User-scoped data has no fallback** — bookings, donations,
+  receipts, favourites and notifications show an explicit error rather than someone else's sample
+  rows.
 - **RTL** is done explicitly (row-reverse + right-aligned text with `writingDirection: 'rtl'`) rather than relying on `I18nManager.forceRTL`, so screens render correctly on first launch in Expo Go with no reload.
 - **Fonts** — Cairo loads via `@expo-google-fonts/cairo` on mobile; the dashboard repo copies the same weights out of that package into its own `public/fonts/`.

@@ -1,5 +1,23 @@
 # Missing from the backend
 
+> ## ⚠️ SUPERSEDED — historical snapshot, 2026-08-01
+>
+> This file is kept for history. It was written before the full delivery audit and **several of its
+> statements are now wrong**, most visibly:
+>
+> - it lists `بطاقة بنكية` and `إنستاباي` among the payment methods — both were **removed** when the
+>   client narrowed the offering to تحويل بنكي / فوري / فودافون كاش;
+> - it reports CMS `version: 7` — the schema is now **11**;
+> - its "still outstanding" section has largely been closed, and several items it does *not* mention
+>   turned out to be more serious than anything it lists (no CI gate at all, deploys overwriting
+>   admin content and role permissions, a public route serving unpublished cases, enumerable receipt
+>   references).
+>
+> **For current status use [`qa/`](qa/):**
+> [`PROJECT_COMPLETION_MATRIX.md`](qa/PROJECT_COMPLETION_MATRIX.md) (52 requirements, evidence-based),
+> [`REMAINING_TASKS.md`](qa/REMAINING_TASKS.md) (what is left and in what order),
+> [`FIX_LOG.md`](qa/FIX_LOG.md) (every fix, with retests — and a register of withdrawn findings).
+
 **Re-checked 2026‑08‑01, after PR #4 deployed.** What still stands between the current
 backend and a fully API‑backed app + dashboard.
 

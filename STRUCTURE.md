@@ -2,7 +2,16 @@
 
 Full map of the **جمعية خواطر أحلى شباب** platform: an npm-workspaces monorepo with a React Native mobile app and one shared package. The admin dashboard now lives in its own repository, [ahla-shabab-dashboard](https://github.com/ahmedAbdelhaleemGamal/ahla-shabab-dashboard), with a vendored copy of `shared/`. Arabic-first, fully RTL, official brand identity from [ahlashabab.com](https://ahlashabab.com).
 
-> Current release: **v1.2.1** (versionCode 6) · demo on mock data — the backend is specced in [BACKEND.md](BACKEND.md) but not built yet. Every donation/consultation flow is a **presentation demo**: no real payment, server, or database runs.
+> Current release: **v1.6.0** (versionCode 11). The backend specced in [BACKEND.md](BACKEND.md)
+> **is built and live** at `https://portfolio.27lashabab.com/api/v1` — NestJS 10 + Prisma +
+> PostgreSQL, 39 controllers / 143 routes / 38 models, behind a CI gate running 192 tests against a
+> real database.
+>
+> Real: email-OTP login with JWTs, `/me/*` account data, CMS-driven content, donations recorded
+> server-side and attributed to a case. **Not real, deliberately:** there is no payment gateway —
+> every donation stays «قيد المراجعة» until an admin approves it.
+>
+> Delivery status and evidence: [`qa/`](qa/).
 
 ---
 
@@ -91,7 +100,7 @@ NavigationContainer (navRef)
 | Cases & sponsorship | `CasesScreen` (search + tag filters), `CaseDetailScreen`, `UrgentCasesScreen` (حالات عاجلة), `SponsorshipScreen` (اكفل أسرة — monthly) |
 | Projects | `ProjectsScreen` (category + timeline), `ProjectDetailScreen` (updates timeline) |
 | Services & consultations | `ServicesBrowseScreen`, `ProviderDetailScreen`, `ServiceDetailScreen`, `BookAppointmentScreen` (**5-step wizard**), `BookingConfirmationScreen`, `MyBookingsScreen`\*, `ConsultationsScreen` (type picker), `ConsultationRequestScreen` (per-type forms), `BookingScreen` |
-| Auth | `EmailAuthScreen` → `OtpScreen` (passwordless **email** login; mock code; updates `appState`) |
+| Auth | `EmailAuthScreen` → `OtpScreen` (passwordless **email** login; **real** `/auth/otp/*`; JWT pair stored in the OS keystore via `store/session.ts`) |
 | Content & info | `NewsScreen` (عن الجمعية — About route), `ArticleDetailScreen`, `FaqScreen`, `PrivacyPolicyScreen`, `OnboardingScreen` (tour) |
 | Engagement | `VolunteerScreen` (validated form), `ContactUsScreen` (reads `appConfig`), `NotificationsScreen` (notification center)\*, `FavoritesScreen`\* |
 | Settings | `AccountSettingsScreen`, `NotificationPreferencesScreen`, `LanguageScreen` |
@@ -100,7 +109,12 @@ NavigationContainer (navRef)
 
 ### State — `src/store/` (all `useSyncExternalStore`, module-level)
 
-- `appState.ts` — session (guest by default, **email** login) + donation receipts (always **pending**) + saved consultation requests (demo, on-device only).
+- `appState.ts` — session (guest by default, **email** login) + receipts + saved consultation requests.
+- `session.ts` — the JWT pair, held in the OS keystore (`expo-secure-store`), rotated at boot and
+  revoked server-side on logout. Bearer credentials do not belong in AsyncStorage.
+- `hooks/useMyData.ts` — loads a `/me/*` collection with loading / error / empty / guest states and
+  **no fallback to bundled data**: for account data, an empty list with an explanation is the honest
+  answer, and a guest is told to sign in rather than shown someone else's sample rows.
 - `drawer.ts` — sidebar open/close.
 - `notifications.ts` — notification-center read/unread; the AppBar bell badge reads its live unread count.
 
@@ -117,7 +131,8 @@ so its imports read exactly as they did here. That copy is the thing to watch: i
 does not track this repo automatically.
 
 To run the app and dashboard on **one origin**, which is what makes a CMS edit
-visible in the app (browsers partition localStorage per origin):
+visible in the app (browsers partitioned localStorage per origin). **This is obsolete** — the CMS
+now lives on the server, so both read it through the API and can run anywhere. Kept for history:
 
 ```bash
 cd ../ahla-shabab-dashboard && DEMO_BASE=/admin/ npm run build
@@ -160,7 +175,16 @@ The exFAT SSD breaks Gradle, so release builds run inside an APFS disk image:
 3. Bump `versionCode`/`versionName` in `android/app/build.gradle` **and** `app.json`.
 4. **Put Node ≥ 20 on PATH first** (`export PATH=~/.nvm/versions/node/v22.22.2/bin:$PATH`) — the default Node 18 fails the JS bundle step (`createBundleReleaseJsAndAssets` → `configs.toReversed is not a function`).
 5. `./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon` (Gradle 8.13). JS-only changes rebuild in ~1 min.
-6. Artifacts land at repo root, e.g. `ahla-shabab-v1.2.1-demo.apk` (29 MB). `.apk` is gitignored; publish via a [GitHub Release](https://github.com/ahmedabdelhaleemnoby/Ahla-Shabab-Foundation/releases) for phone testing.
+6. Artifacts land in `builds/`, e.g. `ahla-shabab-v1.6.0-demo.apk` (60 MB). `.apk` is gitignored;
+   publish via a [GitHub Release](https://github.com/ahmedabdelhaleemnoby/Ahla-Shabab-Foundation/releases)
+   for phone testing.
+7. **Verify the artifact, not the build log.** The JS bundle is Hermes bytecode: binary-safe `grep -a`
+   for ASCII, and **UTF-16LE** for Arabic strings — a UTF-8 grep for Arabic returns 0 even when the
+   string is present, which reads as a missing feature. Native modules can sit in `classes2.dex` or
+   `classes3.dex`, so search every dex.
+8. ⚠️ **The release build is signed with the Android *debug* keystore** (`app/build.gradle` points the
+   `release` type at `signingConfigs.debug`, carrying React Native's own warning). Fine for
+   sideloading; **Google Play will reject it.** A real keystore is needed before any store release.
 
 Android 12+ gotcha: the system splash shows the **adaptive icon cropped to a circle**, so icon marks are circle-safe; icon/splash res files are swapped directly in the build image to avoid `prebuild --clean`.
 
@@ -169,11 +193,28 @@ Android 12+ gotcha: the system splash shows the **adaptive icon cropped to a cir
 | File | Purpose |
 |---|---|
 | [README.md](README.md) | Install & run quick start |
-| [BACKEND.md](BACKEND.md) | Complete backend spec — data model, REST endpoints, booking engine, security acceptance criteria. Hand this to whoever builds `backend/` |
+| [BACKEND.md](BACKEND.md) | The backend spec. **It has since been built** — treat it as the design record, and the running code plus `qa/` as the source of truth where they differ |
 | [STRUCTURE.md](STRUCTURE.md) | This map |
+| [`qa/FINAL_PROJECT_DELIVERY_AUDIT.md`](qa/FINAL_PROJECT_DELIVERY_AUDIT.md) | **Start here for status.** The delivery verdict |
+| [`qa/PROJECT_COMPLETION_MATRIX.md`](qa/PROJECT_COMPLETION_MATRIX.md) | 52 requirements, evidence-based, per layer |
+| [`qa/REMAINING_TASKS.md`](qa/REMAINING_TASKS.md) | What is left, in the order to do it |
+| [`qa/FIX_LOG.md`](qa/FIX_LOG.md) | Every fix with its retest — **and a register of withdrawn findings**, including ones the audit itself got wrong |
+| [`qa/final-delivery-audit/`](qa/final-delivery-audit/) | Raw evidence: API probes, DB verification, security, build logs |
+| [CLIENT_DECISIONS_REQUIRED.md](CLIENT_DECISIONS_REQUIRED.md) | Open decisions for the foundation |
+| [MISSING_API.md](MISSING_API.md) | ⚠️ Superseded historical snapshot — use `qa/` |
 
-## 9. What's intentionally not built yet
+## 9. What is still not built — and why
 
-- `backend/` — the app still runs on `@ahla/shared` mock data by default; dashboard edits, app receipts, and consultation requests live in session/on-device memory only. See `BACKEND.md` §22 for the API client that replaces this.
-- Real payments · email OTP delivery · push notifications — all demo-only, clearly labeled «نسخة عرض» in the app.
-- ESLint config (known gap; TypeScript strict + vitest cover the current QA).
+- **Payment gateway — deliberately absent.** The client's instruction is explicit: there is no online
+  gateway and the app must not simulate instant payment success. All three methods are completed
+  outside the app and approved by an admin. The webhook handler exists and is tested against the day
+  one is ever connected — but a defect must be fixed first: it matches a pending donation **by amount
+  alone**, so with two same-amount donations it would confirm the wrong donor's. See `qa/` T-10.
+- **OTP email delivery** — needs SMTP plus a readable inbox. The **only** remaining item that
+  requires a third party. Login cannot be completed in testing without it.
+- **Push notifications (FCM)** — needs a server key.
+- **Consultant portal** — not started.
+- **Monitoring / error tracking** — not chosen or wired.
+- **iOS build** — needs an Apple developer account.
+- **A release keystore** — every build so far is debug-signed; Google Play will reject it.
+- ESLint config (known gap; TypeScript strict + 192 backend tests + 43 shared tests cover current QA).
