@@ -924,6 +924,40 @@ impossible; if reversal is ever allowed, the credit must be reversed with it.
 
 ---
 
+## T-21 — One coverage number across both suites ✅ DONE
+
+**Before.** Coverage was measured over the **unit run only**. Anything covered by an integration test
+read as uncovered, so adding 19 integration tests made the headline figure go **down** — 20.71% to
+20.67%. A number that moves the wrong way when the thing it measures improves is worse than no
+number: it teaches people to ignore it.
+
+**Fix.** `jest.config.js` now uses `projects`. Both suites run under one invocation and coverage
+aggregates across them, while staying separable — the integration project needs PostgreSQL and the
+unit one must not:
+
+| Command | Runs | Database |
+|---|---|---|
+| `npm test` | unit + e2e | **not required** (verified with `DATABASE_URL` unset) |
+| `npm run test:int` | integration | required |
+| `npm run test:cov` / `test:ci` | **both** | required |
+
+`test/jest-int.json` is deleted — `package.json` was its only reference, and two ways to run one
+suite is exactly the confusion T-12 set out to end. CI drops from two test steps to one, with the
+database prepared first because the single invocation now includes the integration project.
+
+**The real number.** **54.45% statements, 52.83% lines** — not the 20.67% previously reported.
+Thresholds re-baselined to the merged measurement (54/29/28/52) and verified as a ratchet: `test:ci`
+passes, a one-point raise fails.
+
+**Retest.** 192 tests across 18 suites in a single run; unit-only still 101/10 with no database;
+build clean; **CI green** (`31235412133`) reporting **54.48%**.
+
+**Note.** The thresholds now only bite where a database is available — that is CI, which is where the
+gate matters. A developer running `npm test` locally gets the fast unit suite with no coverage gate,
+which is the right trade.
+
+---
+
 ## Corrections to the baseline audit
 
 Six findings are wrong and are withdrawn/corrected — four from the first report, two of my own:

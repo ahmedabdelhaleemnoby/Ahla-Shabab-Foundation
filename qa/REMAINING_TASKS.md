@@ -89,12 +89,22 @@ mid/senior full-stack engineer familiar with this codebase.
   reversal is ever allowed, the credit must be reversed with it.
 - Evidence `final-delivery-audit/reports/T-20-fundraising-totals.md`.
 
-### T-21 · Merge unit and integration coverage reporting — NEW
+### T-21 · Merge unit and integration coverage reporting — ✅ DONE
 - Module Testing · Backend · **P3** · Effort 0.25d
-- `npm run test:cov` measures only the unit run, so code covered by integration tests reads as
-  uncovered — after adding 19 integration tests the headline number went *down* (20.71% → 20.67%).
-  The ratchet in `jest.config.js` governs the unit run only, which is correct but confusing.
-- **Acceptance** one coverage number that reflects both suites.
+- Coverage measured the **unit run only**, so integration-covered code read as uncovered: adding 19
+  integration tests made the headline number go **down** (20.71% → 20.67%) — the opposite of the
+  truth, and the kind of metric that teaches people to ignore metrics.
+- **Done** `jest.config.js` now uses `projects`, so both suites run under one invocation and coverage
+  aggregates across them, while staying separable because the integration project needs PostgreSQL
+  and the unit one must not: `npm test` (unit, no DB — verified with `DATABASE_URL` unset),
+  `npm run test:int` (integration), `npm run test:cov` (**both, one report**). `test/jest-int.json`
+  removed — two ways to run one suite is the confusion T-12 set out to end. CI collapsed from two
+  test steps to one, with the database prepared first.
+- **The real number is 54.45% statements / 52.83% lines**, not 20.67%. Thresholds re-baselined to the
+  merged measurement (54/29/28/52) and verified as a ratchet: `test:ci` passes, a one-point raise
+  fails.
+- **Acceptance** one coverage number reflecting both suites — **MET**. CI reports
+  **54.48% across 192 tests / 18 suites** in a single run.
 
 ### T-17 · Every deploy overwrites admin-authored data — ✅ DONE & PROVEN ON A REAL DATABASE
 - Module CMS · Backend/Deploy · **High** · Effort 0.25d · Files `prisma/seed/**`
