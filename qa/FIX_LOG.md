@@ -1104,6 +1104,78 @@ setup file.
 limiting) **PASS → PARTIAL**, a deliberate downgrade. They cancel: **73%, unchanged** — which is the
 point worth reporting. The two most serious defects found in this engagement moved the score by zero.
 
+## Deploy schema step — `db push` removed ✅ DONE (with a failure of mine on the way)
+
+**Before.** T-01 baselined the migrations. `deploy.yml` went on running
+`npx prisma db push --skip-generate` on every push to main, so production's schema was still being
+forced into shape with no history, no plan and no review step — on a live database holding donations
+and beneficiary records. `db push` drops and rewrites columns to make the database match the schema.
+
+**Root cause.** Documented and deliberate: T-01's runbook says the switch needs a one-time baseline
+that requires production database access. It was deferred and then not revisited.
+
+**Fix.** `scripts/apply-schema.js` reads the database and picks — deploy when migrations have been
+applied or the database is empty, stop with instructions otherwise. `deploy.yml` calls it.
+
+**What I got wrong.** The first version decided on whether `_prisma_migrations` **exists**. Production
+had that table with **no rows** — a state I had not considered and had not tested — so the script took
+the deploy path and Prisma tried to `CREATE TABLE governorates` on top of the live schema.
+
+Nothing was lost: PostgreSQL runs each migration in a transaction and it failed on the first
+statement. But it recorded `0_init` as **failed**, and Prisma blocks every later migration until that
+is cleared (P3018). Production is in that state now and needs one command from someone with database
+access. It is the exact trap I had described in writing two hours earlier, having tested the
+no-table case and never the empty-table case.
+
+A second defect surfaced with it: the deploy script had no `set -e`, so after the schema step exited
+non-zero the workflow **carried on to seed and restart the app, and reported success**. My commit
+message had claimed a deploy that cannot apply its schema does not restart the app. That was not true
+when I wrote it.
+
+**Also fixed.** The runbook named `0_init` alone — correct when written, stale since T-20 added a
+second migration. Following it verbatim half-baselines the database and wedges it. The script prints
+the live list instead.
+
+**Retest.** 6 tests, each on its own throwaway cluster: fresh database, `db push` state, empty
+migrations table, the failed-migration state, and recovery through `resolve --rolled-back`. The
+second deploy behaved correctly — red, stopped before the seed and restart, recovery commands in the
+log.
+
+**Result.** Deploys are blocked until the baseline is run, which is the intended state. Production
+runs `8c92e66` and is serving normally; the undeployed commits touch deploy tooling, not runtime.
+
+## Administrator accounts ✅ DONE
+
+**Before.** `AdminUser` rows came from the seed or from psql. No create, no list, no disable, no
+password reset for anyone but yourself. The foundation ran on exactly one administrator account —
+whose password was published in a public repository until this morning — and somebody who left could
+not be locked out without database access.
+
+**Fix.** `admin/admin-users` — list, read, create, update, reset another admin's password. Guarded by
+`roles:write`, so only «مدير عام» reaches it by default.
+
+The two refusals are the point. You cannot deactivate your own account, and you cannot leave nobody
+holding `roles:write` — by deactivating the last holder or by moving them to a role without it. An
+account screen that permits either has relocated the lockout, not removed it.
+
+No DELETE: an administrator who has done anything is referenced by the activity log, and an audit
+trail that can be erased by deleting its subject is not an audit trail. Resetting a password revokes
+every refresh token for that account.
+
+Audit rows are written in the service. `ActivityLogInterceptor` stores `newValue: request.body`, and
+these bodies carry plaintext passwords — the same trap as T-06's change-password.
+
+**Found while doing it.** T-14's structural guard selected controllers by **filename**
+(`*-admin.controller.ts`), which is a naming convention rather than a rule. Re-pointed at the route
+prefix, it immediately caught `POST /admin/uploads` — writing files to disk with **no record of who
+uploaded them**. For this client those files are photographs of beneficiaries and their documents.
+Now audited. `src/admin/roles.controller.ts` was never covered by the old guard either; it happened to
+carry the interceptor.
+
+**Retest.** 19 tests over real HTTP. Mutation-checked: allowing self-deactivation, dropping the
+last-manager guard, un-auditing uploads, and selecting `passwordHash` into responses each fail
+exactly one test. **246 tests / 25 suites, coverage 58.28%.**
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed
@@ -1112,5 +1184,10 @@ production SMTP (delivery only — QA can complete an OTP login without it), the
 the staging environment.
 
 Two things need the client before launch and neither is engineering work: **change the live admin
-password** (the endpoint now exists) and **set `TRUST_PROXY`** to the hop count the nginx config
-implies.
+password** (done — the published credential now returns 401) and **set `TRUST_PROXY`** to the hop
+count the nginx config implies. A third is now on the server list: **clear the failed `0_init`
+migration** so deploys resume.
+
+The headline figure is **70%**, down from a published 73% — see the two corrections at the top of
+`PROJECT_COMPLETION_MATRIX.md`. Neither is a regression. One is arithmetic I got wrong; the other is
+push notifications being counted as blocked on a credential when the feature was never built.

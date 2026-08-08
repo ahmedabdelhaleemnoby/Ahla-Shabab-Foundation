@@ -45,6 +45,31 @@
 > working on production**, with no way to change it through the product, and a rate limiter that any
 > stranger could use to lock every administrator out of the dashboard. Neither is visible in the score.
 > See `final-delivery-audit/security/T-06-credentials-and-qa-environment.md`.
+>
+> ---
+>
+> ## Two corrections, both downward
+>
+> **1. The 73% above was arithmetic I got wrong.** When T-14 moved row 51 out of BLOCKED, the counts
+> were re-derived from the rows but the **denominator was carried forward unchanged**. With BLOCKED 3
+> and N/A 1 it should have been `52 − 3 − 1 = 48`, not 47. On the same counts the figure is
+> `(24 + 10.5) / 48 =` **72%**, not 73%. The published number was half a point generous and the note
+> claiming counts were "re-derived, not carried forward" was true of the numerator only.
+>
+> **2. Row 49 (Push) was BLOCKED "FCM key". It is MISSING.** The key would change nothing:
+> `firebase-admin` sits in `package.json` and is **never imported anywhere in `src/`**,
+> `FCM_SERVER_KEY` is read by no code, and `POST /me/device-tokens` stores device tokens that nothing
+> ever reads. The app asks users for notification permission and files a token that can never be used.
+> This is the sixth requirement filed as waiting-on-a-credential that was not.
+>
+> Reclassifying it **lowers** the score, because unbuilt work belongs in the denominator while a
+> genuine external blocker does not:
+>
+> PASS 24 · PARTIAL 21 · FAIL 0 · MISSING **4** · BLOCKED **2** · N/A 1
+> → `(24 + 10.5) / (52 − 2 − 1)` = 34.5 / 49 = **70%**.
+>
+> Nothing regressed. 70% is what the previous number would have been if push had been counted honestly
+> and the division done correctly.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -102,7 +127,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 46 | Monitoring | Sentry/APM/error tracking | **MISSING** | MISSING | MISSING | — | — | MISSING | **MISSING** | choose + wire |
 | 47 | iOS | iOS build | — | **MISSING** | — | — | — | MISSING | **MISSING** | Apple account + build |
 | 48 | Payments | Live gateway (create + confirm) | PARTIAL | — | — | — | PARTIAL | PASS | **NOT APPLICABLE** | client ruled out a gateway; webhook path pinned by 11 tests (T-10). Re-open only if a gateway is adopted |
-| 49 | Push | FCM delivery | PARTIAL | MISSING | — | — | BLOCKED | BLOCKED | **BLOCKED** | FCM key |
+| 49 | Push | FCM delivery | **MISSING** | MISSING | — | — | MISSING | MISSING | **MISSING** ⬇ | not blocked on a key — **there is no send path**. `firebase-admin` is in `package.json` and never imported; `FCM_SERVER_KEY` is read by nothing; `POST /me/device-tokens` stores tokens and nothing ever reads the table. ~2–3d |
 | 50 | Email | Real OTP email delivery | PASS | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | SMTP creds + inbox |
 | 51 | Manual transfer | Proof upload → admin approval | PASS | PASS | PASS | — | PASS | PASS | **PARTIAL** ⬆ | T-14: **not blocked** — the client chose WhatsApp proof, which ships. Approval, receipt and audit all work and are tested. PARTIAL because the proof lives outside the system: nothing links a donation to its evidence |
 | 52 | Database | Production data verification | — | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | no DB access |
