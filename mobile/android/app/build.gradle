@@ -4,6 +4,53 @@ apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
+/* ---------------------------------------------------------------------------
+ * Release signing
+ *
+ * Every build of this app so far — including v1.6.0, which is published as a
+ * GitHub release — was signed with the DEBUG key, because `buildTypes.release`
+ * pointed at `signingConfigs.debug` (under a comment telling you not to do that).
+ * A debug-signed APK is rejected by Google Play, and nothing in the build said
+ * so: it produced a perfectly ordinary-looking artefact.
+ *
+ * Credentials come from `android/keystore.properties` if it exists, otherwise
+ * from Gradle properties or the environment, so CI can supply them without a
+ * file on disk. All four are required:
+ *
+ *   AHLA_RELEASE_STORE_FILE      path to the .jks / .keystore
+ *   AHLA_RELEASE_STORE_PASSWORD
+ *   AHLA_RELEASE_KEY_ALIAS
+ *   AHLA_RELEASE_KEY_PASSWORD
+ *
+ * With none of them, debug builds carry on working and **release builds fail**
+ * with the message at the bottom of this file. That is the point: the previous
+ * behaviour was to succeed and hand back something unpublishable.
+ *
+ * The keystore itself is the foundation's to generate and keep. Lose it and the
+ * app can never be updated on Play again — there is no recovery, by design.
+ * ------------------------------------------------------------------------- */
+
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+def signingSetting = { String name ->
+    keystoreProperties.getProperty(name) ?: findProperty(name) ?: System.getenv(name)
+}
+
+def releaseStoreFile = signingSetting('AHLA_RELEASE_STORE_FILE')
+def releaseStorePassword = signingSetting('AHLA_RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = signingSetting('AHLA_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = signingSetting('AHLA_RELEASE_KEY_PASSWORD')
+
+// A path that points at nothing counts as absent: a typo must not silently fall
+// back to the debug key, which is the failure this whole block exists to stop.
+def hasReleaseKeystore =
+        releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword &&
+        file(releaseStoreFile).exists()
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -107,15 +154,26 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseKeystore) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // The debug key here is a placeholder that keeps CONFIGURATION valid
+            // when no keystore is present. It is never reached: the task-graph
+            // check at the bottom of this file fails any release build before it
+            // runs. Previously this line was the whole story, and every release
+            // shipped debug-signed.
+            signingConfig hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
@@ -181,5 +239,50 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * Refuse to produce an unpublishable release.
+ *
+ * Checked against the task graph rather than at configuration time, so
+ * `assembleDebug`, `test` and IDE syncs keep working with no keystore — only a
+ * release build stops. Before this, a release with no keystore succeeded and
+ * quietly handed back a debug-signed APK; v1.6.0 is one, and Google Play would
+ * have rejected it at upload with an error naming neither this file nor the
+ * reason.
+ * ------------------------------------------------------------------------- */
+gradle.taskGraph.whenReady { graph ->
+    def wantsRelease = graph.allTasks.any { task ->
+        task.project == project && task.name ==~ /(?i)(assemble|bundle|install|package)Release.*/
+    }
+
+    if (wantsRelease && !hasReleaseKeystore) {
+        throw new GradleException("""
+        ────────────────────────────────────────────────────────────────────
+        Refusing to build a release: no signing keystore is configured.
+
+        This build would otherwise be signed with the DEBUG key, which Google
+        Play rejects. Every release before this one, v1.6.0 included, was
+        debug-signed for exactly that reason.
+
+        Generate a keystore once and keep it safe — if it is lost, this app can
+        never be updated on Play again:
+
+            keytool -genkeypair -v -storetype PKCS12 \\
+              -keystore ahla-shabab-release.jks \\
+              -alias ahla-shabab -keyalg RSA -keysize 2048 -validity 10000
+
+        Then create android/keystore.properties (git-ignored):
+
+            AHLA_RELEASE_STORE_FILE=/absolute/path/to/ahla-shabab-release.jks
+            AHLA_RELEASE_STORE_PASSWORD=…
+            AHLA_RELEASE_KEY_ALIAS=ahla-shabab
+            AHLA_RELEASE_KEY_PASSWORD=…
+
+        CI can pass the same four as Gradle properties or environment variables
+        instead of a file.
+        ────────────────────────────────────────────────────────────────────
+        """.stripIndent())
     }
 }

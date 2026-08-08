@@ -1262,6 +1262,45 @@ account** for the server, and **`google-services.json`** for the app — from th
 16. The `googleServicesFile` line is deliberately *not* in `app.json`: pointing it at a missing file
 fails every APK build, not just push.
 
+## Release signing ✅ DONE (keystore still the foundation's to supply)
+
+**Before.** `buildTypes.release` pointed at `signingConfigs.debug`, under a stock comment telling you
+not to do that. Every release build was signed with the Android SDK's throwaway debug key and looked
+completely ordinary coming out.
+
+**Verified, not assumed.** `apksigner verify --print-certs` on the shipped artefacts:
+
+    ahla-shabab-v1.5.0-demo.apk → CN=Android Debug, OU=Android, O=Unknown
+    ahla-shabab-v1.4.1-demo.apk → CN=Android Debug, OU=Android, O=Unknown
+
+Google Play rejects those at upload. v1.6.0, published as a GitHub release, came off the same
+unchanged config.
+
+**Fix.** Signing credentials are read from `android/keystore.properties`, Gradle properties or the
+environment — the last two so CI can supply them without a file on disk. A path that points at nothing
+counts as absent, because a typo silently falling back to the debug key is the exact failure being
+fixed.
+
+The refusal is checked against the **task graph**, not at configuration time, so `assembleDebug`,
+tests and IDE syncs keep working with no keystore and only a release build stops. It prints the
+`keytool` line and the four properties needed.
+
+**Retest — both paths, for real.**
+
+| | |
+|---|---|
+| `assembleRelease` with no keystore | **BUILD FAILED**, with the instructions |
+| `assembleRelease -PAHLA_RELEASE_*` | **BUILD SUCCESSFUL in 2m 55s** |
+| Signature of the produced APK | `CN=AhlaShababSigningTest` — the supplied key, not the debug one |
+
+The test keystore was generated in `/tmp` for the check and deleted afterwards. `keystore.properties`,
+`*.jks` and `*.keystore` are now git-ignored so a real one cannot be committed by accident.
+
+**Still the foundation's to do.** Generate the keystore and store it somewhere it cannot be lost —
+losing it means the app can never be updated on Play again, and there is no recovery. Decision 12 now
+carries the exact commands. Row 8 **PASS → PARTIAL**: "release APK produced" was scored on a file
+existing, and what existed was never publishable.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed

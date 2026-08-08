@@ -82,6 +82,19 @@
 > tested, but nothing is deliverable until the app registers a token):
 > PASS 24 · PARTIAL **22** · FAIL 0 · MISSING **3** · BLOCKED 2 · N/A 1
 > → `(24 + 11) / 49` = 35 / 49 = **71%**.
+>
+> **Tally after release signing** (row 8 **PASS → PARTIAL**, another deliberate downgrade). "Android
+> release APK produced" was scored PASS on the fact that a file came out. Verified with `apksigner`:
+> every APK shipped so far is signed **`CN=Android Debug, OU=Android, O=Unknown`** — the throwaway key
+> that ships with the Android SDK. Google Play rejects those, so what was produced was never a release
+> in the sense the row claims.
+>
+> Signing now reads a real keystore, and a release build **fails** without one instead of quietly
+> substituting the debug key. Both paths were verified for real: refused with no keystore, and a
+> 63.8 MB APK signed by the supplied test certificate when one is provided.
+>
+> PASS **23** · PARTIAL **23** · FAIL 0 · MISSING 3 · BLOCKED 2 · N/A 1
+> → `(23 + 11.5) / 49` = 34.5 / 49 = **70%**.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -98,7 +111,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 5 | Governorates | Governorates + work areas | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
 | 6 | Home config | Home sections ordered/toggled from CMS | PASS | PASS | PASS | — | PASS | PASS | **PASS** | — |
 | 7 | Shared rules | Donation-status + privacy invariants unit-tested | — | PASS | PASS | — | PASS | PASS | **PASS** | — |
-| 8 | Build | Android release APK produced (v1.4.0) | — | PASS | — | — | — | PASS | **PASS** | — |
+| 8 | Build | Android release APK produced (v1.4.0) | — | PARTIAL | — | — | — | PARTIAL | **PARTIAL** ⬇ | APKs are produced, but **every one shipped so far is signed `CN=Android Debug`** — verified with `apksigner` on v1.4.1 and v1.5.0 — which Google Play rejects. Signing is now wired to a real keystore and a release build **fails** without one (both paths verified). Needs the foundation's keystore — decision 12 |
 | 9 | Navigation | No dead links; all live CMS targets resolve | — | PASS | — | — | PASS | PASS | **PASS** | runtime tap-through pending |
 | 10 | Guest flow | Browse all public content without login | PASS | PASS | — | — | PASS | PASS | **PASS** | — |
 | 11 | Validation | Invalid bodies → 400 + per-field Arabic errors | PASS | PASS | — | — | PASS | PASS | **PASS** | — |
