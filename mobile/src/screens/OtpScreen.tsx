@@ -9,6 +9,7 @@ import { StickyFooter } from './DonateScreen';
 import { colors, font, row } from '../theme';
 import { verifyOtp, requestOtp } from '@ahla/shared';
 import { saveSession } from '../store/session';
+import { registerForPush } from '../store/push';
 import { appState } from '../store/appState';
 import { loginDemoUserByEmail } from '../store/demoUsers';
 import type { RootProps } from '../navigation/types';
@@ -50,6 +51,11 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
       const session = await verifyOtp(email, code);
       await saveSession(session);
       appState.login(session.user?.email ?? email);
+      // Now, not at app start: `/me/device-tokens` is authenticated, and the
+      // token is stored against whoever just signed in. Deliberately not
+      // awaited — the permission prompt must not hold up the navigation, and
+      // `registerForPush` never rejects.
+      void registerForPush();
       // Keeps locally-stored consultations/bookings attached to this address
       // until the /me/* screens read them from the server (T-05).
       loginDemoUserByEmail(email);
@@ -95,12 +101,17 @@ export default function OtpScreen({ route }: RootProps<'Otp'>) {
         </Text>
       </View>
 
-      <Card style={[row, { gap: 10, marginTop: 16, backgroundColor: colors.goldSoft }]}>
-        <Icon name="alert-triangle" size={15} color="#B9791A" />
-        <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
-          نسخة عرض — لم يُرسل أي بريد إلكتروني. أدخل أي رمز مكوّن من 6 أرقام للمتابعة.
-        </Text>
-      </Card>
+      {/*
+        The banner that used to sit here read «نسخة عرض — لم يُرسل أي بريد
+        إلكتروني. أدخل أي رمز مكوّن من 6 أرقام للمتابعة» — "demo build, no email
+        was sent, enter any six digits". That was true before T-04 and false
+        afterwards: the code is verified against the server, a wrong one is
+        rejected, and the rejection is shown below.
+
+        Left in place it told every user to do the one thing guaranteed not to
+        work, and then blamed them for it. Removed rather than reworded — the
+        screen already names the address the code was sent to.
+      */}
 
       {/* OTP boxes (tap anywhere focuses the hidden input) */}
       <Pressable onPress={() => inputRef.current?.focus()} style={{ marginTop: 26 }}>

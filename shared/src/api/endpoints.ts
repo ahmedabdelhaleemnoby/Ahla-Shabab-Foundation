@@ -344,6 +344,27 @@ export const removeFavorite = (entityType: FavoriteEntity, entityId: string) =>
 export const fetchMyNotifications = (query: Record<string, unknown> = {}) =>
   requestList<Record<string, any>>('me/notifications', query);
 
+export type DevicePlatform = 'ios' | 'android' | 'web';
+
+/**
+ * Register this device so notifications can reach it.
+ *
+ * The endpoint has existed since the first backend commit and **no client ever
+ * called it** — the table stayed empty, which is why push was dead on both sides
+ * at once. The backend half was built separately; this is the half that gives it
+ * something to send to.
+ *
+ * `token` must be the **native FCM / APNs token**, not an Expo push token. The
+ * server delivers through `firebase-admin` directly, so an `ExponentPushToken[…]`
+ * would be accepted, stored, and rejected by FCM on every send. See
+ * `mobile/src/store/push.ts`.
+ */
+export const registerDeviceToken = (token: string, platform: DevicePlatform) =>
+  request<Record<string, any>>('me/device-tokens', {
+    method: 'POST',
+    body: { token, platform },
+  });
+
 export const markNotificationRead = (id: string) =>
   request<Record<string, any>>(`me/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
 

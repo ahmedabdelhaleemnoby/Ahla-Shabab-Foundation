@@ -8,6 +8,7 @@ import { navRef } from '../navigation/ref';
 import { useDrawerOpen, closeDrawer } from '../store/drawer';
 import { useAppState, appState } from '../store/appState';
 import { endSession } from '../store/session';
+import { forgetPushRegistration } from '../store/push';
 import { getMenu, getSettings } from '../store/cms';
 
 const DRAWER_W = 296;
@@ -127,6 +128,10 @@ export function AppDrawer() {
                   // session. `endSession` never rejects — a failed revoke must
                   // not trap the user in a signed-in state on this device.
                   void endSession();
+                  // Drop the memo so the next person to sign in on this phone
+                  // registers under their own account rather than inheriting
+                  // the previous user's.
+                  forgetPushRegistration();
                   appState.logout();
                   closeDrawer();
                 }}

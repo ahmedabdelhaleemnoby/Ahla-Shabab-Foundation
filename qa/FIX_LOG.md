@@ -1220,6 +1220,48 @@ permission and files a token that can never be used". It does not ask. I inferre
 from the endpoint existing instead of reading the app — the same mistake this audit keeps finding in
 other people's work.
 
+## Push — the mobile half ✅ DONE (needs two files from the client to deliver)
+
+**Before.** `POST /me/device-tokens` shipped in the first backend commit and **no client ever called
+it**. `mobile/` had no push dependency of any kind. The table was empty, so the backend half built
+earlier had nothing to send to — each missing half hid the other.
+
+**Fix.** `expo-notifications`, and `mobile/src/store/push.ts`:
+
+- **the native token, not the Expo one.** `getExpoPushTokenAsync()` returns `ExponentPushToken[…]`,
+  which only works through Expo's own push service; the server delivers through `firebase-admin`, so
+  it needs `getDevicePushTokenAsync()` — the raw FCM registration token. Sending the wrong one fails
+  in the worst way: the API accepts it, the row is stored, and every send is rejected by FCM. A
+  feature that looks wired from every angle except the phone.
+- registered **after sign-in** (the endpoint is authenticated and the token belongs to a user) and on
+  a **restored session**, since a returning user never passes the OTP screen and would otherwise go
+  quietly unreachable as FCM rotates the token.
+- a token-rotation listener, so a refreshed token is re-sent rather than waiting for a restart.
+- cleared on sign-out, so the next person to use the phone does not inherit the previous
+  registration.
+- never throws. A device that cannot register misses notifications; it does not fail to open the app.
+
+**Found while wiring it.** The OTP screen still carried a demo banner: «نسخة عرض — لم يُرسل أي بريد
+إلكتروني. أدخل أي رمز مكوّن من 6 أرقام للمتابعة» — *"demo build, enter any six digits"*. True before
+T-04, false ever since: the code is verified server-side and a wrong one is rejected. It told every
+user to do the one thing guaranteed not to work, then showed them the error. Removed.
+
+**A packaging defect, caught by building rather than reasoning.** npm hoists `expo-notifications` to
+the workspace root while `expo` and `expo-modules-core` stay in `mobile/node_modules`, so from the
+hoisted copy neither resolves. `npx expo export` **failed outright** — not a type nit, a broken build.
+Metro is unaffected (its `nodeModulesPaths` covers both roots), so the fix was to stop loading the
+config plugin and map the peer for `tsc`. Bundle verified: **3.61 MB Hermes bundle exported clean.**
+The cost is cosmetic — the Android notification icon stays the app default. Recorded as decision 17.
+
+**Retest.** 6 shared tests on the endpoint contract (path, bearer token, the three platform values the
+backend's Zod schema accepts, and that a failure rejects rather than resolving). Shared suite **49
+passed**. `npm run typecheck` clean. Android bundle exported.
+
+**⚠️ Still not deliverable.** Two files from the client, neither of which is code: a **Firebase service
+account** for the server, and **`google-services.json`** for the app — from the same project. Decision
+16. The `googleServicesFile` line is deliberately *not* in `app.json`: pointing it at a missing file
+fails every APK build, not just push.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed

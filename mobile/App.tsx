@@ -18,6 +18,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { configureApi } from '@ahla/shared';
 import { getAccessToken, restoreSession, getSessionEmail } from './src/store/session';
+import { registerForPush } from './src/store/push';
 import { appState } from './src/store/appState';
 import { hydrateCms } from './src/store/cms';
 import { hydrateContent } from './src/store/content';
@@ -163,7 +164,14 @@ export default function App() {
       // the app would hold a valid token while every LoginGate still treated
       // the user as a guest.
       restoreSession().then((ok) => {
-        if (ok) appState.login(getSessionEmail() ?? '');
+        if (ok) {
+          appState.login(getSessionEmail() ?? '');
+          // A returning user never passes through the OTP screen, so this is the
+          // only place their device gets re-registered. FCM rotates tokens and
+          // the server drops ones it cannot deliver to, so skipping this would
+          // leave long-lived sessions quietly unreachable.
+          void registerForPush();
+        }
       }),
     ])
       .catch(() => undefined)

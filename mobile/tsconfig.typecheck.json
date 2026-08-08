@@ -3,8 +3,18 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "@ahla/shared": ["../shared/src/index.ts"],
-      "react": ["./node_modules/@types/react"]
+      "@ahla/shared": [
+        "../shared/src/index.ts"
+      ],
+      "react": [
+        "./node_modules/@types/react"
+      ],
+      "expo-modules-core": [
+        "./node_modules/expo-modules-core"
+      ],
+      "expo-modules-core/*": [
+        "./node_modules/expo-modules-core/*"
+      ]
     }
   }
 }
