@@ -1301,6 +1301,52 @@ losing it means the app can never be updated on Play again, and there is no reco
 carries the exact commands. Row 8 **PASS → PARTIAL**: "release APK produced" was scored on a file
 existing, and what existed was never publishable.
 
+## Consultant portal, phase 1 — consultations are visible ✅ DONE
+
+**Before.** A beneficiary submits the consultation form, gets a reference, and the request lands
+somewhere **nobody at the foundation can open**. `POST /consultations` works (T-07 verified it live at
+47/47). `GET /admin/consultations` and `PATCH :id/status` are routed and working.
+`fetchAdminConsultations` and `updateConsultationStatus` were already written in the dashboard's
+`adminApi.ts` — and **nothing imported them**. `Inbox.tsx` had two tabs: volunteers and messages.
+
+Row 23 scored the **admin column PASS** for this.
+
+**Fix.** A third Inbox tab: the requester's contact details, preferred channel and time, the summary
+they wrote, and the five statuses from the client's own workflow (decision 7). Only the next step
+forward is offered, so the trail through a request reads in order.
+
+«تم تحديد موعد» records that a time was agreed and deliberately claims no more:
+`consultationsService.schedule()` exists and **no route exposes it**, so assignment is unreachable.
+That is phase 2 — not something to paper over with a button that pretends to book.
+
+**Also removed:** the banner on every dashboard page reading «نسخة عرض — يتم حفظ التعديلات على هذا
+الجهاز فقط» — *"demo build, changes are saved on this device only"*. True before T-02/T-03, false ever
+since. Telling staff their work is not being saved invites them to redo it or distrust what they are
+looking at, on screens holding real beneficiaries' requests.
+
+**A gap in my own QA environment, found by using it.** `scripts/qa-env.ts` booted `AppModule` and set
+only the global prefix, while `main.ts` configured helmet, CORS and TRUST_PROXY inline. The first
+browser to try it got a **404 on the CORS preflight** and `net::ERR_FAILED` on every request: the
+environment served curl and not a browser, which is half of what QA needs it for. Extracted to
+`src/bootstrap.ts`; both entry points now call it.
+
+**Retest — end to end against a disposable API, not asserted from the code.**
+
+| # | Step | Result |
+|---|---|---|
+| 1 | Two requests submitted through the public endpoint | **201, 201** |
+| 2 | CORS preflight that previously 404'd | **204** |
+| 3 | Dashboard login against the QA API | 200, admin session |
+| 4 | Both requests visible in the new tab, badge counting them | **2** |
+| 5 | Status changed from the UI | `PATCH … /status` → **200** |
+| 6 | Database read back | «قيد المراجعة» on one, «جديد» on the other |
+| 7 | Badge after the change | **1** |
+
+Dashboard typecheck and production build clean.
+
+**Row 23's admin column is now true rather than merely scored.** The Final column stays PARTIAL —
+the mobile app still submits locally — so the tally does not move: **70%**.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed

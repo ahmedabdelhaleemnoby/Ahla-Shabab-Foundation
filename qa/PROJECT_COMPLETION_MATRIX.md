@@ -95,6 +95,17 @@
 >
 > PASS **23** · PARTIAL **23** · FAIL 0 · MISSING 3 · BLOCKED 2 · N/A 1
 > → `(23 + 11.5) / 49` = 34.5 / 49 = **70%**.
+>
+> **Tally after making consultations visible — unchanged at 70%, and again that is the point.** Row 23's
+> **admin column was already scored PASS** while no consultations screen existed anywhere in the
+> dashboard. The API client functions were written and nothing imported them, so every consultation
+> request a beneficiary submitted landed somewhere no one at the foundation could open. Fixing it moves
+> no cell in the Final column, because the row was already PARTIAL for a different reason (the mobile
+> app still submits locally).
+>
+> A cell scored on "the code exists" rather than "a person can reach it" is the same error as row 8's
+> "an APK was produced" and row 49's "blocked on a credential". PASS 23 · PARTIAL 23 · FAIL 0 ·
+> MISSING 3 · BLOCKED 2 · N/A 1 → **70%**.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -126,7 +137,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 20 | Projects | CRUD, stages, updates, ordering | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 21 | News | Articles CRUD, publish, pin | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
 | 22 | Services | Categories + services CRUD, activate | PASS | PASS | PASS | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | CRUD wired `f87bd35`; live proof pending |
-| 23 | Consultations | Submit request → stored | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | mobile submits locally |
+| 23 | Consultations | Submit request → stored | PASS | PARTIAL | **PASS** | — | PASS ⬆ | PASS ⬆ | **PARTIAL** | the **A column was scored PASS and there was no screen at all**: `fetchAdminConsultations` and `updateConsultationStatus` existed in the dashboard and nothing imported them, so a submitted request was unreachable. Now a third Inbox tab, proven end to end against a real API (submit → visible → status change → persisted). Final stays PARTIAL: **mobile still submits locally** |
 | 24 | Consultations | Dynamic form schema per type | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | T-07 `8edf040`; verified live — **47/47, zero known defects** |
 | 25 | Bookings | Engine + Serializable-tx concurrency | PASS | PASS | PASS | — | PASS | PASS | **PASS** ✅ | race PROVEN on a real DB (2-way + 5-way); P2034 → 409 fixed; partial unique index recommended |
 | 26 | Donations | Create; server owns status | PASS | PASS | PASS | — | PASS | PASS | **PARTIAL** ⬆ | T-20: mobile now records on the server with case links; totals derive on approval. **Needs a new APK to reach donors** |
