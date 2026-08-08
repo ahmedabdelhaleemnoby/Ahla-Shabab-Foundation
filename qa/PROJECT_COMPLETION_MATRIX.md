@@ -25,9 +25,12 @@
 > and N/A are both excluded from the denominator. The number did not move; what moved is that one item
 > left the "waiting on the client" pile for good.
 >
-> **Tally after T-14** (row 35 → PASS — bookings were the one admin surface with no audit trail):
-> PASS 24 · PARTIAL 20 · FAIL 0 · MISSING 3 · BLOCKED 4 · N/A 1
-> → **(24+10)/47 = 72%** (baseline 57%). Counts re-derived from the rows, not carried forward.
+> **Tally after T-14** (row 35 → PASS — bookings were the one admin surface with no audit trail;
+> row 51 BLOCKED → PARTIAL, because it was never blocked on a credential: the client chose WhatsApp
+> proof, which ships, and approval/receipt/audit all work. It stays PARTIAL rather than PASS because
+> the proof lives outside the system — nothing links a donation to its evidence):
+> PASS 24 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED **3** · N/A 1
+> → **(24+10.5)/47 = 73%** (baseline 57%). Counts re-derived from the rows, not carried forward.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -87,7 +90,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 48 | Payments | Live gateway (create + confirm) | PARTIAL | — | — | — | PARTIAL | PASS | **NOT APPLICABLE** | client ruled out a gateway; webhook path pinned by 11 tests (T-10). Re-open only if a gateway is adopted |
 | 49 | Push | FCM delivery | PARTIAL | MISSING | — | — | BLOCKED | BLOCKED | **BLOCKED** | FCM key |
 | 50 | Email | Real OTP email delivery | PASS | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | SMTP creds + inbox |
-| 51 | Manual transfer | Proof upload → admin approval | PARTIAL | PARTIAL | FAIL | — | BLOCKED | BLOCKED | **BLOCKED** | admin token to test |
+| 51 | Manual transfer | Proof upload → admin approval | PASS | PASS | PASS | — | PASS | PASS | **PARTIAL** ⬆ | T-14: **not blocked** — the client chose WhatsApp proof, which ships. Approval, receipt and audit all work and are tested. PARTIAL because the proof lives outside the system: nothing links a donation to its evidence |
 | 52 | Database | Production data verification | — | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | no DB access |
 
 ## Tally
