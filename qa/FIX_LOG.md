@@ -958,6 +958,44 @@ which is the right trade.
 
 ---
 
+## T-14 — Manual transfer flow, re-scoped: the audit trail had a hole ✅ DONE
+
+**"Proof upload" contradicts the client's own choice.** They specified **WhatsApp proof submission**
+(+20 105 090 0710, `https://wa.me/201050900710`), and the app already ships it —
+`donationSupport.proofCta` = «إرسال إثبات التحويل عبر واتساب», with a note to keep the transfer
+screenshot. Building an in-app uploader would repeat T-10's mistake: work the client ruled out. So the
+task is re-scoped to the rest of its acceptance.
+
+**Three clauses were already met** — the donation lands «قيد المراجعة» (T-15, and it was wrong before:
+فوري and فودافون كاش went to «قيد التأكيد»), only an authorised admin can approve (T-08, mutation-
+checked), and the receipt exists and is unguessable (T-15).
+
+**The fourth was broken.** `ActivityLogInterceptor` is applied **per controller**, and it sat on 16
+admin controllers but **not on `bookings-admin` or `provider-portal`**. Every content, CMS, donation
+and user mutation was audited; **every change to a booking was not.** Confirming, cancelling or
+marking a booking no-show left no record of who did it — the operational core, and the single most
+obvious thing an operations audit log exists to capture. Both are now intercepted.
+
+**Retest.** 5 integration tests over real HTTP: a booking status change and a donation approval each
+write an entry naming the acting admin; a GET writes nothing; and a **structural guard** asserts every
+mutating `*-admin` controller carries the interceptor — the test that matters most, because the next
+controller added without it would otherwise silently stop being audited. **Mutation-checked**:
+removing it fails 3 of 5, including the guard. **197 tests / 19 suites**, merged coverage **55.8%**;
+three consecutive integration runs stable; **CI green** (`31244405565`).
+
+**⚠️ Finding, recorded not fixed: the audit write is fire-and-forget.** The interceptor writes inside
+`tap(async …)`, which RxJS does not await — so the response can return before the row commits (this
+surfaced as a **real race** in the first version of the suite, not a hypothetical), and the `catch`
+that stops logging breaking the response **swallows a failed write silently**, leaving no trace
+anywhere. The trail is best-effort, not guaranteed. Awaiting it adds latency to every admin mutation,
+so it is a product/ops decision rather than a unilateral change — but for a log whose purpose is
+accountability it should be decided deliberately, not inherited.
+
+**Result.** Row 35 **PARTIAL → PASS**; recounted tally **PASS 24 · PARTIAL 20 · FAIL 0 · MISSING 3 ·
+BLOCKED 4 · N/A 1 = 72%**.
+
+---
+
 ## Corrections to the baseline audit
 
 Six findings are wrong and are withdrawn/corrected — four from the first report, two of my own:

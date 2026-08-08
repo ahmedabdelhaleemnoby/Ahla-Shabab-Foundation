@@ -256,9 +256,32 @@ mid/senior full-stack engineer familiar with this codebase.
   FCM fan-out, preference filtering. The send was **not executed on production**: `segment:'all'`
   would notify every real user. Remaining effort ≈ 0.25d once staging exists.
 
-### T-14 · Manual transfer flow (proof upload → approval)
-- Module Donations · Full stack · High · Depends T-03, T-06 · Effort 2d
-- **Acceptance** User uploads proof → donation `قيد المراجعة` → only an authorized admin can approve → receipt issued → audit entry written.
+### T-14 · Manual transfer flow — ✅ RE-SCOPED & DONE (upload conflicts with the client's choice)
+- Module Donations · Full stack · High · Effort 2d
+- **"Proof upload" contradicts the client's instruction.** They chose **WhatsApp proof submission**
+  (customer service `+20 105 090 0710`, `https://wa.me/201050900710`), and the app already ships it —
+  `proofCta: 'إرسال إثبات التحويل عبر واتساب'`. Building an in-app uploader would be the wrong work,
+  as with T-10's gateway sandbox.
+- **The rest of the acceptance was covered — and one clause exposed a real gap:**
+  - *donation «قيد المراجعة»* — done in T-15 (all three approved methods, previously two went to
+    «قيد التأكيد»).
+  - *only an authorised admin can approve* — proven in T-08 (403 matrix, mutation-checked).
+  - *receipt issued* — the reference **is** the receipt; made unguessable in T-15.
+  - *audit entry written* — **this was broken.** `ActivityLogInterceptor` is applied per-controller
+    and sat on 16 admin controllers but **not on `bookings-admin` or `provider-portal`**. Every
+    content, CMS, donation and user mutation was audited; **confirming, cancelling or marking a
+    booking no-show left no record of who did it** — the operational core, unaudited. Both are now
+    intercepted.
+- **5 integration tests over HTTP**, including a **structural guard** asserting no mutating
+  `*-admin` controller is missing the interceptor, so the next one added cannot silently stop being
+  audited. Mutation-checked: removing it fails 3 of 5.
+- **⚠️ Finding, recorded not fixed:** the audit write is **fire-and-forget**. The interceptor writes
+  inside `tap(async …)`, which RxJS does not await, so a response can return before the row commits —
+  and the `try/catch` that stops a logging failure breaking the response **swallows it silently**.
+  The trail is best-effort, not guaranteed, which matters for a log whose purpose is accountability.
+  It surfaced as a genuine race in the first version of the test.
+- 197 tests / 19 suites; merged coverage 55.8%. Evidence
+  `final-delivery-audit/security/T-14-audit-trail.md`.
 
 ### T-15 · Receipts: server-issued + ownership test — ✅ DONE (3 real defects fixed)
 - Module Receipts · Backend+Mobile · High · Effort 1.5d

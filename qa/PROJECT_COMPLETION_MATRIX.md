@@ -19,12 +19,15 @@
 >
 > Tally after T-08 (row 34 → PASS): PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 5 → 71%.
 >
-> **Tally after T-10** (row 48 BLOCKED → **NOT APPLICABLE**: the client ruled out a payment gateway,
-> so it is not work that is waiting — it is work that should not be done):
-> PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 4 · N/A 1
-> → **(23+10.5)/47 = 71%** — *unchanged*, because BLOCKED and N/A are both excluded from the
-> denominator. The number did not move; what moved is that one item left the "waiting on the client"
-> pile for good. Counts re-derived from the rows, not carried forward.
+> Tally after T-10 (row 48 BLOCKED → **NOT APPLICABLE**: the client ruled out a payment gateway, so it
+> is not work that is waiting — it is work that should not be done):
+> PASS 23 · PARTIAL 21 · FAIL 0 · MISSING 3 · BLOCKED 4 · N/A 1 → **71%, unchanged**, because BLOCKED
+> and N/A are both excluded from the denominator. The number did not move; what moved is that one item
+> left the "waiting on the client" pile for good.
+>
+> **Tally after T-14** (row 35 → PASS — bookings were the one admin surface with no audit trail):
+> PASS 24 · PARTIAL 20 · FAIL 0 · MISSING 3 · BLOCKED 4 · N/A 1
+> → **(24+10)/47 = 72%** (baseline 57%). Counts re-derived from the rows, not carried forward.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -68,7 +71,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 32 | Volunteers | Applications submit + admin inbox | PASS | PARTIAL | PASS | — | PARTIAL | PARTIAL | **PARTIAL** | status PATCH unwired |
 | 33 | Media | Upload endpoint + library | PASS | PARTIAL | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | CMS media → server upload |
 | 34 | RBAC | Roles + permission guards | PASS | — | PASS | — | PASS | PASS | **PASS** ✅ | T-08: 31 HTTP tests — 403 matrix, no self-promotion, blocked-user, IDOR; mutation-checked |
-| 35 | Audit log | actor/action/entity/prev/new/ip/UA | PASS | — | PASS | — | BLOCKED | BLOCKED | **PARTIAL** | verify writes on mutations |
+| 35 | Audit log | actor/action/entity/prev/new/ip/UA | PASS | — | PASS | — | PASS | PASS | **PASS** ✅ | T-14: verified over HTTP; **bookings were unaudited** and are now covered; structural guard added. Writes are best-effort (fire-and-forget) |
 | 36 | Reports | Aggregates + date filters | PASS | — | PASS | — | BLOCKED | BLOCKED | **PARTIAL** | compare vs SQL |
 | 37 | Exports | CSV / print | — | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | client-side only |
 | 38 | Deployment | nginx conf + GitHub Actions deploy | PARTIAL | — | PARTIAL | — | PARTIAL | MISSING | **PARTIAL** | documented runbook |
