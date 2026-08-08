@@ -70,6 +70,18 @@
 >
 > Nothing regressed. 70% is what the previous number would have been if push had been counted honestly
 > and the division done correctly.
+>
+> **Correction to the correction.** Writing the above I said "the app asks users for notification
+> permission and files a token that can never be used". **The app does not ask.** `mobile/` has no push
+> dependency of any kind and never calls `/me/device-tokens` — the endpoint exists and no client has
+> ever hit it. Users are not being prompted for a useless permission; there is simply nothing on the
+> device side at all. I inferred the mobile behaviour from the endpoint's existence instead of reading
+> the app, which is the mistake this whole audit keeps finding in other people's work.
+>
+> **Tally after building the backend half** (row 49 MISSING → PARTIAL — the send path exists and is
+> tested, but nothing is deliverable until the app registers a token):
+> PASS 24 · PARTIAL **22** · FAIL 0 · MISSING **3** · BLOCKED 2 · N/A 1
+> → `(24 + 11) / 49` = 35 / 49 = **71%**.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -127,7 +139,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 46 | Monitoring | Sentry/APM/error tracking | **MISSING** | MISSING | MISSING | — | — | MISSING | **MISSING** | choose + wire |
 | 47 | iOS | iOS build | — | **MISSING** | — | — | — | MISSING | **MISSING** | Apple account + build |
 | 48 | Payments | Live gateway (create + confirm) | PARTIAL | — | — | — | PARTIAL | PASS | **NOT APPLICABLE** | client ruled out a gateway; webhook path pinned by 11 tests (T-10). Re-open only if a gateway is adopted |
-| 49 | Push | FCM delivery | **MISSING** | MISSING | — | — | MISSING | MISSING | **MISSING** ⬇ | not blocked on a key — **there is no send path**. `firebase-admin` is in `package.json` and never imported; `FCM_SERVER_KEY` is read by nothing; `POST /me/device-tokens` stores tokens and nothing ever reads the table. ~2–3d |
+| 49 | Push | FCM delivery | **PARTIAL** ⬆ | **MISSING** | — | — | PARTIAL | PARTIAL | **PARTIAL** | backend send path built + 14 tests (dead-token cleanup, 500-token batching, contained failures). **Mobile registers no token at all** — no push dependency, `/me/device-tokens` never called — so nothing is deliverable yet. Needs a service account, **not** an FCM server key (retired 20 Jun 2024) |
 | 50 | Email | Real OTP email delivery | PASS | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | SMTP creds + inbox |
 | 51 | Manual transfer | Proof upload → admin approval | PASS | PASS | PASS | — | PASS | PASS | **PARTIAL** ⬆ | T-14: **not blocked** — the client chose WhatsApp proof, which ships. Approval, receipt and audit all work and are tested. PARTIAL because the proof lives outside the system: nothing links a donation to its evidence |
 | 52 | Database | Production data verification | — | — | — | — | BLOCKED | BLOCKED | **BLOCKED** | no DB access |

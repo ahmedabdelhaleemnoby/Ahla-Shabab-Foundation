@@ -1176,6 +1176,50 @@ carry the interceptor.
 last-manager guard, un-auditing uploads, and selecting `passwordHash` into responses each fail
 exactly one test. **246 tests / 25 suites, coverage 58.28%.**
 
+## Push notifications — row 49 ✅ BACKEND DONE (mobile half does not exist)
+
+**Before.** Row 49: **BLOCKED, "FCM key"**. Two things were wrong with that.
+
+There was **no send path** for a key to unblock. `firebase-admin` sat in `package.json` and was never
+imported anywhere in `src/`; `FCM_SERVER_KEY` was read by no code; `POST /me/device-tokens` filed
+tokens that nothing ever read.
+
+And **the key would not have worked.** An FCM *server key* authenticates the legacy FCM HTTP API,
+which Google deprecated in June 2023 and **shut down on 20 June 2024**. The credential the audit was
+waiting for has not authenticated anything for two years. The modern path is a **service account**
+through the v1 API.
+
+**Fix.** `PushService` on firebase-admin, wired into `NotificationsService.create` — the single funnel
+every notification passes through, so bookings, donations, event listeners and the admin broadcast are
+covered in one place rather than per call site, where a miss is invisible.
+
+Three properties it treats as load-bearing:
+
+- **dead tokens are deleted.** `registration-token-not-registered` means the app was uninstalled or
+  the token rotated; left in place they accumulate for the life of the product. Transient codes are
+  kept, so an FCM outage does not silently unsubscribe everyone.
+- **500 tokens per call**, FCM's limit — exceeding it rejects the whole call rather than truncating.
+- **a failure never escapes.** The in-app row is written before this runs; an unreachable Google must
+  not turn a confirmed booking into a 500. Logged at error level, because the silent catch is what hid
+  the OTP failure for the whole project.
+
+A disabled preference silences the row *and* the push. The broadcast sends **one multicast** for its
+whole audience. With no credential, push is disabled and says so once at boot rather than being a
+silent no-op — which is the state that let this go unnoticed.
+
+**Retest.** 14 tests. Mutation-checked: dropping the create hook, pushing per-user in the broadcast,
+keeping dead tokens, and raising the batch limit each fail exactly one test. **260 tests / 27 suites,
+coverage 59.41%.**
+
+**⚠️ Not deliverable end to end.** The mobile app has **no push dependency of any kind** and never
+calls `/me/device-tokens`. There are no tokens to send to, so a service account alone will not produce
+a notification on anyone's phone — the app has to register first. Row 49 is **PARTIAL**, not PASS.
+
+**A claim of mine to correct.** Reporting this I wrote that "the app asks users for notification
+permission and files a token that can never be used". It does not ask. I inferred the mobile behaviour
+from the endpoint existing instead of reading the app — the same mistake this audit keeps finding in
+other people's work.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed
@@ -1188,6 +1232,6 @@ password** (done — the published credential now returns 401) and **set `TRUST_
 count the nginx config implies. A third is now on the server list: **clear the failed `0_init`
 migration** so deploys resume.
 
-The headline figure is **70%**, down from a published 73% — see the two corrections at the top of
+The headline figure is **71%**, down from a published 73% — see the two corrections at the top of
 `PROJECT_COMPLETION_MATRIX.md`. Neither is a regression. One is arithmetic I got wrong; the other is
 push notifications being counted as blocked on a credential when the feature was never built.
