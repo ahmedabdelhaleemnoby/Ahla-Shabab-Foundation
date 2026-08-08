@@ -10,7 +10,7 @@ Backend API · Mobile app (Android) · Admin dashboard
 ## Where the platform stands
 
 **71% of the agreed requirements are delivered and verified**, up from 57% at the start of this
-remediation. Of 52 requirements: **23 complete**, **24 partially complete**, **2 not started**, **2
+remediation. Everything described below is **live on the server as of 8 August**. Of 52 requirements: **23 complete**, **24 partially complete**, **2 not started**, **2
 waiting on an external account**, 1 no longer applicable.
 
 **Nothing is failing.** At the start of this work, three requirements were outright broken and four
@@ -137,8 +137,7 @@ server.
 
 | | What | Who | Effort |
 |---|---|---|---|
-| 1 | **Clear a stuck database migration.** Six completed changes are queued and cannot reach the live server until this is done. Three commands, no data affected. | Server administrator | 5 minutes |
-| 2 | **Set the proxy configuration** so rate limits apply per visitor rather than to everyone at once. | Server administrator | 10 minutes |
+| 1 | **Set the proxy configuration** so rate limits apply per visitor rather than to everyone at once. | Server administrator | 10 minutes |
 
 ### Before the app can be published
 
