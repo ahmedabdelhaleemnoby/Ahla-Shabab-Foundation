@@ -1385,6 +1385,46 @@ Those last three fields were previously impossible to set through the API at all
 read of a beneficiary's written summary, and whether they see requests assigned to others) should be
 answered in writing before any consultant-facing surface is built.
 
+## Monitoring — row 46 ✅ THE VENDOR-INDEPENDENT HALF
+
+**Before.** `GET /health` returned `{ message: 'ok' }` **unconditionally**. It checked nothing.
+Confirmed against production: `{"data":{"message":"ok"}}`.
+
+An uptime monitor pointed at that reports the platform healthy while PostgreSQL is down and every
+request is failing. It is worse than having no monitor, because it converts an outage into silence,
+and it is the first endpoint anyone wires an alert to.
+
+And a 500 could not be traced. The unhandled-exception filter logged `Unhandled exception:` and a
+stack — no method, no path, no actor, no id — into a pm2 log shared with three other applications on
+the same box. A user reporting a failure gave you "sometime around lunchtime".
+
+**Fix.**
+
+- `/health` probes the database and answers **503** when it cannot be reached. The reason is
+  deliberately **not** the driver's message: a Prisma connection error contains the datasource URL, and
+  this endpoint is `@Public()` — reporting it verbatim would publish the database host, user and
+  password to anyone who curls it during an outage.
+- Every request carries an id: returned in `X-Request-Id`, honoured from an inbound header so a trace
+  survives the proxy, and length-capped because it lands in log lines.
+- The 500 body carries that id for the user to quote, and the log line is a single JSON object with
+  method, path, actor id and type — identifiers only, never a name, phone or email.
+
+**A second `PrismaClient`, found by testing rather than reading.** `bookings.module.ts` listed
+`PrismaService` in its own `providers` while `PrismaModule` is `@Global()` and already exports it. So
+there were **two clients with two connection pools** — Prisma sizes one at `cpus × 2 + 1` — roughly
+double the connections for no benefit, against a PostgreSQL whose `max_connections` is shared with
+three other applications. The symptom that exposed it: the health check reported the database *up*
+while the instance the test had stubbed was rejecting, because they were not the same object.
+
+**Retest.** 10 tests. Mutation-checked — a health check that cannot fail, reporting the raw driver
+error, dropping request ids, and restoring the duplicate `PrismaClient` each fail exactly the tests
+covering them, the last reproducing the original symptom. **283 tests / 29 suites, coverage 60.2%.**
+
+**What is still the foundation's.** The vendor — Sentry, Datadog, Better Stack — is a purchasing and
+privacy decision, not an engineering one, and nothing here presumes it. What was missing was the
+groundwork any of them needs, which is useful without one: a health endpoint that tells the truth and
+errors that can be found. Row 46 MISSING → **PARTIAL**; tally **71%**.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed

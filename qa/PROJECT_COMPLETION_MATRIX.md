@@ -106,6 +106,19 @@
 > A cell scored on "the code exists" rather than "a person can reach it" is the same error as row 8's
 > "an APK was produced" and row 49's "blocked on a credential". PASS 23 · PARTIAL 23 · FAIL 0 ·
 > MISSING 3 · BLOCKED 2 · N/A 1 → **70%**.
+>
+> **Tally after monitoring** (row 46 MISSING → PARTIAL). `GET /health` returned `{ message: 'ok' }`
+> **unconditionally** — confirmed against production. Any uptime monitor pointed at it reports the
+> platform healthy through an outage, which is worse than having none: it converts a failure into
+> silence. It now probes the database and answers 503, and every request carries an id that appears in
+> the error body and the log line.
+>
+> Two things are worth separating here. The **vendor** — Sentry, Datadog, whatever — remains the
+> foundation's choice and is not something engineering should decide on their behalf. The **groundwork**
+> a vendor needs, and which is useful without one, was simply absent, and was inside the scope of "wire".
+>
+> PASS 23 · PARTIAL **24** · FAIL 0 · MISSING **2** · BLOCKED 2 · N/A 1
+> → `(23 + 12) / 49` = 35 / 49 = **71%**.
 
 Baseline: see `00_CURRENT_STATE.md`. Statuses are **evidence-based**; anything that could not
 be executed in this environment is **BLOCKED**, never PASS.
@@ -160,7 +173,7 @@ Legend — B=Backend, M=Mobile, A=Admin dashboard, C=Consultant portal, I=Integr
 | 43 | Broadcast | Admin sends notification | PASS | — | PASS | — | PASS | BLOCKED | **PARTIAL** ⬆ | wired T-13; send not executed — would push to real users on prod |
 | 44 | Consultant portal | Dashboard UI for consultants | PASS | FAIL | **MISSING** | **MISSING** | FAIL | MISSING | **MISSING** | build the portal |
 | 45 | Database | Migration history | **PASS** | — | — | — | — | PASS | **PASS** ✅ | done `a1cd48a`; CI switch pending prod baseline |
-| 46 | Monitoring | Sentry/APM/error tracking | **MISSING** | MISSING | MISSING | — | — | MISSING | **MISSING** | choose + wire |
+| 46 | Monitoring | Sentry/APM/error tracking | **PARTIAL** ⬆ | MISSING | MISSING | — | PARTIAL | PARTIAL | **PARTIAL** ⬆ | the vendor-independent half is built: `/health` **probes the database and 503s** (it returned `ok` unconditionally — verified on production), request ids in `X-Request-Id` and in the error body, structured JSON error logs with method/path/actor. 10 tests. **Choosing the product is still the foundation's call** |
 | 47 | iOS | iOS build | — | **MISSING** | — | — | — | MISSING | **MISSING** | Apple account + build |
 | 48 | Payments | Live gateway (create + confirm) | PARTIAL | — | — | — | PARTIAL | PASS | **NOT APPLICABLE** | client ruled out a gateway; webhook path pinned by 11 tests (T-10). Re-open only if a gateway is adopted |
 | 49 | Push | FCM delivery | **PARTIAL** ⬆ | **PARTIAL** ⬆ | — | — | PARTIAL | PARTIAL | **PARTIAL** | both halves now exist: backend send path (14 tests — dead-token cleanup, 500-token batching, contained failures) and mobile registration (`expo-notifications`, native FCM token, registered on login and on restored session, 6 shared tests). Bundle verified. **Not deliverable until the client supplies a Firebase service account + `google-services.json`** — decisions 16/17. An FCM *server key* would not work: that API was retired 20 Jun 2024 |
