@@ -1425,6 +1425,53 @@ privacy decision, not an engineering one, and nothing here presumes it. What was
 groundwork any of them needs, which is useful without one: a health endpoint that tells the truth and
 errors that can be found. Row 46 MISSING → **PARTIAL**; tally **71%**.
 
+## T-09's last piece — the database enforces one live booking per slot ✅ DONE
+
+**Before.** T-09 proved the *application* refuses a concurrent double-booking: two simultaneous
+identical requests leave exactly one row, a five-way burst also leaves one. That guarantee lives in a
+Serializable transaction inside `BookingsService`, which protects the one path that runs through it.
+A duplicate arriving any other way — a future endpoint, a repair script, a hand-written `UPDATE` —
+met nothing at all.
+
+It was left unapplied for exactly one reason, recorded at the time: creating the index fails if the
+table already holds duplicate non-cancelled rows, **and production could not be queried**. That
+constraint disappeared the moment the read-only server check existed. Production holds **zero
+bookings and zero duplicates**, so the index applies cleanly.
+
+**Partial, not plain.** A cancelled booking keeps its row, so the `@@unique([providerId, date,
+timeSlot])` originally recommended — and the only form Prisma can express — rejects every legitimate
+rebooking after a cancellation. Removing the `WHERE` clause fails **three of seven tests**, which is
+how that stays a fact rather than a claim in a comment.
+
+**Not `CONCURRENTLY`:** it cannot run inside a transaction and Prisma wraps every migration in one.
+The right call on a large live table; this one holds zero rows.
+
+**Applied to production** in the deploy of `760d0f3` — `Applying migration
+20260820103000_booking_slot_unique`. Known drift documented: Prisma cannot describe a partial index,
+so `migrate diff` reports it as extra and would offer to drop it. It stays.
+
+## A change made directly on production, and what it took with it
+
+`0551560`, written on the server and in no repository, titled *"add TRUST_PROXY support"*. Its intent
+was right and is live. But it was written against a checkout older than main, so the diff read as a
+revert and removed three things unrelated to it:
+
+1. `main.ts`'s call to `configureApp()`, re-inlining helmet, the prefix and CORS — the shared
+   bootstrap that exists *because* main.ts and the QA environment had already drifted apart once.
+2. `FIREBASE_SERVICE_ACCOUNT` and `FIREBASE_SERVICE_ACCOUNT_PATH` from the env schema, in the week
+   push is being switched on.
+3. **The T-11 production boot guard** — the `superRefine` that stops the app starting without a
+   `WEBHOOK_SECRET` of at least 16 characters.
+
+I read that diff twice and catalogued the first two. **Two tests caught the third.** A security guard
+disappeared inside a commit titled "add TRUST_PROXY support", and the only thing that noticed was an
+assertion that production refuses to boot without it.
+
+Resolved as the client chose: the commit was merged to main through PR #9 with its authorship intact,
+then the collateral restored in `2b95ed9`. The deploy now **mirrors origin** rather than pulling into
+it — `git pull` refuses outright on divergent branches, which is what blocked every deploy behind this
+— and prints what it discards rather than dropping it silently.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed
