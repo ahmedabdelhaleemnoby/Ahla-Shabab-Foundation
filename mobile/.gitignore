@@ -1,0 +1,9 @@
+
+# Firebase — supplied at build time, never committed.
+#
+# This repository is PUBLIC. google-services.json is not a password (it ships
+# inside the APK), but it carries the project number and an Android API key, and
+# this project has already had one credential exposed through a public repo. It
+# costs nothing to keep it out and hand it to the build instead.
+google-services.json
+GoogleService-Info.plist
