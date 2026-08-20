@@ -1,6 +1,6 @@
 # Ahla Shabab platform — delivery summary
 
-**جمعية خواطر أحلى شباب** · 8 August 2026
+**جمعية خواطر أحلى شباب** · 8–20 August 2026
 Backend API · Mobile app (Android) · Admin dashboard
 
 > Arabic version of this document: `DELIVERY_SUMMARY.ar.md`
@@ -10,7 +10,8 @@ Backend API · Mobile app (Android) · Admin dashboard
 ## Where the platform stands
 
 **71% of the agreed requirements are delivered and verified**, up from 57% at the start of this
-remediation. Everything described below is **live on the server as of 8 August**. Of 52 requirements: **23 complete**, **24 partially complete**, **2 not started**, **2
+remediation. Everything described below is **live on the server as of 20 August**.
+Of 52 requirements: **23 complete**, **24 partially complete**, **2 not started**, **2
 waiting on an external account**, 1 no longer applicable.
 
 **Nothing is failing.** At the start of this work, three requirements were outright broken and four
@@ -22,8 +23,8 @@ needed* — all of which are decisions or accounts, not engineering work.
 ### What "verified" means here
 
 Every status in this summary is backed by something that was executed, not by reading the code.
-Where a claim could not be tested, it is not claimed. The backend now runs **283 automated tests**
-across 29 suites on every change, against a real PostgreSQL database, and refuses to accept a change
+Where a claim could not be tested, it is not claimed. The backend now runs **290 automated tests**
+across 30 suites on every change, against a real PostgreSQL database, and refuses to accept a change
 that reduces coverage.
 
 ---
@@ -68,7 +69,9 @@ Before this work, several parts of the mobile app looked complete but never reac
 ### Safety and correctness
 
 - **Double-booking is proven impossible.** Two people booking the same slot at the same instant leave
-  exactly one booking; the second is refused with a clear message.
+  exactly one booking; the second is refused with a clear message. The database now enforces this in
+  its own right, so a duplicate cannot arrive by any other route either — while a cancelled slot can
+  still be rebooked normally.
 - **Permissions are proven.** 31 tests confirm that an administrator cannot reach a module they are not
   granted, that a user cannot reach the admin area, and that one person's records never appear in
   another's.
@@ -104,7 +107,8 @@ the real visitor address from behind Cloudflare. In practice: five failed login 
 the internet would have locked **every** administrator out of the dashboard for ten minutes,
 repeatable indefinitely; and the whole platform shared a single budget of 100 requests per minute.
 
-The fix is written and waits on one configuration value being set on the server.
+Fixed. The setting was applied on the server on 20 August and confirmed live, so the limits now
+apply per visitor.
 
 ### 3. Password reset emails reported success when nothing was sent
 
