@@ -1,0 +1,402 @@
+<title>Ahla Shabab Launch Path</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* Palette taken from the platform's own interface: the dashboard navy, the
+     gold of its notice banners, and a warm neutral biased toward that gold. */
+  :root {
+    --ground:   #FAF9F6;
+    --surface:  #FFFFFF;
+    --ink:      #14213A;
+    --ink-soft: #4A5468;
+    --ink-faint:#7A8497;
+    --rule:     #E4E1D9;
+    --navy:     #1B3A6B;
+    --gold:     #8A5B10;
+    --gold-lite:#F3E7CC;
+    --critical: #93321F;
+    --done:     #2F6B4F;
+    --shadow:   0 1px 2px rgba(20,33,58,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #12151C;
+      --surface:  #191D26;
+      --ink:      #ECEAE4;
+      --ink-soft: #AEB4C0;
+      --ink-faint:#7C8494;
+      --rule:     #2A303C;
+      --navy:     #9FBAE6;
+      --gold:     #D8A64A;
+      --gold-lite:#33291A;
+      --critical: #E08B76;
+      --done:     #6FBF95;
+      --shadow:   none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #12151C;
+    --surface:  #191D26;
+    --ink:      #ECEAE4;
+    --ink-soft: #AEB4C0;
+    --ink-faint:#7C8494;
+    --rule:     #2A303C;
+    --navy:     #9FBAE6;
+    --gold:     #D8A64A;
+    --gold-lite:#33291A;
+    --critical: #E08B76;
+    --done:     #6FBF95;
+    --shadow:   none;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  body[dir="rtl"] { font-family: "Cairo", "Segoe UI", sans-serif; line-height: 1.9; }
+
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 3.5rem 1.5rem 5rem; }
+
+  /* ── masthead ─────────────────────────────────────────── */
+  .masthead { display: flex; flex-direction: column; gap: .75rem; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--gold); margin: 0;
+  }
+  body[dir="rtl"] .eyebrow { font-family: "Cairo", sans-serif; letter-spacing: 0; font-weight: 700; }
+  h1 {
+    font-family: "Cairo", "Source Serif 4", serif;
+    font-weight: 800; font-size: clamp(1.9rem, 5vw, 2.6rem);
+    line-height: 1.15; margin: 0; text-wrap: balance; color: var(--ink);
+  }
+  .standfirst { color: var(--ink-soft); margin: 0; font-size: 1.06rem; max-width: 38rem; }
+
+  .langbar { display: flex; gap: .4rem; margin: 1.75rem 0 0; }
+  .langbar button {
+    font: 500 .78rem/1 "IBM Plex Mono", monospace;
+    letter-spacing: .06em; padding: .5rem .8rem; cursor: pointer;
+    background: transparent; color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 2px;
+  }
+  .langbar button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .langbar button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ── status strip ─────────────────────────────────────── */
+  .status {
+    margin: 2.5rem 0 0; padding: 1.15rem 1.35rem;
+    background: var(--surface); border: 1px solid var(--rule);
+    box-shadow: var(--shadow);
+    display: flex; flex-wrap: wrap; gap: 1.5rem 2.5rem; align-items: baseline;
+  }
+  .stat { display: flex; flex-direction: column; gap: .15rem; }
+  .stat b {
+    font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+    font-size: 1.6rem; font-weight: 500; line-height: 1; color: var(--ink);
+  }
+  .stat span { font-size: .78rem; color: var(--ink-faint); letter-spacing: .02em; }
+  .stat.ok b { color: var(--done); }
+
+  h2 {
+    font-family: "Cairo", "Source Serif 4", serif; font-weight: 700;
+    font-size: 1.22rem; margin: 3.25rem 0 .35rem; color: var(--ink);
+    padding-bottom: .5rem; border-bottom: 1px solid var(--rule);
+  }
+  .lede { color: var(--ink-soft); font-size: .95rem; margin: .6rem 0 1.5rem; }
+
+  /* ── items: a ledger, one row each ────────────────────── */
+  .items { display: flex; flex-direction: column; gap: .1rem; }
+  .item {
+    display: grid; grid-template-columns: 1fr auto; gap: .35rem 1.5rem;
+    padding: 1.1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-inline-start: 3px solid var(--owner, var(--rule));
+  }
+  .item + .item { border-block-start: none; }
+  .item h3 { margin: 0; font-size: 1rem; font-weight: 600; font-family: inherit; color: var(--ink); }
+  .item p { margin: 0; grid-column: 1 / -1; color: var(--ink-soft); font-size: .93rem; }
+  .effort {
+    font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+    font-size: .78rem; color: var(--ink-faint); white-space: nowrap; align-self: start; padding-top: .2rem;
+  }
+  .who { --owner: var(--navy); }
+  .who-found { --owner: var(--gold); }
+  .who-us { --owner: var(--ink-faint); }
+  .who-crit { --owner: var(--critical); }
+
+  .tag {
+    display: inline-block; font-family: "IBM Plex Mono", monospace;
+    font-size: .66rem; letter-spacing: .1em; text-transform: uppercase;
+    padding: .18rem .45rem; margin-inline-end: .5rem; vertical-align: .1em;
+    border: 1px solid currentColor; color: var(--ink-faint);
+  }
+  body[dir="rtl"] .tag { font-family: "Cairo", sans-serif; letter-spacing: 0; }
+  .tag.crit { color: var(--critical); }
+
+  .warn {
+    margin-top: .55rem; grid-column: 1 / -1;
+    background: var(--gold-lite); color: var(--gold);
+    padding: .7rem .85rem; font-size: .9rem; line-height: 1.55;
+    border-inline-start: 2px solid currentColor;
+  }
+  .warn.crit { color: var(--critical); background: transparent; border-inline-start-width: 2px; }
+
+  /* ── the release sequence, which really is a sequence ─── */
+  ol.chain { list-style: none; margin: 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; }
+  ol.chain li {
+    counter-increment: step; position: relative;
+    padding: .85rem 0 .85rem 3rem; border-bottom: 1px dashed var(--rule);
+  }
+  body[dir="rtl"] ol.chain li { padding: .85rem 3rem .85rem 0; }
+  ol.chain li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute; inset-inline-start: 0; top: .95rem;
+    font-family: "IBM Plex Mono", monospace; font-size: .8rem;
+    color: var(--gold); font-variant-numeric: tabular-nums;
+  }
+  ol.chain li:last-child { border-bottom: none; }
+  ol.chain b { font-weight: 600; }
+  ol.chain small { display: block; color: var(--ink-faint); font-size: .85rem; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--rule);
+    color: var(--ink-faint); font-size: .85rem;
+  }
+  footer code { font-family: "IBM Plex Mono", monospace; font-size: .82rem; color: var(--ink-soft); }
+
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: no-preference) {
+    .item, .status { transition: border-color .15s ease; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow" data-en>Ahla Shabab Foundation · 20 August 2026</p>
+    <p class="eyebrow" data-ar hidden>جمعية خواطر أحلى شباب · 20 أغسطس 2026</p>
+
+    <h1 data-en>What is left to finish the platform</h1>
+    <h1 data-ar hidden>ما تبقّى لإنهاء المنصّة</h1>
+
+    <p class="standfirst" data-en>
+      Nine items remain. None of them is unfinished engineering — each is a decision,
+      an account, or a short task on the server.
+    </p>
+    <p class="standfirst" data-ar hidden>
+      تبقّت تسعة بنود. لا يوجد بينها عمل برمجي غير مكتمل — كل بند منها قرار، أو حساب خارجي،
+      أو مهمة قصيرة على الخادم.
+    </p>
+
+    <div class="langbar">
+      <button type="button" id="btn-en" aria-pressed="true">English</button>
+      <button type="button" id="btn-ar" aria-pressed="false">العربية</button>
+    </div>
+  </header>
+
+  <div class="status">
+    <div class="stat ok"><b>0</b><span data-en>blocking now</span><span data-ar hidden>بند يحجب العمل</span></div>
+    <div class="stat"><b>9</b><span data-en>items remaining</span><span data-ar hidden>بند متبقٍ</span></div>
+    <div class="stat"><b>71%</b><span data-en>delivered &amp; verified</span><span data-ar hidden>منجز ومُتحقَّق منه</span></div>
+    <div class="stat"><b>283</b><span data-en>automated tests</span><span data-ar hidden>اختبار آلي</span></div>
+  </div>
+
+  <!-- ───────────────────────── release path ───────────────────────── -->
+  <h2 data-en>The path to the app store</h2>
+  <h2 data-ar hidden>الطريق إلى متجر التطبيقات</h2>
+  <p class="lede" data-en>
+    These five steps are strictly ordered — each one is impossible until the one before it is done.
+    Supplying the Firebase key first, for example, changes nothing anyone can see.
+  </p>
+  <p class="lede" data-ar hidden>
+    هذه الخطوات الخمس مرتّبة بشكل صارم — كل خطوة متعذّرة قبل إتمام ما قبلها. فتوفير مفتاح Firebase
+    أولًا، مثلًا، لا يُحدث أي أثر ملحوظ.
+  </p>
+
+  <ol class="chain">
+    <li data-en><b>Create the app signing certificate.</b> 15 minutes.
+      <small>Google Play rejects every build produced so far. Release builds now fail rather than
+      producing an unpublishable file.</small></li>
+    <li data-ar hidden><b>إنشاء شهادة توقيع التطبيق.</b> 15 دقيقة.
+      <small>يرفض Google Play كل النسخ المُنتَجة حتى الآن. بناء نسخة الإصدار يفشل الآن بدل إنتاج ملف
+      غير صالح للنشر.</small></li>
+
+    <li data-en><b>Build a new APK.</b> 1 hour, ours.
+      <small>Every current install predates the notification code, so no phone can ever register.</small></li>
+    <li data-ar hidden><b>بناء نسخة APK جديدة.</b> ساعة، من جهتنا.
+      <small>كل النسخ المثبّتة حاليًا سابقة لكود الإشعارات، فلا يمكن لأي هاتف أن يُسجَّل.</small></li>
+
+    <li data-en><b>Supply <code>google-services.json</code>.</b> 10 minutes.
+      <small>From Firebase → Project settings → General. The Android package must read exactly
+      <code>tech.saasfarm.ahlashabab</code>; any other value fails silently, forever.</small></li>
+    <li data-ar hidden><b>توفير ملف <code>google-services.json</code>.</b> 10 دقائق.
+      <small>من Firebase ← إعدادات المشروع ← عام. يجب أن يكون اسم الحزمة بالضبط
+      <code>tech.saasfarm.ahlashabab</code>؛ أي قيمة أخرى تُفشل الإشعارات بصمت وإلى الأبد.</small></li>
+
+    <li data-en><b>Supply the Firebase service account key.</b> 10 minutes.
+      <small>Added as a repository secret — it never passes through a person or a repository.
+      A workflow installs it on the server and reports whether push came up.</small></li>
+    <li data-ar hidden><b>توفير مفتاح حساب خدمة Firebase.</b> 10 دقائق.
+      <small>يُضاف كـ Secret في المستودع — فلا يمرّ عبر شخص ولا يُحفظ في أي مستودع. وهناك إجراء آلي
+      يُثبّته على الخادم ويُبلّغ بنتيجة التفعيل.</small></li>
+
+    <li data-en><b>Send the first notification, and watch it arrive.</b>
+      <small>The first end-to-end proof. Worth doing deliberately rather than discovering it in
+      production.</small></li>
+    <li data-ar hidden><b>إرسال أول إشعار ومتابعة وصوله.</b>
+      <small>أول إثبات كامل من طرف إلى طرف. يُنفَّذ بشكل متعمَّد بدل اكتشافه أثناء التشغيل.</small></li>
+  </ol>
+
+  <!-- ───────────────────────── needs a person ───────────────────────── -->
+  <h2 data-en>Waiting on the foundation</h2>
+  <h2 data-ar hidden>بانتظار الجمعية</h2>
+
+  <div class="items">
+    <div class="item who-crit">
+      <h3 data-en><span class="tag crit">unrecoverable</span>Store the signing certificate safely</h3>
+      <h3 data-ar hidden><span class="tag crit">لا يمكن استرجاعه</span>حفظ شهادة التوقيع بشكل آمن</h3>
+      <span class="effort">15 min</span>
+      <p data-en>The one item on this page where a mistake cannot be undone.</p>
+      <p data-ar hidden>البند الوحيد في هذه الصفحة الذي لا يمكن التراجع عن الخطأ فيه.</p>
+      <div class="warn crit" data-en>If this certificate is lost, the app can never be updated on
+        Google Play again — not by us, not by Google. A new listing would be the only option, and
+        every existing installation would be stranded.</div>
+      <div class="warn crit" data-ar hidden>إذا فُقدت هذه الشهادة، لا يمكن تحديث التطبيق على
+        Google Play مطلقًا — لا من جهتنا ولا من Google. الخيار الوحيد عندها إنشاء تطبيق جديد،
+        وتبقى كل النسخ المثبّتة دون تحديث.</div>
+    </div>
+
+    <div class="item who-found">
+      <h3 data-en>An email service, so login codes arrive</h3>
+      <h3 data-ar hidden>خدمة بريد إلكتروني حتى تصل رموز الدخول</h3>
+      <span class="effort" data-en>provider</span>
+      <p data-en>Until then the server answers honestly that it cannot send — it no longer tells
+        people to check an inbox nothing is coming to.</p>
+      <p data-ar hidden>حتى ذلك الحين يردّ الخادم بصدق بأنه لا يستطيع الإرسال — ولم يعد يطلب من
+        المستخدم فحص بريد لن يصله شيء.</p>
+    </div>
+
+    <div class="item who-found">
+      <h3 data-en>Confirm the Vodafone Cash code <code>#237*9*</code></h3>
+      <h3 data-ar hidden>تأكيد كود فودافون كاش <code>#237*9*</code></h3>
+      <span class="effort">2 min</span>
+      <p data-en>Stored exactly as given. Small, but if it is wrong, donations simply never arrive.</p>
+      <p data-ar hidden>مُخزَّن كما ورد تمامًا. بند صغير، لكن إن كان خاطئًا فالتبرعات لا تصل ببساطة.</p>
+    </div>
+
+    <div class="item who-found">
+      <h3 data-en>Make one real donation, deliberately</h3>
+      <h3 data-ar hidden>تنفيذ تبرّع حقيقي واحد بشكل متعمَّد</h3>
+      <span class="effort">1 hr</span>
+      <p data-en>The live system has never processed a donation. That path should be proven on
+        purpose, not by the first person who tries it.</p>
+      <p data-ar hidden>لم يعالج النظام الحقيقي أي تبرع حتى الآن. يجب إثبات هذا المسار عن قصد، لا عن
+        طريق أول شخص يجرّبه.</p>
+    </div>
+  </div>
+
+  <!-- ───────────────────────── decisions ───────────────────────── -->
+  <h2 data-en>Decisions nobody can take for you</h2>
+  <h2 data-ar hidden>قرارات لا يمكن لأحد اتخاذها نيابةً عنكم</h2>
+
+  <div class="items">
+    <div class="item who">
+      <h3 data-en>What may a consultant read about a beneficiary?</h3>
+      <h3 data-ar hidden>ما الذي يحقّ للمستشار الاطّلاع عليه عن المستفيد؟</h3>
+      <span class="effort" data-en>blocks 3 days</span>
+      <span class="effort" data-ar hidden>يحجب 3 أيام</span>
+      <p data-en>A consultation request carries a person's phone, age, location and their own written
+        account of their circumstances. Does a consultant see all of it before accepting the case?
+        Do they see requests assigned to colleagues?</p>
+      <p data-ar hidden>يحتوي طلب الاستشارة على هاتف الشخص وعمره ومحافظته ووصفه المكتوب بنفسه لظروفه.
+        هل يرى المستشار كل ذلك قبل قبول الحالة؟ وهل يرى الطلبات المُسندة إلى زملائه؟</p>
+      <div class="warn" data-en>This should be decided deliberately rather than settled by whichever
+        answer is easiest to build. Four further questions accompany it.</div>
+      <div class="warn" data-ar hidden>ينبغي حسم هذا بقرار واعٍ، لا أن يُحسم تبعًا لأسهل خيار برمجي.
+        وتصاحبه أربعة أسئلة أخرى.</div>
+    </div>
+
+    <div class="item who">
+      <h3 data-en>Should a failing test stop a deployment?</h3>
+      <h3 data-ar hidden>هل يُمنع النشر عند فشل الاختبارات؟</h3>
+      <span class="effort">1 line</span>
+      <p data-en>A one-line change, but it is a release policy, not a technical call.</p>
+      <p data-ar hidden>تعديل من سطر واحد، لكنه سياسة إصدار وليس قرارًا تقنيًا.</p>
+    </div>
+
+    <div class="item who">
+      <h3 data-en>A change made directly on the live server</h3>
+      <h3 data-ar hidden>تعديل أُجري مباشرةً على الخادم الحقيقي</h3>
+      <span class="effort" data-en>adopt or revert</span>
+      <span class="effort" data-ar hidden>اعتماد أو تراجع</span>
+      <p data-en>One commit exists on production and in no repository — unreviewed, never tested,
+        and drifting from what everything else runs. It should be brought into the repository or
+        removed, on purpose.</p>
+      <p data-ar hidden>يوجد تعديل واحد على الخادم الحقيقي وغير موجود في أي مستودع — لم يُراجَع ولم
+        يُختبَر، ويبتعد عمّا يعمل به كل شيء آخر. ينبغي إدخاله إلى المستودع أو إزالته، بقرار واضح.</p>
+    </div>
+  </div>
+
+  <!-- ───────────────────────── after a decision ───────────────────────── -->
+  <h2 data-en>Engineering that follows those answers</h2>
+  <h2 data-ar hidden>أعمال برمجية تتبع تلك القرارات</h2>
+
+  <div class="items">
+    <div class="item who-us">
+      <h3 data-en>The consultant-facing portal</h3>
+      <h3 data-ar hidden>بوابة المستشارين</h3>
+      <span class="effort">~3 d</span>
+      <p data-en>Requests are already visible and can be scheduled with a named provider, date and
+        time. What remains is the consultant's own view — which waits on the privacy answer above.</p>
+      <p data-ar hidden>الطلبات مرئية بالفعل ويمكن تحديد مواعيدها مع مقدم خدمة وتاريخ ووقت. ما تبقّى
+        هو واجهة المستشار نفسه — وهي بانتظار قرار الخصوصية أعلاه.</p>
+    </div>
+
+    <div class="item who-us">
+      <h3 data-en>The iOS build</h3>
+      <h3 data-ar hidden>إصدار iOS</h3>
+      <span class="effort">~1 d</span>
+      <p data-en>Needs an Apple Developer account before any work can start.</p>
+      <p data-ar hidden>يتطلّب حساب Apple Developer قبل بدء أي عمل.</p>
+    </div>
+  </div>
+
+  <footer>
+    <p data-en>Everything described as delivered is live on the server and verified from outside it.
+      Full detail in <code>DELIVERY_SUMMARY.md</code>; the consultant-portal questions are in
+      <code>CONSULTANT_PORTAL_SCOPE.md</code>.</p>
+    <p data-ar hidden>كل ما هو موصوف كمُنجَز منشور على الخادم ومُتحقَّق منه من خارجه. التفاصيل الكاملة
+      في <code>DELIVERY_SUMMARY.ar.md</code>، وأسئلة بوابة المستشارين في
+      <code>CONSULTANT_PORTAL_SCOPE.md</code>.</p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var en = document.getElementById('btn-en');
+    var ar = document.getElementById('btn-ar');
+
+    function show(lang) {
+      var rtl = lang === 'ar';
+      document.body.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', lang);
+      document.querySelectorAll('[data-en]').forEach(function (n) { n.hidden = rtl; });
+      document.querySelectorAll('[data-ar]').forEach(function (n) { n.hidden = !rtl; });
+      en.setAttribute('aria-pressed', String(!rtl));
+      ar.setAttribute('aria-pressed', String(rtl));
+    }
+
+    en.addEventListener('click', function () { show('en'); });
+    ar.addEventListener('click', function () { show('ar'); });
+  })();
+</script>
