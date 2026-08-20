@@ -26,3 +26,6 @@ qa/harness/*
 ._*
 **/._*
 
+
+# Test builds — large, not releases, and produced on demand.
+ahla-shabab-v1.7.0-test.apk

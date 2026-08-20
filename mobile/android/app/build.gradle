@@ -76,10 +76,15 @@ react {
     // codegenDir = file("../../node_modules/@react-native/codegen")
 
     /* Variants */
-    //   The list of variants to that are debuggable. For those we're going to
-    //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
-    //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    // debuggableVariants = ["liteDebug", "prodDebug"]
+    //   Variants listed here skip JS bundling and expect a Metro server. That is
+    //   right for development and wrong for an APK you hand to someone: it
+    //   installs, opens to a red screen, and looks like the app is broken.
+    //
+    //   `-PbundleInDebug=true` empties the list, so `assembleDebug` embeds the
+    //   bundle and the APK runs on its own. Use it for a testable build before a
+    //   signing certificate exists — it is still debug-signed and still cannot go
+    //   to Google Play, but it can be installed directly and actually used.
+    debuggableVariants = (findProperty('bundleInDebug') ?: 'false').toBoolean() ? [] : ["debug"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -142,8 +147,8 @@ android {
         // Keep in sync with mobile/app.json (expo.version / expo.android.versionCode).
         // This is a bare workflow — android/ is committed, so `expo prebuild` does not
         // run and app.json's values are NOT applied to native builds automatically.
-        versionCode 11
-        versionName "1.6.0"
+        versionCode 12
+        versionName "1.7.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

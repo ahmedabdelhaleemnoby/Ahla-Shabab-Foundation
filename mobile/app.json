@@ -2,7 +2,7 @@
   "expo": {
     "name": "خواطر أحلى شباب",
     "slug": "ahla-shabab",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "ahlashabab",
@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "tech.saasfarm.ahlashabab",
-      "versionCode": 11,
+      "versionCode": 12,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
