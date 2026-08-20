@@ -143,25 +143,25 @@ server.
 
 | | What | Who | Effort |
 |---|---|---|---|
-| 3 | **Create a signing certificate for the app** and store it somewhere it cannot be lost. If it is lost, the app can never be updated on Google Play again — there is no recovery. | Foundation | 15 minutes |
-| 4 | **A Firebase account** (service file for the server, configuration file for the app). Without both, notifications reach the app's own inbox but never a phone. | Foundation | 30 minutes |
-| 5 | **An email service** so login codes actually arrive. | Foundation | Provider-dependent |
+| 2 | **Create a signing certificate for the app** and store it somewhere it cannot be lost. If it is lost, the app can never be updated on Google Play again — there is no recovery. | Foundation | 15 minutes |
+| 3 | **A Firebase account** (service file for the server, configuration file for the app). Without both, notifications reach the app's own inbox but never a phone. | Foundation | 30 minutes |
+| 4 | **An email service** so login codes actually arrive. | Foundation | Provider-dependent |
 
 ### Decisions
 
 | | What | Who |
 |---|---|---|
-| 6 | **Five questions on the consultant portal**, in `CONSULTANT_PORTAL_SCOPE.md`. The one that matters most: a consultation request contains a person's phone, age, location and their own written account of their circumstances. Should a consultant see all of that before accepting the case, and should they see requests assigned to colleagues? This should be decided deliberately. | Foundation |
-| 7 | Confirm the Vodafone Cash code `#237*9*` is correct as written. | Foundation |
-| 8 | Whether deployments should be blocked when tests fail. | Foundation / team |
+| 5 | **Five questions on the consultant portal**, in `CONSULTANT_PORTAL_SCOPE.md`. The one that matters most: a consultation request contains a person's phone, age, location and their own written account of their circumstances. Should a consultant see all of that before accepting the case, and should they see requests assigned to colleagues? This should be decided deliberately. | Foundation |
+| 6 | Confirm the Vodafone Cash code `#237*9*` is correct as written. | Foundation |
+| 7 | Whether deployments should be blocked when tests fail. | Foundation / team |
 
 ### Remaining engineering, once decisions are made
 
 | | What | Effort |
 |---|---|---|
-| 9 | Consultant portal — the consultant-facing part (items 1 and 2 of it are already built) | ~3 days |
-| 10 | iOS build — requires an Apple Developer account | ~1 day after the account |
-| 11 | A first real donation, made deliberately and followed end to end. The live system has never processed one. | 1 hour |
+| 8 | Consultant portal — the consultant-facing part (items 1 and 2 of it are already built) | ~3 days |
+| 9 | iOS build — requires an Apple Developer account | ~1 day after the account |
+| 10 | A first real donation, made deliberately and followed end to end. The live system has never processed one. | 1 hour |
 
 ---
 
