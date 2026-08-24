@@ -1,0 +1,337 @@
+<title>Ahla Shabab Running Costs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* Same tokens as the launch-path report — these two are a set, not two
+     unrelated documents that happen to be about the same client. */
+  :root {
+    --ground:#FAF9F6; --surface:#FFFFFF; --ink:#14213A; --ink-soft:#4A5468;
+    --ink-faint:#7A8497; --rule:#E4E1D9; --navy:#1B3A6B; --gold:#8A5B10;
+    --gold-lite:#F3E7CC; --critical:#93321F; --done:#2F6B4F;
+    --shadow:0 1px 2px rgba(20,33,58,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#12151C; --surface:#191D26; --ink:#ECEAE4; --ink-soft:#AEB4C0;
+      --ink-faint:#7C8494; --rule:#2A303C; --navy:#9FBAE6; --gold:#D8A64A;
+      --gold-lite:#33291A; --critical:#E08B76; --done:#6FBF95; --shadow:none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#12151C; --surface:#191D26; --ink:#ECEAE4; --ink-soft:#AEB4C0;
+    --ink-faint:#7C8494; --rule:#2A303C; --navy:#9FBAE6; --gold:#D8A64A;
+    --gold-lite:#33291A; --critical:#E08B76; --done:#6FBF95; --shadow:none;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Cairo","Segoe UI",sans-serif; font-size:17px; line-height:1.9;
+    -webkit-font-smoothing:antialiased;
+  }
+  body[dir="ltr"] { font-family:"Source Serif 4",Georgia,serif; line-height:1.65; }
+  .wrap { max-width:46rem; margin:0 auto; padding:3.5rem 1.5rem 5rem; }
+
+  .eyebrow {
+    font-family:"Cairo",sans-serif; font-weight:700; font-size:.75rem;
+    letter-spacing:0; color:var(--gold); margin:0;
+  }
+  body[dir="ltr"] .eyebrow {
+    font-family:"IBM Plex Mono",monospace; font-weight:400;
+    letter-spacing:.14em; text-transform:uppercase; font-size:.72rem;
+  }
+  h1 {
+    font-family:"Cairo","Source Serif 4",serif; font-weight:800;
+    font-size:clamp(1.9rem,5vw,2.5rem); line-height:1.25; margin:.6rem 0 0;
+    text-wrap:balance;
+  }
+  .standfirst { color:var(--ink-soft); margin:.75rem 0 0; max-width:38rem; }
+
+  .langbar { display:flex; gap:.4rem; margin:1.75rem 0 0; }
+  .langbar button {
+    font:500 .78rem/1 "IBM Plex Mono",monospace; letter-spacing:.06em;
+    padding:.5rem .8rem; cursor:pointer; background:transparent;
+    color:var(--ink-soft); border:1px solid var(--rule); border-radius:2px;
+  }
+  .langbar button[aria-pressed="true"] { background:var(--ink); color:var(--ground); border-color:var(--ink); }
+  .langbar button:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+
+  .caveat {
+    margin:2rem 0 0; padding:.9rem 1.1rem; background:var(--gold-lite);
+    color:var(--gold); font-size:.92rem; line-height:1.7;
+    border-inline-start:2px solid currentColor;
+  }
+
+  h2 {
+    font-family:"Cairo","Source Serif 4",serif; font-weight:700; font-size:1.2rem;
+    margin:3rem 0 .3rem; padding-bottom:.5rem; border-bottom:1px solid var(--rule);
+  }
+  .lede { color:var(--ink-soft); font-size:.93rem; margin:.55rem 0 1.4rem; }
+
+  /* ── the ledger: label, note, figure ── */
+  .rows { display:flex; flex-direction:column; }
+  .row {
+    display:grid; grid-template-columns:1fr auto; gap:.15rem 1.5rem;
+    padding:.9rem 1.15rem; background:var(--surface);
+    border:1px solid var(--rule); align-items:baseline;
+  }
+  .row + .row { border-block-start:none; }
+  .row b { font-weight:600; font-size:.98rem; }
+  .row small { grid-column:1; color:var(--ink-faint); font-size:.85rem; line-height:1.6; }
+  .fig {
+    grid-row:1 / span 1; font-family:"IBM Plex Mono",monospace;
+    font-variant-numeric:tabular-nums; font-size:.88rem; white-space:nowrap;
+    color:var(--ink); text-align:end;
+  }
+  .fig.free { color:var(--done); }
+  .fig.once { color:var(--ink-faint); }
+
+  .total {
+    display:grid; grid-template-columns:1fr auto; gap:.3rem 1.5rem;
+    margin-top:1.25rem; padding:1.15rem 1.15rem;
+    background:var(--surface); border:1px solid var(--ink);
+    box-shadow:var(--shadow);
+  }
+  .total .fig { font-size:1.15rem; font-weight:500; }
+  .total .egp { grid-column:1 / -1; color:var(--ink-faint); font-size:.85rem; margin:0; }
+
+  ul.prog { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+  ul.prog li {
+    padding:.8rem 0; border-bottom:1px dashed var(--rule);
+    display:grid; grid-template-columns:1fr auto; gap:.1rem 1.25rem; align-items:baseline;
+  }
+  ul.prog li:last-child { border-bottom:none; }
+  ul.prog b { font-weight:600; }
+  ul.prog small { grid-column:1; color:var(--ink-faint); font-size:.85rem; line-height:1.6; }
+  ul.prog .fig { color:var(--done); }
+
+  .risk {
+    padding:1.15rem 1.25rem; background:var(--surface);
+    border:1px solid var(--rule); border-inline-start:3px solid var(--critical);
+  }
+  .risk + .risk { border-block-start:none; }
+  .risk h3 { margin:0 0 .35rem; font-size:1rem; font-weight:700; font-family:inherit; }
+  .risk p { margin:0; color:var(--ink-soft); font-size:.93rem; }
+  .risk .fig { display:inline-block; margin-top:.5rem; color:var(--ink-faint); }
+
+  footer {
+    margin-top:3.5rem; padding-top:1.25rem; border-top:1px solid var(--rule);
+    color:var(--ink-faint); font-size:.85rem;
+  }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.85em; color:var(--ink-soft); }
+  [hidden] { display:none !important; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow" data-ar>جمعية خواطر أحلى شباب · تقدير التشغيل</p>
+    <p class="eyebrow" data-en hidden>Ahla Shabab Foundation · running-cost estimate</p>
+
+    <h1 data-ar>كم تكلّف المنصّة في السنة</h1>
+    <h1 data-en hidden>What the platform costs to run</h1>
+
+    <p class="standfirst" data-ar>
+      تقدير مبني على البنية التشغيلية القائمة فعلًا — ما هو مدفوع اليوم، وما لم يُدفع بعد،
+      وما يمكن أن تغطّيه برامج المنظمات غير الربحية.
+    </p>
+    <p class="standfirst" data-en hidden>
+      An estimate built from the infrastructure actually running — what is paid for today, what is
+      not yet, and what nonprofit programmes could cover.
+    </p>
+
+    <div class="langbar">
+      <button type="button" id="btn-ar" aria-pressed="true">العربية</button>
+      <button type="button" id="btn-en" aria-pressed="false">English</button>
+    </div>
+  </header>
+
+  <p class="caveat" data-ar>
+    <b>هذه تقديرات، وليست عروض أسعار.</b> البنية التشغيلية مفحوصة من الخادم نفسه، لكن الفواتير
+    الفعلية غير متاحة لي — والأسعار تتغيّر. راجعوا فاتورة الاستضافة الحالية قبل اعتماد أي رقم.
+  </p>
+  <p class="caveat" data-en hidden>
+    <b>These are estimates, not quotes.</b> The infrastructure was inspected on the server itself, but
+    the actual invoices are not visible to me, and prices change. Check the current hosting bill before
+    committing to any figure.
+  </p>
+
+  <!-- ── running now ── -->
+  <h2 data-ar>ما هو قائم اليوم</h2>
+  <h2 data-en hidden>Running today</h2>
+
+  <div class="rows">
+    <div class="row">
+      <b data-ar>الخادم (VPS)</b><b data-en hidden>The server (VPS)</b>
+      <span class="fig">$60 – $290</span>
+      <small data-ar>يشارك المشروع الجهاز نفسه مع <b>ثلاثة تطبيقات أخرى</b>. القرص 193 جيجا، المستخدَم منه 16 — فالحصة الفعلية للجمعية أقل من هذا المدى.</small>
+      <small data-en hidden>Shared with <b>three other applications</b> on the same machine. 193 GB disk, 16 GB used — so the foundation's real share is below this range.</small>
+    </div>
+    <div class="row">
+      <b data-ar>قاعدة البيانات PostgreSQL</b><b data-en hidden>PostgreSQL database</b>
+      <span class="fig free" data-ar>ضمن الخادم</span><span class="fig free" data-en hidden>in the VPS</span>
+      <small data-ar>تعمل على الخادم نفسه، فلا تكلفة منفصلة.</small>
+      <small data-en hidden>Runs on the same machine, so no separate cost.</small>
+    </div>
+    <div class="row">
+      <b>Cloudflare</b>
+      <span class="fig free" data-ar>مجاني</span><span class="fig free" data-en hidden>free</span>
+      <small data-ar>الخطة المجانية كافية تمامًا للحجم الحالي.</small>
+      <small data-en hidden>The free plan is entirely sufficient at this scale.</small>
+    </div>
+    <div class="row">
+      <b data-ar>النطاق <code>27lashabab.com</code></b><b data-en hidden>Domain <code>27lashabab.com</code></b>
+      <span class="fig">$12 – $15</span>
+    </div>
+    <div class="row">
+      <b data-ar>Firebase — الإشعارات</b><b data-en hidden>Firebase — notifications</b>
+      <span class="fig free" data-ar>مجاني</span><span class="fig free" data-en hidden>free</span>
+      <small data-ar>خطة Spark تغطي إرسال الإشعارات بالكامل.</small>
+      <small data-en hidden>The Spark plan covers notification sending in full.</small>
+    </div>
+    <div class="row">
+      <b data-ar>شهادة SSL</b><b data-en hidden>SSL certificate</b>
+      <span class="fig free" data-ar>مجاني</span><span class="fig free" data-en hidden>free</span>
+    </div>
+  </div>
+
+  <!-- ── not yet paid ── -->
+  <h2 data-ar>ما لم يُدفع بعد وسيلزم</h2>
+  <h2 data-en hidden>Not yet paid for</h2>
+
+  <div class="rows">
+    <div class="row">
+      <b data-ar>خدمة البريد — رموز الدخول</b><b data-en hidden>Email — login codes</b>
+      <span class="fig">$0 – $5</span>
+      <small data-ar>Amazon SES بحدود دولارات قليلة بحجمكم · أو SendGrid مجانًا حتى 100 رسالة يوميًا. بدونها لا يستطيع أحد تسجيل الدخول.</small>
+      <small data-en hidden>Amazon SES costs a few dollars at this volume; SendGrid is free to 100 messages a day. Without it nobody can sign in.</small>
+    </div>
+    <div class="row">
+      <b>Google Play</b>
+      <span class="fig once" data-ar>$25 مرة واحدة</span><span class="fig once" data-en hidden>$25 once</span>
+      <small data-ar>رسوم مطوّر تُدفع مرة واحدة فقط، وليست سنوية.</small>
+      <small data-en hidden>A one-time developer fee, not annual.</small>
+    </div>
+    <div class="row">
+      <b data-ar>Apple Developer — إذا أردتم iOS</b><b data-en hidden>Apple Developer — only if iOS</b>
+      <span class="fig">$99</span>
+      <small data-ar>سنوية. توجد إعفاءات للمنظمات غير الربحية في دول محدّدة — تستحق السؤال.</small>
+      <small data-en hidden>Annual. Nonprofit fee waivers exist in certain countries — worth asking.</small>
+    </div>
+    <div class="row">
+      <b data-ar>المراقبة ورصد الأعطال</b><b data-en hidden>Monitoring &amp; error tracking</b>
+      <span class="fig free" data-ar>مجاني</span><span class="fig free" data-en hidden>free tier</span>
+      <small data-ar>الخطط المجانية في Sentry أو Better Stack تكفي هذا الحجم بمراحل.</small>
+      <small data-en hidden>Sentry or Better Stack free tiers cover this scale comfortably.</small>
+    </div>
+  </div>
+
+  <div class="total">
+    <b data-ar>أندرويد فقط</b><b data-en hidden>Android only</b>
+    <span class="fig">$80 – $310</span>
+    <b data-ar>أندرويد و iOS معًا</b><b data-en hidden>Android and iOS</b>
+    <span class="fig">$180 – $410</span>
+    <p class="egp" data-ar>أي ما يقارب <b>4,000 – 20,000 جنيه سنويًا</b>، حسب حجم الخادم وسعر الصرف.</p>
+    <p class="egp" data-en hidden>Roughly <b>EGP 4,000 – 20,000 a year</b>, depending on server size and the exchange rate.</p>
+  </div>
+
+  <!-- ── nonprofit programmes ── -->
+  <h2 data-ar>برامج المنظمات غير الربحية</h2>
+  <h2 data-en hidden>Nonprofit programmes</h2>
+  <p class="lede" data-ar>
+    معظمها يتطلّب توثيق صفة الجمعية، غالبًا عبر TechSoup. <b>شروط الأهلية لمصر تحديدًا تحتاج تأكيدًا
+    منكم</b> — لا أستطيع الجزم بها، وهي تتغيّر.
+  </p>
+  <p class="lede" data-en hidden>
+    Most require the foundation's status to be verified, usually through TechSoup. <b>Eligibility for
+    Egypt specifically needs checking on your side</b> — I cannot state it as fact, and it changes.
+  </p>
+
+  <ul class="prog">
+    <li>
+      <b>Google for Nonprofits</b>
+      <span class="fig" data-ar>يغطّي البريد</span><span class="fig" data-en hidden>covers email</span>
+      <small data-ar>يشمل Google Workspace مجانًا — وهو ما يُلغي بند البريد بالكامل.</small>
+      <small data-en hidden>Includes Google Workspace free, which removes the email line entirely.</small>
+    </li>
+    <li>
+      <b>Cloudflare Project Galileo</b>
+      <span class="fig" data-ar>حماية موسّعة</span><span class="fig" data-en hidden>added protection</span>
+      <small data-ar>حماية متقدّمة مجانًا لمنظمات النفع العام.</small>
+      <small data-en hidden>Advanced protection at no cost for public-interest organisations.</small>
+    </li>
+    <li>
+      <b data-ar>رصيد سحابي</b><b data-en hidden>Cloud credits</b>
+      <span class="fig">~$2,000</span>
+      <small data-ar>Microsoft Azure تمنح رصيدًا سنويًا في حدود هذا المبلغ؛ ولدى AWS و DigitalOcean برامج مشابهة. قد يغطّي الخادم بالكامل.</small>
+      <small data-en hidden>Microsoft Azure grants roughly this much annually; AWS and DigitalOcean run similar programmes. Could cover the server entirely.</small>
+    </li>
+    <li>
+      <b data-ar>إعفاء رسوم Apple</b><b data-en hidden>Apple fee waiver</b>
+      <span class="fig">$99</span>
+      <small data-ar>متاح لدول محدّدة فقط — يستحق التقديم والسؤال.</small>
+      <small data-en hidden>Available in certain countries only — worth applying and asking.</small>
+    </li>
+  </ul>
+
+  <div class="total" style="margin-top:1.75rem">
+    <b data-ar>مع البرامج، الأرجح</b><b data-en hidden>With those programmes, likely</b>
+    <span class="fig">$70 – $300</span>
+  </div>
+
+  <!-- ── risks ── -->
+  <h2 data-ar>بندان غائبان عن كل حساب — وهما الأهم</h2>
+  <h2 data-en hidden>Two items missing from every budget — and they matter most</h2>
+
+  <div class="rows">
+    <div class="risk">
+      <h3 data-ar>لا توجد نسخة احتياطية لقاعدة البيانات</h3>
+      <h3 data-en hidden>There is no database backup</h3>
+      <p data-ar>لم أجد أي آلية نسخ احتياطي على الخادم. الجمعية تخزّن بيانات متبرعين، وأرقامًا قومية،
+        وسجلات مستفيدين — وفقدان القاعدة يعني فقدانها كاملة، بلا استرجاع. التكلفة تكاد تكون صفرًا،
+        <b>وغيابه مخاطرة أكبر من كل البنود السابقة مجتمعة</b>.</p>
+      <p data-en hidden>I found no backup mechanism on the server. The foundation stores donor records,
+        national ID numbers and beneficiary details — losing the database means losing all of it, with
+        no recovery. The cost is near zero, and <b>its absence is a larger risk than every line above
+        put together</b>.</p>
+      <span class="fig" data-ar>$0 – $12 سنويًا</span>
+      <span class="fig" data-en hidden>$0 – $12 a year</span>
+    </div>
+
+    <div class="risk">
+      <h3 data-ar>الخادم مشترك مع ثلاثة مشاريع أخرى</h3>
+      <h3 data-en hidden>The server is shared with three other projects</h3>
+      <p data-ar>ليس خطأً في ذاته، لكنه يعني أن ضغطًا أو عطلًا في مشروع آخر قد يؤثّر على الجمعية،
+        وأن حصتها الحقيقية من التكلفة غير واضحة. قرار يستحق الحسم: يبقى مشتركًا، أم خادم مستقل صغير
+        للجمعية وحدها.</p>
+      <p data-en hidden>Not wrong in itself, but it means load or a fault in another project can affect
+        the foundation, and its real share of the cost is unclear. Worth deciding deliberately: stay
+        shared, or take a small dedicated server.</p>
+    </div>
+  </div>
+
+  <footer>
+    <p data-ar>الأرقام بالدولار الأمريكي. البنية التشغيلية مفحوصة من الخادم بتاريخ 20 أغسطس 2026.</p>
+    <p data-en hidden>Figures in US dollars. Infrastructure inspected on the server, 20 August 2026.</p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var ar = document.getElementById('btn-ar');
+    var en = document.getElementById('btn-en');
+    function show(lang) {
+      var rtl = lang === 'ar';
+      document.body.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', lang);
+      document.querySelectorAll('[data-ar]').forEach(function (n) { n.hidden = !rtl; });
+      document.querySelectorAll('[data-en]').forEach(function (n) { n.hidden = rtl; });
+      ar.setAttribute('aria-pressed', String(rtl));
+      en.setAttribute('aria-pressed', String(!rtl));
+    }
+    ar.addEventListener('click', function () { show('ar'); });
+    en.addEventListener('click', function () { show('en'); });
+    show('ar');
+  })();
+</script>
