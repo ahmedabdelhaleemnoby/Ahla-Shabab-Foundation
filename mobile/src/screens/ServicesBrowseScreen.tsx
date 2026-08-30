@@ -3,13 +3,13 @@ import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import {
-  childCategories,
-  servicesInCategory,
-  categoryById,
-  providerById,
-  providers,
-  services,
-} from '@ahla/shared';
+  getCategoryById,
+  getChildCategories,
+  getProviderById,
+  getProviders,
+  getServices,
+  getServicesInCategory,
+} from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Pill } from '../components/ui';
@@ -24,9 +24,9 @@ type Mode = 'categories' | 'providers';
 
 /** Distinct category names a provider serves (from their assigned services). */
 const providerCategories = (providerId: string): string[] => {
-  const names = services
+  const names = getServices()
     .filter((s) => s.providerId === providerId)
-    .map((s) => categoryById(s.categoryId)?.name)
+    .map((s) => getCategoryById(s.categoryId)?.name)
     .filter(Boolean) as string[];
   return Array.from(new Set(names));
 };
@@ -38,13 +38,13 @@ export default function ServicesBrowseScreen({ route }: Props) {
   // On the tab there is no stack `push`; navigating bubbles to the root stack.
   const openCategory = (cid: string) =>
     nav.push ? nav.push('ServicesBrowse', { parentId: cid }) : nav.navigate('ServicesBrowse', { parentId: cid });
-  const current = parentId ? categoryById(parentId) : undefined;
+  const current = parentId ? getCategoryById(parentId) : undefined;
   const isRoot = !current;
 
   const [mode, setMode] = useState<Mode>('categories');
 
-  const categories = childCategories(parentId);
-  const svcs = parentId ? servicesInCategory(parentId) : [];
+  const categories = getChildCategories(parentId);
+  const svcs = parentId ? getServicesInCategory(parentId) : [];
   const showProviders = isRoot && mode === 'providers';
 
   return (
@@ -68,7 +68,7 @@ export default function ServicesBrowseScreen({ route }: Props) {
 
       {/* Providers directory (root only) */}
       {showProviders &&
-        providers.map((p) => {
+        getProviders().map((p) => {
           const cats = providerCategories(p.id);
           return (
             <Pressable key={p.id} onPress={() => nav.navigate('ProviderDetail', { providerId: p.id })}>
@@ -120,7 +120,7 @@ export default function ServicesBrowseScreen({ route }: Props) {
       {/* Services at a leaf subcategory */}
       {!showProviders &&
         svcs.map((s) => {
-          const p = providerById(s.providerId);
+          const p = getProviderById(s.providerId);
           return (
             <Pressable key={s.id} onPress={() => nav.navigate('ServiceDetail', { serviceId: s.id })}>
               <Card style={[row, { gap: 12, marginTop: 12, alignItems: 'flex-start' }]}>

@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import {
   makeDefaultCmsState,
 } from '@ahla/shared';
-import { getConsultants } from '../store/content';
+import { getConsultants, getServices } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -17,7 +17,26 @@ import { getConsultationTypes } from '../store/cms';
    The list is CMS-authored (Form Builder) with a safe default fallback. */
 export default function ConsultationsScreen() {
   const nav = useNavigation<any>();
-  const featured = getConsultants().find((c) => c.featured)!;
+  /*
+   * No consultant is guaranteed to be featured. The bundled offline data marks
+   * one, so the `!` here read as safe — but the moment the API answered, every
+   * mapped consultant came back `featured: false` and this was `undefined`,
+   * crashing the whole tab on `featured.name` below. The mapper now carries the
+   * real flag; this still falls back to the first consultant, and to no card at
+   * all when the API returns none.
+   */
+  const consultants = getConsultants();
+  const featured = consultants.find((c) => c.featured) ?? consultants[0];
+  /*
+   * The two buttons on the featured card pointed at the literal service id
+   * `'sv-psych'`, which only ever existed in the bundled mock catalog. Against
+   * the real catalog that is a 404 on the detail screen and «الخدمة غير موجودة»
+   * on any booking built from it. Resolve one of the consultant's own services
+   * instead, and fall back to the first service the catalog has.
+   */
+  const featuredService =
+    (featured ? getServices().find((s) => s.providerId === featured.id) : undefined) ??
+    getServices()[0];
   const cmsTypes = getConsultationTypes();
   const types = (cmsTypes.length > 0 ? cmsTypes : makeDefaultCmsState().consultations).map((c) => ({
     type: c.key,
@@ -59,7 +78,8 @@ export default function ConsultationsScreen() {
         ))}
       </View>
 
-      {/* Featured consultant */}
+      {/* Featured consultant — omitted entirely when the API returns none. */}
+      {featured && (
       <Card style={{ marginTop: 16, backgroundColor: '#F6F9FD' }}>
         <View style={[row, { gap: 6, justifyContent: 'flex-end' }]}>
           <Text style={[font('800'), { fontSize: 11, color: colors.navy700 }]}>مستشار مميز</Text>
@@ -71,7 +91,8 @@ export default function ConsultationsScreen() {
             <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>{featured.name}</Text>
             <Text style={[font('400'), { fontSize: 11, color: colors.slate }]}>{featured.specialty}</Text>
             <Text style={[font('400'), { fontSize: 9, color: colors.slate, marginVertical: 6 }]}>
-              +{featured.sessions.toLocaleString('en-US')} جلسة · خبرة {featured.yearsExperience} سنوات
+              {featured.sessions > 0 ? `+${featured.sessions.toLocaleString('en-US')} جلسة · ` : ''}
+              خبرة {featured.yearsExperience} سنوات
             </Text>
             <View style={{ backgroundColor: '#fff', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center', alignSelf: 'stretch' }}>
               <Text>
@@ -83,10 +104,24 @@ export default function ConsultationsScreen() {
           </View>
         </View>
         <View style={[row, { gap: 8, marginTop: 10 }]}>
-          <Button label="تعرف على الخدمة" variant="outline" small style={{ flex: 1 }} onPress={() => nav.navigate('ServiceDetail', { serviceId: 'sv-psych' })} />
-          <Button label="احجز الآن" small style={{ flex: 1 }} onPress={() => nav.navigate('BookAppointment', { serviceId: 'sv-psych' })} />
+          <Button
+            label="تعرف على الخدمة"
+            variant="outline"
+            small
+            style={{ flex: 1 }}
+            disabled={!featuredService}
+            onPress={() => featuredService && nav.navigate('ServiceDetail', { serviceId: featuredService.id })}
+          />
+          <Button
+            label="احجز الآن"
+            small
+            style={{ flex: 1 }}
+            disabled={!featuredService}
+            onPress={() => featuredService && nav.navigate('BookAppointment', { serviceId: featuredService.id })}
+          />
         </View>
       </Card>
+      )}
 
       {/* Privacy note */}
       <Card style={[row, { gap: 11, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
@@ -100,7 +135,7 @@ export default function ConsultationsScreen() {
       </Card>
 
       {/* Book CTA */}
-      <Button label="احجز موعد استشارة" icon="calendar" style={{ marginTop: 16 }} onPress={() => nav.navigate('ServicesBrowse', { parentId: 'counseling' })} />
+      <Button label="احجز موعد استشارة" icon="calendar" style={{ marginTop: 16 }} onPress={() => nav.navigate('ServicesBrowse', { parentId: null })} />
       <View style={{ height: 12 }} />
     </Screen>
   );

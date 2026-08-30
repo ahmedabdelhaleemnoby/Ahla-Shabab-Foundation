@@ -26,7 +26,7 @@ export default function PaymentInfoScreen() {
       <Card style={[row, { gap: 11, backgroundColor: '#EAF0F8', marginTop: 4 }]}>
         <Icon name="shield" size={20} color={colors.navy700} />
         <Text style={[font('700'), { flex: 1, fontSize: 12, color: colors.navy700, textAlign: 'right', lineHeight: 18 }]}>
-          سيتم تأكيد عملية الدفع من الخادم في النسخة التشغيلية.
+          يُسجَّل تبرعك على الخادم فور التأكيد، ولا يُعتمد إلا بعد مراجعة الإدارة.
         </Text>
       </Card>
 
@@ -49,7 +49,7 @@ export default function PaymentInfoScreen() {
       <Card style={[row, { gap: 10, backgroundColor: colors.goldSoft }]}>
         <Icon name="alert-triangle" size={16} color="#B9791A" />
         <Text style={[font('700'), { flex: 1, fontSize: 11, color: '#8A5B10', textAlign: 'right', lineHeight: 17 }]}>
-          هذه نسخة عرض تقديمي — لا يوجد اتصال بخادم أو بوابة دفع، ولا يظهر أي تبرع بحالة «مكتمل» تلقائياً.
+          لا توجد بوابة دفع إلكتروني داخل التطبيق حالياً — التحويل يتم خارج التطبيق بالطرق الموضحة أعلاه، ولا يظهر أي تبرع بحالة «مكتمل» تلقائياً.
         </Text>
       </Card>
 
