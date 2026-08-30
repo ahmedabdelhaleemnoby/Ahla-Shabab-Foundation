@@ -77,7 +77,7 @@ export default function ReceiptsScreen() {
       <Card style={[row, { gap: 9, marginBottom: 12, backgroundColor: colors.goldSoft }]}>
         <Icon name="alert-triangle" size={14} color="#B9791A" />
         <Text style={[font('700'), { flex: 1, fontSize: 10, color: '#8A5B10', textAlign: 'right' }]}>
-          إيصالات تجريبية لغرض العرض فقط — لا تمثل عمليات دفع حقيقية.
+          لا يتم تنفيذ أي عملية دفع داخل التطبيق — الإيصال يوثّق تسجيل التبرع، ويُعتمد بعد تحقّق الإدارة من التحويل.
         </Text>
       </Card>
 

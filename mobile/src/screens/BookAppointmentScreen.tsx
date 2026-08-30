@@ -1,8 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { serviceById, providerById, categoryById, buildAvailableDays, makeBookingRef, isEgPhone, isEmail } from '@ahla/shared';
+import {
+  fetchAvailability,
+  submitBooking,
+  isEgPhone,
+  isEmail,
+  type ApiError,
+  type DayAvailability,
+} from '@ahla/shared';
+import { getCategoryById, getProviderById, getServiceById } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Pill } from '../components/ui';
@@ -14,6 +22,34 @@ import type { RootProps } from '../navigation/types';
 /* Multi-step booking wizard (UX v2): specialty → consultant → date/time → contact → confirm. */
 const STEPS = ['التخصص', 'المختص', 'الموعد', 'بياناتك', 'التأكيد'] as const;
 const COMM_TYPES = ['واتساب', 'مكالمة هاتفية', 'بريد إلكتروني'] as const;
+
+const WEEKDAYS_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+/** Local YYYY-MM-DD. `toISOString()` is UTC and shifts the day in Cairo (UTC+2/3). */
+const isoOf = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Split a server date for the day chip. Parsed as local, to match `isoOf`. */
+function dayLabel(iso: string): { weekday: string; day: number; month: string } {
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return { weekday: WEEKDAYS_AR[date.getDay()], day: d, month: MONTHS_AR[m - 1] };
+}
+
+/**
+ * "14:15" -> "2:15 م" for display only.
+ *
+ * The 24-hour value is what gets sent: it is what availability returned, and
+ * `CreateBookingSchema` matches `timeSlot` against /^\d{2}:\d{2}$/. Formatting
+ * it into the booking payload would fail validation.
+ */
+function timeLabel(slot: string): string {
+  const [h, m] = slot.split(':').map(Number);
+  const suffix = h < 12 ? 'ص' : 'م';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`;
+}
 
 const inputStyle = (error?: boolean) => ({
   fontFamily: font('600').fontFamily,
@@ -39,17 +75,45 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 
 export default function BookAppointmentScreen({ route }: RootProps<'BookAppointment'>) {
   const nav = useNavigation<any>();
-  const service = serviceById(route.params.serviceId);
-  const provider = service ? providerById(service.providerId) : undefined;
-  const category = service ? categoryById(service.categoryId) : undefined;
+  const serviceId = route.params.serviceId;
+  const service = getServiceById(serviceId);
+  const provider = service ? getProviderById(service.providerId) : undefined;
+  const category = service ? getCategoryById(service.categoryId) : undefined;
 
-  const days = useMemo(() => (provider ? buildAvailableDays(provider, new Date(), 14) : []), [provider]);
-  const firstAvailable = days.find((d) => d.available);
-  // TODO(backend): GET /services/:id/availability — booked slots come from the server.
-  const bookedSlots = useMemo(() => (provider ? provider.slots.filter((_, i) => i % 3 === 1) : []), [provider]);
+  /*
+   * Availability comes from the server, for two reasons.
+   *
+   * `buildAvailableDays(provider, …)` used to derive the days from the
+   * provider's weekly pattern, and the booked slots were literally invented:
+   *
+   *     provider.slots.filter((_, i) => i % 3 === 1)
+   *
+   * — every third slot was struck through as «محجوز» regardless of whether
+   * anyone had booked it, and every slot that WAS booked looked free. Only
+   * `GET /services/:id/availability` knows which slots are actually left, and
+   * its values are the only ones `POST /bookings` accepts.
+   */
+  const [days, setDays] = useState<DayAvailability[] | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  const loadAvailability = useCallback(async () => {
+    setLoadErr(null);
+    try {
+      const today = new Date();
+      const to = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 21);
+      setDays(await fetchAvailability(serviceId, isoOf(today), isoOf(to)));
+    } catch (e) {
+      setDays([]);
+      setLoadErr((e as Error)?.message ?? 'تعذّر تحميل المواعيد المتاحة. تحقق من الاتصال.');
+    }
+  }, [serviceId]);
+
+  useEffect(() => {
+    void loadAvailability();
+  }, [loadAvailability]);
 
   const [step, setStep] = useState(0);
-  const [dateIso, setDateIso] = useState<string | undefined>(firstAvailable?.iso);
+  const [dateIso, setDateIso] = useState<string | undefined>();
   const [time, setTime] = useState<string | undefined>();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -58,6 +122,21 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
   const [comm, setComm] = useState('');
   const [notes, setNotes] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const bookable = useMemo(() => (days ?? []).filter((d) => d.slots.length > 0), [days]);
+  const selectedDay = bookable.find((d) => d.date === dateIso);
+
+  /* Pick the first bookable day once availability arrives, and drop a selection
+     that a refresh has invalidated (someone else took the last slot). */
+  useEffect(() => {
+    if (!bookable.length) return;
+    if (!dateIso || !bookable.some((d) => d.date === dateIso)) setDateIso(bookable[0].date);
+  }, [bookable, dateIso]);
+
+  useEffect(() => {
+    if (time && selectedDay && !selectedDay.slots.includes(time)) setTime(undefined);
+  }, [selectedDay, time]);
 
   if (!service || !provider) {
     return (
@@ -82,22 +161,70 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
     return null;
   };
 
-  const next = () => {
-    const e = validateStep();
-    setErr(e);
-    if (e) return;
-    if (step < STEPS.length - 1) setStep(step + 1);
-    else {
-      // Booking is created PENDING — the admin team confirms it (dashboard).
+  /*
+   * Create the booking ON THE SERVER.
+   *
+   * This step used to be `makeBookingRef(Math.floor(Date.now() / 1000))` and a
+   * navigate — a reference invented on the phone, for a booking that existed
+   * nowhere. The applicant was told the team would call them; nothing had been
+   * recorded, so nobody could. The comment above it even claimed the admin team
+   * would confirm it in the dashboard.
+   *
+   * The reference now comes from the server, so it is one the foundation can
+   * look up. There is no local fallback: an offline booking must fail visibly.
+   */
+  const confirm = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      const created = await submitBooking({
+        serviceId: service.id,
+        applicantName: name.trim(),
+        phone,
+        date: dateIso!,
+        // The server takes 24-hour HH:MM — exactly what availability returned.
+        timeSlot: time!,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        // The base booking row has no column for these; the service's form
+        // definition carries them through instead of losing them.
+        extraFields: {
+          preferredContact: comm,
+          ...(whatsapp ? { whatsapp } : {}),
+          ...(email.trim() ? { email: email.trim() } : {}),
+        },
+      });
+
       nav.navigate('BookingConfirmation', {
-        reference: makeBookingRef(Math.floor(Date.now() / 1000)),
+        reference: created.reference,
         serviceId: service.id,
         providerId: provider.id,
         date: dateIso!,
         time: time!,
         mode: comm,
       });
+    } catch (e) {
+      const api = e as ApiError;
+      setErr(api?.message ?? 'تعذّر تسجيل الحجز. تحقق من الاتصال وحاول مرة أخرى.');
+      /* SLOT_TAKEN means someone booked it between loading the screen and
+         confirming. Reload so the gone slot disappears, and send them back to
+         the picker rather than leaving them staring at a dead confirm button. */
+      if (api?.code === 'SLOT_TAKEN') {
+        void loadAvailability();
+        setTime(undefined);
+        setStep(2);
+      }
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const next = () => {
+    const e = validateStep();
+    setErr(e);
+    if (e) return;
+    if (step < STEPS.length - 1) setStep(step + 1);
+    else void confirm();
   };
 
   const back = () => (step > 0 ? (setErr(null), setStep(step - 1)) : nav.goBack());
@@ -108,7 +235,13 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
       footer={
         <StickyFooter>
           {step > 0 && <Button label="السابق" variant="outline" style={{ width: 104 }} onPress={back} />}
-          <Button label={step === STEPS.length - 1 ? 'تأكيد الحجز' : 'التالي'} icon={step === STEPS.length - 1 ? 'check' : undefined} style={{ flex: 1 }} onPress={next} />
+          <Button
+            label={step === STEPS.length - 1 ? (submitting ? 'جارٍ الحجز…' : 'تأكيد الحجز') : 'التالي'}
+            icon={step === STEPS.length - 1 && !submitting ? 'check' : undefined}
+            style={{ flex: 1 }}
+            disabled={submitting}
+            onPress={next}
+          />
         </StickyFooter>
       }
     >
@@ -163,42 +296,62 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
         </Card>
       )}
 
-      {/* Step 2 — date & time */}
+      {/* Step 2 — date & time, entirely from GET /services/:id/availability */}
       {step === 2 && (
         <>
-          <SectionTitle label="اختر اليوم" icon="calendar" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: 'row-reverse' }}>
-            {days.map((d) => {
-              const on = d.iso === dateIso;
-              return (
-                <Pressable key={d.iso} disabled={!d.available} onPress={() => setDateIso(d.iso)}
-                  style={{ width: 60, alignItems: 'center', borderRadius: 12, paddingVertical: 10, borderWidth: on ? 0 : 1, borderColor: colors.line, backgroundColor: on ? colors.navy700 : d.available ? '#fff' : colors.paper2, opacity: d.available ? 1 : 0.5 }}>
-                  <Text style={[font('400'), { fontSize: 9, color: on ? '#fff' : colors.slate }]}>{d.weekday}</Text>
-                  <Text style={[font('800'), num, { fontSize: 17, color: on ? '#fff' : d.available ? colors.navy700 : colors.muted }]}>{d.day}</Text>
-                  <Text style={[font('400'), { fontSize: 8, color: on ? '#fff' : colors.slate }]}>{d.available ? d.month : 'غير متاح'}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          {days === null ? (
+            <View style={{ alignItems: 'center', paddingVertical: 40, gap: 10 }}>
+              <ActivityIndicator color={colors.navy700} />
+              <Text style={[font('600'), { fontSize: 12, color: colors.slate }]}>جارٍ تحميل المواعيد المتاحة…</Text>
+            </View>
+          ) : bookable.length === 0 ? (
+            <Card style={{ gap: 10, alignItems: 'center', paddingVertical: 24 }}>
+              <Icon name="calendar" size={26} color={colors.muted} />
+              <Text style={[font('700'), { fontSize: 13, color: colors.navy700, textAlign: 'center' }]}>
+                {loadErr ? 'تعذّر تحميل المواعيد' : 'لا توجد مواعيد متاحة حالياً'}
+              </Text>
+              <Text style={[font('400'), { fontSize: 11, color: colors.slate, textAlign: 'center', lineHeight: 17 }]}>
+                {loadErr ?? 'كل مواعيد الأسابيع القادمة محجوزة. جرّب لاحقاً أو اختر خدمة أخرى.'}
+              </Text>
+              <Button label="إعادة المحاولة" variant="outline" small onPress={() => void loadAvailability()} />
+            </Card>
+          ) : (
+            <>
+              <SectionTitle label="اختر اليوم" icon="calendar" />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: 'row-reverse' }}>
+                {bookable.map((d) => {
+                  const on = d.date === dateIso;
+                  const label = dayLabel(d.date);
+                  return (
+                    <Pressable key={d.date} onPress={() => setDateIso(d.date)}
+                      style={{ width: 60, alignItems: 'center', borderRadius: 12, paddingVertical: 10, borderWidth: on ? 0 : 1, borderColor: colors.line, backgroundColor: on ? colors.navy700 : '#fff' }}>
+                      <Text style={[font('400'), { fontSize: 9, color: on ? '#fff' : colors.slate }]}>{label.weekday}</Text>
+                      <Text style={[font('800'), num, { fontSize: 17, color: on ? '#fff' : colors.navy700 }]}>{label.day}</Text>
+                      <Text style={[font('400'), { fontSize: 8, color: on ? '#fff' : colors.slate }]}>{label.month}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
 
-          <SectionTitle label="اختر الوقت" icon="clock" />
-          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
-            {provider.slots.map((s) => {
-              const booked = bookedSlots.includes(s);
-              const on = s === time;
-              return (
-                <Pressable key={s} disabled={booked} onPress={() => setTime(s)}
-                  style={{ borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, backgroundColor: booked ? colors.paper2 : on ? colors.navy700 : '#fff', opacity: booked ? 0.6 : 1 }}>
-                  <Text style={[font('700'), { fontSize: 12.5, color: on ? '#fff' : booked ? colors.muted : colors.slate, textDecorationLine: booked ? 'line-through' : 'none' }]}>
-                    {s}{booked ? ' · محجوز' : ''}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={[font('400'), { fontSize: 10, color: colors.muted, textAlign: 'right', marginTop: 8 }]}>
-            المواعيد المشطوبة محجوزة بالفعل ولا يمكن اختيارها.
-          </Text>
+              <SectionTitle label="اختر الوقت" icon="clock" />
+              <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
+                {(selectedDay?.slots ?? []).map((slot) => {
+                  const on = slot === time;
+                  return (
+                    <Pressable key={slot} onPress={() => setTime(slot)}
+                      style={{ borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, borderWidth: 1, borderColor: on ? colors.navy700 : colors.line, backgroundColor: on ? colors.navy700 : '#fff' }}>
+                      <Text style={[font('700'), num, { fontSize: 12.5, color: on ? '#fff' : colors.slate }]}>
+                        {timeLabel(slot)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={[font('400'), { fontSize: 10, color: colors.muted, textAlign: 'right', marginTop: 8 }]}>
+                المعروض هنا هو المتاح فعلياً — المواعيد المحجوزة لا تظهر أصلاً.
+              </Text>
+            </>
+          )}
         </>
       )}
 
@@ -248,14 +401,14 @@ export default function BookAppointmentScreen({ route }: RootProps<'BookAppointm
             <SumRow icon="grid" label="الخدمة" value={service.name} />
             <SumRow icon="user" label="المختص" value={provider.name} />
             <SumRow icon="calendar" label="اليوم" value={dateIso ?? '—'} mono />
-            <SumRow icon="clock" label="الوقت" value={time ?? '—'} />
+            <SumRow icon="clock" label="الوقت" value={time ? timeLabel(time) : '—'} />
             <SumRow icon="message-square" label="وسيلة التواصل" value={comm || '—'} />
             <SumRow icon="phone" label="الهاتف" value={phone} mono />
           </Card>
           <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
             <Icon name="info" size={16} color={colors.navy700} />
             <Text style={[font('400'), { flex: 1, fontSize: 10.5, color: colors.slate, textAlign: 'right', lineHeight: 16 }]}>
-              بعد التأكيد سيتواصل معك فريق الإدارة لتثبيت الموعد. جميع الجلسات أونلاين وسرية.{'\n'}هذه نسخة عرض تقديمي — لا يتم إرسال حجز فعلي.
+              يُسجَّل حجزك بحالة «قيد الانتظار» ويصلك رقم مرجعي، ثم يتواصل معك فريق الإدارة لتثبيت الموعد. جميع الجلسات أونلاين وسرية.
             </Text>
           </Card>
         </>

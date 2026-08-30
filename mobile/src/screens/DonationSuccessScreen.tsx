@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Share, Pressable, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -43,15 +43,10 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
   const nav = useNavigation<any>();
   const { amount, cause, method, recurring, reference, date, status } = route.params;
   const ui = STATUS_UI[status] ?? STATUS_UI['قيد التأكيد'];
-  const [downloaded, setDownloaded] = useState(false);
-
   const shareReceipt = () =>
     Share.share({
-      message: `إيصال تجريبي لغرض العرض فقط — جمعية خواطر أحلى شباب\nرقم العملية: ${reference}\nالتاريخ: ${date}\nالمبلغ: ${amount}\nوجهة التبرع: ${cause}\nطريقة الدفع: ${method}\nالحالة: ${status}\nنسخة عرض — لا يتم تنفيذ أي عملية دفع فعلية.`,
+      message: `إيصال تبرع — جمعية خواطر أحلى شباب\nرقم العملية: ${reference}\nالتاريخ: ${date}\nالمبلغ: ${amount}\nوجهة التبرع: ${cause}\nطريقة الدفع: ${method}\nالحالة: ${status}\nلا يتم تنفيذ أي عملية دفع داخل التطبيق؛ يُعتمد التبرع بعد مراجعة الإدارة.`,
     }).catch(() => {});
-
-  // Demo download — visual feedback only, nothing is written to storage.
-  const downloadReceipt = () => setDownloaded(true);
 
   return (
     <Screen
@@ -99,7 +94,7 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
       <Card style={[row, { gap: 9, marginTop: 16, backgroundColor: colors.goldSoft }]}>
         <Icon name="alert-triangle" size={14} color="#B9791A" />
         <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
-          نسخة عرض — لا يتم تنفيذ أي عملية دفع فعلية.{'\n'}إيصال تجريبي لغرض العرض فقط.
+          لا يتم تنفيذ أي عملية دفع داخل التطبيق.{'\n'}هذا إيصال تسجيل التبرع، ويُعتمد بعد تحقّق الإدارة من التحويل.
         </Text>
       </Card>
 
@@ -125,15 +120,12 @@ export default function DonationSuccessScreen({ route }: RootProps<'DonationSucc
         </View>
       </Card>
 
-      {/* Download (demo) */}
-      <Button
-        label={downloaded ? 'تم حفظ الإيصال (نسخة عرض) ✓' : 'تحميل الإيصال PDF'}
-        variant={downloaded ? 'green' : 'outline'}
-        icon={downloaded ? 'check' : 'download'}
-        style={{ marginTop: 12 }}
-        onPress={downloadReceipt}
-      />
-
+      {/*
+        A «تحميل الإيصال PDF» button sat here. It set a boolean and wrote
+        nothing — no file, no PDF, no storage access — so it reported "تم حفظ
+        الإيصال" for a save that never happened. Removed rather than relabelled:
+        the footer's «مشاركة الإيصال» already shares the receipt for real.
+      */}
       {recurring && status !== 'فشل' && (
         <Card style={[row, { gap: 11, marginTop: 12, backgroundColor: '#EAF0F8' }]}>
           <Icon name="calendar" size={18} color={colors.navy700} />

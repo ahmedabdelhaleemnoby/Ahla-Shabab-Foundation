@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { serviceById, providerById, categoryById } from '@ahla/shared';
+import { getCategoryById, getProviderById, getServiceById } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Pill } from '../components/ui';
@@ -27,9 +27,9 @@ function InfoRow({ icon, label, value }: { icon: IconName; label: string; value:
 
 export default function ServiceDetailScreen({ route }: RootProps<'ServiceDetail'>) {
   const nav = useNavigation<any>();
-  const service = serviceById(route.params.serviceId);
-  const provider = service ? providerById(service.providerId) : undefined;
-  const category = service ? categoryById(service.categoryId) : undefined;
+  const service = getServiceById(route.params.serviceId);
+  const provider = service ? getProviderById(service.providerId) : undefined;
+  const category = service ? getCategoryById(service.categoryId) : undefined;
 
   if (!service || !provider) {
     return (

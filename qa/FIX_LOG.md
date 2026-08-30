@@ -1472,6 +1472,149 @@ then the collateral restored in `2b95ed9`. The deploy now **mirrors origin** rat
 it — `git pull` refuses outright on divergent branches, which is what blocked every deploy behind this
 — and prints what it discards rather than dropping it silently.
 
+## 30 August — what taking the store screenshots found
+
+Producing the Google Play assets meant running v1.7.0 end to end on a real device against
+the live API. That had not been done before. Two things came out of it.
+
+### The الاستشارات tab crashed on open — 100% of the time, for every real user
+
+`mapConsultant` in `shared/src/api/mappers.ts` hard-coded `featured: false` for every
+provider it mapped, discarding a `featured` column the API genuinely returns.
+`ConsultationsScreen` then did:
+
+```ts
+const featured = getConsultants().find((c) => c.featured)!   // always undefined
+```
+
+and dereferenced `featured.name`. The `!` silenced the one compiler error that would have
+caught it.
+
+The reason nobody saw it: the bundled offline data in `shared/src/data.ts` **does** mark a
+consultant featured, so the screen worked in every local run and every offline launch. It
+only failed once the API answered — which is to say, always, in the hands of a user. The
+tab rendered a full-screen error and the tab bar stopped responding.
+
+Fixed in three places, all verified on the device afterwards:
+
+- the mapper now carries `featured` through (and prefers the real `providers.sessions`
+  column over `_count.bookings`);
+- `ConsultationsScreen` falls back to the first consultant, and omits the featured card
+  entirely when the API returns none;
+- `BookingScreen` had the same shape (`?? getConsultants()[1]`, itself `undefined` for a
+  list shorter than two) and was hardened too — it is registered as `Booking` but nothing
+  navigates to it, so it was never a live crash.
+
+Six tests in `shared/src/__tests__/consultantMapper.test.ts` cover it. Both were
+mutation-checked: restoring `featured: false` fails one, restoring the `_count.bookings`
+session count fails another.
+
+### Nine screens still told the user the app was a demo — and most were lying
+
+The donation summary carried «نسخة عرض — لا يتم تنفيذ أي عملية دفع فعلية» and the confirm
+button read **«تأكيد التبرع (عرض)»**, on a flow that has been recording donations on the
+server since T-13. A green panel underneath promised that «في النسخة التشغيلية يكون الدفع
+آمناً ومشفّراً بالكامل … بعد تأكيد بوابة الدفع» — the same non-existent payment gateway that
+had to be removed from the privacy policy.
+
+Each claim was checked against what the screen actually does before being touched:
+
+| Screen | Claim | Verdict |
+|---|---|---|
+| `DonateScreen` | demo, no payment, «(عرض)» button | **false** — `submitDonation()` posts, server assigns «قيد المراجعة» |
+| `DonationSuccessScreen` | «إيصال تجريبي لغرض العرض فقط» | **false** — the reference comes from the server |
+| `ReceiptsScreen` | «إيصالات تجريبية … لا تمثل عمليات دفع حقيقية» | **false** — `fetchMyDonations()` returns real records |
+| `EmailAuthScreen` | «لا يُرسل أي بريد … ويُقبل أي رمز» | **false** — `requestOtp()` hits the server |
+| `ConsultationRequestScreen` | «لم يُرسل لأي جهة … سيُمسح عند إغلاق التطبيق» | **false** — `submitConsultation()` posts to the dashboard inbox |
+| `PaymentInfoScreen` | «لا يوجد اتصال بخادم أو بوابة دفع» | **half false** — no gateway is true, no server is not |
+| `BookAppointmentScreen` | «لا يتم إرسال حجز فعلي» | **TRUE — kept** (see below) |
+| `ConsultantDashboardScreen` | «التعديلات تُحفظ أثناء الجلسة الحالية فقط» | **TRUE — kept**, the portal is unbuilt |
+
+All the false ones were corrected to describe what actually happens, keeping the client's
+donation rules intact: no in-app payment, transfer externally, send the receipt on
+WhatsApp, status stays «قيد المراجعة» until an admin approves. The two true notices were
+left exactly where they are.
+
+A dead **«تحميل الإيصال PDF»** button was also removed from the receipt screen. It set a
+boolean and wrote nothing — no file, no PDF — then reported «تم حفظ الإيصال». The footer's
+«مشاركة الإيصال» already shares the receipt for real, so nothing was lost.
+
+### Still open: booking from the app never reaches the server
+
+`BookAppointmentScreen.next()` ends the flow by generating a reference **locally** with
+`makeBookingRef(Math.floor(Date.now() / 1000))` and navigating to a confirmation screen
+that posts nothing. Its own comment says "Booking is created PENDING — the admin team
+confirms it (dashboard)". Nothing is created anywhere.
+
+This is the donation bug of T-13 — an invented reference and a confirmation for a record
+that does not exist — still present in the **booking** flow. The backend has the endpoints,
+the availability query and the `booking_slot_unique` constraint; the app simply never calls
+them. The «لا يتم إرسال حجز فعلي» notice on that screen is accurate, and stays until the
+flow is wired up.
+
+### Booking from the app now reaches the server
+
+Wiring only the POST would not have worked. `BookAppointmentScreen` read its service,
+provider and category from `shared/src/services.ts` — a module whose own header says "All
+mock data for now" — so the ids it held were `sv-psych` and `pr-tarek`, which the server
+has never issued. A booking built from them is answered «الخدمة غير موجودة». The catalog
+had to become real before the submit could be.
+
+What changed:
+
+- **`mapServiceCategory` / `mapProvider` / `mapCatalogService`** map the server's catalog
+  onto the shapes the screens already render. The provider's working weekdays and slot
+  labels are derived from its `schedules`, and a category icon the dashboard authored but
+  Feather does not define (the live data has `people`) is aliased or falls back, rather
+  than rendering as nothing.
+- **`fetchServiceCategories` / `fetchProviders` / `fetchCatalogServices`** join the other
+  hydrators in `mobile/src/store/content.ts`, with the bundled catalog kept as the offline
+  fallback. `ServicesBrowse`, `ServiceDetail`, `ProviderDetail` and `BookingConfirmation`
+  now resolve through the store instead of importing the mock arrays.
+- **`fetchAvailability` is now typed and deliberately does NOT fall back.** Every other
+  read in the package degrades to bundled data so a screen always renders; availability
+  must not, because invented availability means either a booking the server refuses or one
+  that collides with somebody's real appointment.
+- **The date/time step is driven entirely by `GET /services/:id/availability`.** The old
+  step derived days from the provider's weekly pattern and marked slots booked with
+  `provider.slots.filter((_, i) => i % 3 === 1)` — literally every third slot struck through
+  as «محجوز» whether or not anyone had booked it, while genuinely booked slots looked free.
+- **The wizard's last step calls `submitBooking`.** The reference on the confirmation screen
+  is the server's. A `SLOT_TAKEN` refusal reloads availability, clears the chosen time and
+  returns the applicant to the picker; every other failure shows the server's Arabic
+  message. There is no local fallback.
+- `ConsultationsScreen`'s two buttons pointed at the literal id `'sv-psych'`; they now
+  resolve one of the featured consultant's own services.
+- `Button` grew a `disabled` prop so the confirm button cannot be pressed twice mid-flight.
+
+Verified against a disposable, seeded QA environment (`npm run qa:env`) rather than
+production — the environment binds to loopback and dies with its process, so no test row
+was written to the live database. From the app on an emulator: the catalog loaded from the
+API (real provider `أ. فاطمة حسن`), availability rendered the provider's real weekdays and
+slots, and confirming produced booking **AS-6JN0SSZGTF20** — read back from the server as
+`svc-3` / `provider-2`, `2026-08-30` `11:00`, status «قيد الانتظار», with
+`extraFieldsJson: {preferredContact: واتساب}` and `userId: null` for a guest. The slot then
+disappeared from the picker on re-entry, which is the availability query reflecting it.
+
+Both 409s were exercised against the same server: a second booking of one slot returns
+`SLOT_TAKEN` «هذا الموعد محجوز بالفعل، يرجى اختيار موعد آخر», and the same phone booking the
+same service twice in a day returns `DUPLICATE_BOOKING`. Eight tests in
+`shared/src/__tests__/bookingContract.test.ts` pin the payload shapes and that both codes
+reach the caller; mutating `submitBooking` to swallow errors and invent a reference fails
+three of them, and giving `fetchAvailability` a fallback fails another.
+
+**One thing was not confirmed visually**: the rendering of the `SLOT_TAKEN` branch in the
+app — the error banner and the bounce back to the picker. The emulator (software GPU, debug
+build) began throwing input-dispatch ANRs under scripted typing before that walk could be
+completed. The branch is four lines keyed on `api.code`, and both the server response and
+`submitBooking`'s surfacing of it are covered; it is still worth one manual pass on a real
+device.
+
+Still not addressed: an admin is not notified when a booking arrives. `booking.created`
+creates an in-app notification **only for a signed-in applicant** and nothing for staff, so
+the confirmation screen's old claim «وصلك إشعار بالطلب، وتم إخطار فريق الإدارة» was corrected
+to say the booking is registered and visible to the team for review.
+
 ## Status of the delivery decision
 
 **NOT READY — REMAINING CORE TASKS**, but **every P0 is now closed**, including T-06, which was filed
