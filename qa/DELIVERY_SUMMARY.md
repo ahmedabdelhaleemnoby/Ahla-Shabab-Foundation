@@ -61,8 +61,9 @@ Before this work, several parts of the mobile app looked complete but never reac
   donation now credits the case it was given for.
 - **Receipt references were guessable.** They were six random digits — roughly a one-in-a-million
   space with a realistic chance of two donors receiving the same reference. Anyone could have stepped
-  through them and read donor names and national ID numbers. References are now unguessable, and 200,000
-  generated in a test produced no collision.
+  through them and read a donor's name, and — through the booking lookup — **a beneficiary's phone,
+  age, gender and national ID number**. References are now unguessable, the national ID is no longer
+  returned at all, and 200,000 generated in a test produced no collision.
 - Donations made by bank transfer, Fawry or Vodafone Cash correctly stay «قيد المراجعة» until a person
   confirms them. No payment is ever reported as successful by the app.
 

@@ -1,4 +1,10 @@
-<title>Ahla Shabab Launch Path</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Ahla Shabab — Store Release Checklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -18,6 +24,7 @@
     --gold-lite:#F3E7CC;
     --critical: #93321F;
     --done:     #2F6B4F;
+    --on-done:  #FAF9F6;
     --shadow:   0 1px 2px rgba(20,33,58,.05);
   }
   @media (prefers-color-scheme: dark) {
@@ -33,6 +40,7 @@
       --gold-lite:#33291A;
       --critical: #E08B76;
       --done:     #6FBF95;
+      --on-done:  #12151C;
       --shadow:   none;
     }
   }
@@ -48,6 +56,7 @@
     --gold-lite:#33291A;
     --critical: #E08B76;
     --done:     #6FBF95;
+    --on-done:  #12151C;
     --shadow:   none;
   }
 
@@ -64,7 +73,7 @@
   }
   body[dir="rtl"] { font-family: "Cairo", "Segoe UI", sans-serif; line-height: 1.9; }
 
-  .wrap { max-width: 46rem; margin: 0 auto; padding: 3.5rem 1.5rem 5rem; }
+  .wrap { max-width: 54rem; margin: 0 auto; padding: 3.5rem 1.5rem 5rem; }
 
   /* ── masthead ─────────────────────────────────────────── */
   .masthead { display: flex; flex-direction: column; gap: .75rem; }
@@ -174,28 +183,155 @@
   }
   footer code { font-family: "IBM Plex Mono", monospace; font-size: .82rem; color: var(--ink-soft); }
 
+  /* ── interactive release checklist ───────────────────── */
+  .progress-shell {
+    flex: 1 1 15rem; min-width: min(100%, 15rem); display: grid; gap: .55rem;
+    align-self: center;
+  }
+  .progress-track {
+    height: 5px; background: var(--rule); overflow: hidden;
+  }
+  .progress-fill {
+    display: block; height: 100%; width: 0; background: var(--done);
+    transform-origin: left center; transition: width .35s cubic-bezier(.22,1,.36,1);
+  }
+  body[dir="rtl"] .progress-fill { transform-origin: right center; }
+  .progress-copy {
+    display: flex; justify-content: space-between; gap: 1rem;
+    color: var(--ink-faint); font-size: .76rem;
+  }
+
+  .checklist-tools {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: .75rem 1rem; margin: 1rem 0 2.25rem;
+  }
+  .save-note { margin: 0; color: var(--ink-faint); font-size: .84rem; }
+  .tool-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .quiet-button {
+    appearance: none; border: 1px solid var(--rule); border-radius: 2px;
+    padding: .55rem .75rem; background: var(--surface); color: var(--ink-soft);
+    font: 600 .76rem/1.1 "Source Serif 4", Georgia, serif; cursor: pointer;
+  }
+  body[dir="rtl"] .quiet-button { font-family: "Cairo", sans-serif; }
+  .quiet-button:hover { border-color: var(--ink-faint); color: var(--ink); }
+  .quiet-button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .quiet-button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .notice {
+    display: grid; grid-template-columns: auto 1fr; gap: .7rem 1rem;
+    margin: 0 0 2.5rem; padding: 1rem 1.15rem;
+    border-block: 1px solid var(--rule); color: var(--ink-soft); font-size: .9rem;
+  }
+  .notice-mark {
+    color: var(--gold); font: 700 .78rem/1.5 "IBM Plex Mono", monospace;
+  }
+  .notice p { margin: 0; }
+
+  .phase { margin-top: 3.25rem; }
+  .phase-head {
+    display: grid; grid-template-columns: auto 1fr; gap: .45rem 1rem;
+    align-items: baseline; padding-bottom: .65rem; border-bottom: 1px solid var(--rule);
+  }
+  .phase-number {
+    font: 500 .8rem/1 "IBM Plex Mono", monospace; color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+  .phase h2 { margin: 0; padding: 0; border: 0; }
+  .phase-lede { grid-column: 2; margin: 0; color: var(--ink-faint); font-size: .9rem; }
+
+  .todos { list-style: none; margin: .6rem 0 0; padding: 0; }
+  .todo {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    gap: .45rem 1rem; padding: 1.2rem 0; border-bottom: 1px solid var(--rule);
+  }
+  .todo.is-filtered { display: none; }
+  .todo-main {
+    display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: .75rem;
+    align-items: start; cursor: pointer;
+  }
+  .task-check { position: absolute; opacity: 0; pointer-events: none; }
+  .check-ui {
+    width: 1.25rem; height: 1.25rem; margin-top: .13rem; border: 1px solid var(--ink-faint);
+    background: var(--surface); display: grid; place-items: center; transition: .18s ease;
+  }
+  .check-ui::after {
+    content: ""; width: .58rem; height: .3rem; border-inline-start: 2px solid var(--on-done);
+    border-bottom: 2px solid var(--on-done); transform: rotate(-45deg) translateY(-.08rem);
+    opacity: 0;
+  }
+  body[dir="rtl"] .check-ui::after { transform: rotate(-45deg) translateY(-.08rem); }
+  .task-check:focus-visible + .check-ui { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .task-check:checked + .check-ui { background: var(--done); border-color: var(--done); }
+  .task-check:checked + .check-ui::after { opacity: 1; }
+  .todo-copy { min-width: 0; }
+  .todo-copy strong { display: block; color: var(--ink); font-size: 1rem; line-height: 1.45; }
+  .todo-copy small { display: block; margin-top: .28rem; color: var(--ink-soft); font-size: .88rem; line-height: 1.65; }
+  .todo.completed .todo-copy strong { color: var(--ink-faint); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .todo.completed .todo-copy small { color: var(--ink-faint); }
+  .owner {
+    align-self: start; white-space: nowrap; border: 1px solid var(--rule); padding: .25rem .45rem;
+    color: var(--ink-faint); font: 500 .66rem/1.2 "IBM Plex Mono", monospace;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  body[dir="rtl"] .owner { font-family: "Cairo", sans-serif; letter-spacing: 0; }
+  .owner.foundation { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, var(--rule)); }
+  .owner.engineering { color: var(--navy); border-color: color-mix(in srgb, var(--navy) 35%, var(--rule)); }
+  .task-links { grid-column: 1 / -1; padding-inline-start: 2.15rem; font-size: .82rem; }
+  .task-links a { color: var(--navy); text-underline-offset: 3px; }
+  .task-links a + a::before { content: "·"; padding: 0 .5rem; color: var(--ink-faint); text-decoration: none; }
+
+  .completion-note {
+    margin-top: 3rem; padding: 1.25rem 0; border-block: 1px solid var(--rule);
+    color: var(--ink-soft); text-align: center;
+  }
+  .completion-note[hidden] { display: none; }
+  .completion-note strong { color: var(--done); }
+
+  .legacy-notes { margin-top: 3rem; border-block: 1px solid var(--rule); }
+  .legacy-notes > summary {
+    cursor: pointer; padding: 1rem 0; color: var(--ink-soft); font-size: .9rem;
+    font-weight: 600;
+  }
+  .legacy-notes > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .legacy-notes[open] { padding-bottom: 1.5rem; }
+
+  @media (max-width: 38rem) {
+    .wrap { padding: 2rem 1rem 3.5rem; }
+    .status { gap: 1.25rem; }
+    .progress-shell { flex-basis: 100%; }
+    .todo { grid-template-columns: 1fr; }
+    .owner { margin-inline-start: 2rem; justify-self: start; }
+    .task-links { padding-inline-start: 2rem; }
+    .phase-head { grid-template-columns: auto 1fr; }
+  }
+
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: no-preference) {
-    .item, .status { transition: border-color .15s ease; }
+    .item, .status, .todo { transition: border-color .15s ease, opacity .18s ease; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .progress-fill, .check-ui { transition: none; }
   }
 </style>
+</head>
+<body dir="ltr">
 
 <div class="wrap">
 
   <header class="masthead">
-    <p class="eyebrow" data-en>Ahla Shabab Foundation · 20 August 2026</p>
-    <p class="eyebrow" data-ar hidden>جمعية خواطر أحلى شباب · 20 أغسطس 2026</p>
+    <p class="eyebrow" data-en>Ahla Shabab Foundation · 26 August 2026</p>
+    <p class="eyebrow" data-ar hidden>جمعية خواطر أحلى شباب · 26 أغسطس 2026</p>
 
-    <h1 data-en>What is left to finish the platform</h1>
-    <h1 data-ar hidden>ما تبقّى لإنهاء المنصّة</h1>
+    <h1 data-en>Store release checklist</h1>
+    <h1 data-ar hidden>قائمة نشر التطبيق على المتاجر</h1>
 
     <p class="standfirst" data-en>
-      Eight items remain. None of them is unfinished engineering — each is a decision,
-      an account, or a short task on the server.
+      Create the foundation-owned accounts, prepare the app, then release through internal testing.
+      Mark each step when it is genuinely complete; progress is saved on this device.
     </p>
     <p class="standfirst" data-ar hidden>
-      تبقّت ثمانية بنود. لا يوجد بينها عمل برمجي غير مكتمل — كل بند منها قرار أو حساب خارجي.
-      وكل ما تم بناؤه منشور على الخادم ومُتحقَّق منه من خارجه.
+      أنشئوا الحسابات باسم الجمعية، ثم جهّزوا التطبيق وانشروه أولًا للاختبار الداخلي. ضعوا علامة
+      أمام كل خطوة بعد اكتمالها فعليًا؛ يُحفَظ التقدّم على هذا الجهاز.
     </p>
 
     <div class="langbar">
@@ -204,12 +340,424 @@
     </div>
   </header>
 
-  <div class="status">
-    <div class="stat ok"><b>0</b><span data-en>blocking now</span><span data-ar hidden>بند يحجب العمل</span></div>
-    <div class="stat"><b>8</b><span data-en>items remaining</span><span data-ar hidden>بند متبقٍ</span></div>
-    <div class="stat"><b>71%</b><span data-en>delivered &amp; verified</span><span data-ar hidden>منجز ومُتحقَّق منه</span></div>
-    <div class="stat"><b>290</b><span data-en>automated tests</span><span data-ar hidden>اختبار آلي</span></div>
+  <div class="status" aria-live="polite">
+    <div class="stat ok"><b id="done-count">0</b><span data-en>steps done</span><span data-ar hidden>خطوة مكتملة</span></div>
+    <div class="stat"><b id="remaining-count">22</b><span data-en>remaining</span><span data-ar hidden>متبقية</span></div>
+    <div class="stat"><b id="percent-count">0%</b><span data-en>release progress</span><span data-ar hidden>تقدّم النشر</span></div>
+    <div class="progress-shell">
+      <div class="progress-track" role="progressbar" aria-label="Release progress" aria-valuemin="0" aria-valuemax="22" aria-valuenow="0">
+        <span class="progress-fill" id="progress-fill"></span>
+      </div>
+      <div class="progress-copy">
+        <span data-en>Account → preparation → testing → review</span>
+        <span data-ar hidden>الحسابات ← التجهيز ← الاختبار ← المراجعة</span>
+        <span><span id="done-fraction">0</span>/22</span>
+      </div>
+    </div>
   </div>
+
+  <div class="checklist-tools">
+    <p class="save-note" data-en>✓ Changes save automatically in this browser.</p>
+    <p class="save-note" data-ar hidden>✓ تُحفَظ العلامات تلقائيًا في هذا المتصفح.</p>
+    <div class="tool-actions">
+      <button class="quiet-button" type="button" id="pending-toggle" aria-pressed="false">
+        <span data-en>Show remaining only</span><span data-ar hidden>عرض المتبقي فقط</span>
+      </button>
+      <button class="quiet-button" type="button" id="reset-progress">
+        <span data-en>Reset progress</span><span data-ar hidden>إعادة ضبط التقدّم</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="notice">
+    <span class="notice-mark">01</span>
+    <p data-en>The foundation must own both store accounts. Use invitations for the development team;
+      never share passwords, two-factor codes, signing keys, or service-account files in chat.</p>
+    <p data-ar hidden>يجب أن تكون ملكية حسابَي المتجر للجمعية. أضيفوا فريق التطوير بالدعوات، ولا
+      تشاركوا كلمات المرور أو رموز التحقق أو مفاتيح التوقيع أو ملفات حسابات الخدمة في المحادثات.</p>
+  </div>
+
+  <main id="release-checklist">
+    <section class="phase">
+      <div class="phase-head">
+        <span class="phase-number">01</span>
+        <h2 id="phase-accounts-en" data-en>Foundation identity and store accounts</h2>
+        <h2 id="phase-accounts-ar" data-ar hidden>هوية الجمعية وحسابات المتاجر</h2>
+        <p class="phase-lede" data-en>These steps must be completed by a legally authorized representative.</p>
+        <p class="phase-lede" data-ar hidden>ينفّذ هذه الخطوات ممثل يملك صلاحية قانونية عن الجمعية.</p>
+      </div>
+      <ol class="todos">
+        <li class="todo" data-task="legal-details">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Confirm the foundation’s exact legal details</strong>
+              <strong data-ar hidden>تأكيد البيانات القانونية الدقيقة للجمعية</strong>
+              <small data-en>Legal Arabic and English name, registered address, public phone, functional website, registration documents, and a work email on the organization’s domain.</small>
+              <small data-ar hidden>الاسم القانوني بالعربية والإنجليزية، والعنوان المسجل، والهاتف العام، والموقع الفعّال، ومستندات التسجيل، وبريد عمل على نطاق الجمعية.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+        </li>
+
+        <li class="todo" data-task="duns-number">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Look up or request the organization’s D‑U‑N‑S number</strong>
+              <strong data-ar hidden>البحث عن رقم D‑U‑N‑S للجمعية أو طلبه</strong>
+              <small data-en>Use the same legal name, address, and phone everywhere. Google says a new number may take up to 30 days, so start here.</small>
+              <small data-ar hidden>استخدموا الاسم والعنوان والهاتف القانوني نفسه في كل مكان. قد يستغرق إصدار رقم جديد حتى 30 يومًا، لذا ابدؤوا بهذه الخطوة.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+          <div class="task-links"><a href="https://support.google.com/googleplay/android-developer/answer/13628312" target="_blank" rel="noreferrer"><span data-en>Google requirements</span><span data-ar hidden>متطلبات Google</span></a><a href="https://developer.apple.com/help/account/membership/D-U-N-S/" target="_blank" rel="noreferrer"><span data-en>Apple lookup guide</span><span data-ar hidden>دليل Apple</span></a></div>
+        </li>
+
+        <li class="todo" data-task="google-play-account">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Create and verify a Google Play organization account</strong>
+              <strong data-ar hidden>إنشاء وتوثيق حساب مؤسسة في Google Play</strong>
+              <small data-en>Choose Organization, accept the agreement, pay the one-time US$25 fee, and verify the organization, public email, and public phone.</small>
+              <small data-ar hidden>اختاروا «مؤسسة»، واقبلوا الاتفاقية، وادفعوا رسم 25 دولارًا لمرة واحدة، ثم وثّقوا الجمعية والبريد والهاتف الظاهرين للجمهور.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+          <div class="task-links"><a href="https://play.google.com/console/signup" target="_blank" rel="noreferrer"><span data-en>Open Play Console signup</span><span data-ar hidden>فتح تسجيل Play Console</span></a></div>
+        </li>
+
+        <li class="todo" data-task="apple-developer-account">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Create and verify an Apple Developer organization account</strong>
+              <strong data-ar hidden>إنشاء وتوثيق حساب مؤسسة في Apple Developer</strong>
+              <small data-en>The authorized representative needs an Apple Account with two-factor authentication. Enroll as Organization / Nonprofit and request the nonprofit fee waiver before paying the US$99 annual fee.</small>
+              <small data-ar hidden>يحتاج الممثل المخوّل إلى Apple Account مفعّل عليه التحقق بخطوتين. سجّلوا كمؤسسة غير ربحية واطلبوا الإعفاء قبل دفع الرسم السنوي البالغ 99 دولارًا.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+          <div class="task-links"><a href="https://developer.apple.com/programs/enroll/" target="_blank" rel="noreferrer"><span data-en>Start Apple enrollment</span><span data-ar hidden>بدء تسجيل Apple</span></a><a href="https://developer.apple.com/help/account/membership/fee-waivers" target="_blank" rel="noreferrer"><span data-en>Fee waiver</span><span data-ar hidden>الإعفاء من الرسوم</span></a></div>
+        </li>
+
+        <li class="todo" data-task="team-invitations">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Invite the development team with the correct roles</strong>
+              <strong data-ar hidden>إضافة فريق التطوير بالصلاحيات المناسبة</strong>
+              <small data-en>Use store invitations after approval. Keep the Account Holder role with the foundation and grant only the access needed for builds, TestFlight, and releases.</small>
+              <small data-ar hidden>استخدموا دعوات المتاجر بعد الموافقة. احتفظوا بدور مالك الحساب لدى الجمعية، وامنحوا فقط صلاحيات البناء وTestFlight والإصدارات المطلوبة.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="phase">
+      <div class="phase-head">
+        <span class="phase-number">02</span>
+        <h2 id="phase-policy-en" data-en>Permanent decisions and store policy</h2>
+        <h2 id="phase-policy-ar" data-ar hidden>القرارات الدائمة وسياسات المتاجر</h2>
+        <p class="phase-lede" data-en>Resolve these before creating store records or sending a build for review.</p>
+        <p class="phase-lede" data-ar hidden>احسموا هذه البنود قبل إنشاء سجلات التطبيق أو إرسال نسخة للمراجعة.</p>
+      </div>
+      <ol class="todos">
+        <li class="todo" data-task="application-id">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Approve the permanent Android package and iOS bundle identifier</strong>
+              <strong data-ar hidden>اعتماد اسم الحزمة الدائم لأندرويد وiOS</strong>
+              <small data-en>Current value: <code>tech.saasfarm.ahlashabab</code>. Decide whether to keep it or move to a foundation-owned identifier such as <code>com.ahlashabab.app</code> before the first upload.</small>
+              <small data-ar hidden>القيمة الحالية: <code>tech.saasfarm.ahlashabab</code>. قرروا الإبقاء عليها أو الانتقال إلى معرّف باسم الجمعية مثل <code>com.ahlashabab.app</code> قبل أول رفع.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Decision</span><span class="owner foundation" data-ar hidden>قرار</span>
+        </li>
+
+        <li class="todo" data-task="apple-nonprofit-donations">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Approve the iOS donation route</strong>
+              <strong data-ar hidden>اعتماد مسار التبرع على iOS</strong>
+              <small data-en>For direct in-app fundraising, complete nonprofit approval through Benevity and support Apple Pay. Otherwise, redesign iOS donation collection to happen outside the app in a policy-compliant flow.</small>
+              <small data-ar hidden>لجمع التبرعات مباشرة داخل التطبيق، استكملوا اعتماد المؤسسة عبر Benevity وادعموا Apple Pay. وإلا فيجب نقل التحصيل خارج تطبيق iOS بمسار متوافق مع السياسة.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+          <div class="task-links"><a href="https://developer.apple.com/apple-pay/nonprofits/" target="_blank" rel="noreferrer"><span data-en>Apple nonprofit approval</span><span data-ar hidden>اعتماد المؤسسات لدى Apple</span></a></div>
+        </li>
+
+        <li class="todo" data-task="account-deletion">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Implement account deletion in the app and on the web</strong>
+              <strong data-ar hidden>تنفيذ حذف الحساب داخل التطبيق وعلى الويب</strong>
+              <small data-en>Add an authenticated in-app deletion path, delete associated data except legally retained records, and publish a direct web deletion-request URL for Google Play.</small>
+              <small data-ar hidden>أضيفوا مسارًا واضحًا لحذف الحساب داخل التطبيق، واحذفوا البيانات المرتبطة به عدا ما يلزم الاحتفاظ به قانونيًا، وانشروا رابط ويب مباشرًا لطلبات الحذف في Google Play.</small>
+            </span>
+          </label>
+          <span class="owner engineering" data-en>Engineering</span><span class="owner engineering" data-ar hidden>الفريق التقني</span>
+          <div class="task-links"><a href="https://support.google.com/googleplay/android-developer/answer/13327111" target="_blank" rel="noreferrer"><span data-en>Google policy</span><span data-ar hidden>سياسة Google</span></a><a href="https://developer.apple.com/support/offering-account-deletion-in-your-app/" target="_blank" rel="noreferrer"><span data-en>Apple policy</span><span data-ar hidden>سياسة Apple</span></a></div>
+        </li>
+
+        <li class="todo" data-task="privacy-policy">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Publish an accurate privacy policy and complete both privacy forms</strong>
+              <strong data-ar hidden>نشر سياسة خصوصية دقيقة وإكمال نماذج الخصوصية</strong>
+              <small data-en>Disclose email, phone, age, gender, governorate/city, optional national ID, donation and booking history, consultation details, and notification tokens. Add a public privacy-policy URL.</small>
+              <small data-ar hidden>افصحوا عن البريد والهاتف والعمر والنوع والمحافظة والمدينة والرقم القومي الاختياري وسجل التبرعات والحجوزات وتفاصيل الاستشارات ورموز الإشعارات. أضيفوا رابطًا عامًا للسياسة.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+
+        <li class="todo" data-task="reviewer-login">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Make production login work and prepare reviewer access</strong>
+              <strong data-ar hidden>تشغيل تسجيل الدخول الفعلي وتجهيز وصول المراجع</strong>
+              <small data-en>Configure the OTP email provider, remove all demo-language, and provide App Review with a working test path or fully featured demo mode.</small>
+              <small data-ar hidden>اضبطوا مزود بريد رموز التحقق، واحذفوا كل عبارات النسخة التجريبية، ووفّروا للمراجعة مسار اختبار يعمل أو وضع عرض مكتمل الوظائف.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="phase">
+      <div class="phase-head">
+        <span class="phase-number">03</span>
+        <h2 id="phase-app-en" data-en>App preparation</h2>
+        <h2 id="phase-app-ar" data-ar hidden>تجهيز التطبيق</h2>
+        <p class="phase-lede" data-en>Turn the current test project into signed, reviewable store binaries.</p>
+        <p class="phase-lede" data-ar hidden>تحويل المشروع الحالي من نسخة اختبار إلى ملفات متجر موقّعة وقابلة للمراجعة.</p>
+      </div>
+      <ol class="todos">
+        <li class="todo" data-task="android-signing">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Create Android upload credentials and enable Play App Signing</strong>
+              <strong data-ar hidden>إنشاء بيانات توقيع أندرويد وتفعيل Play App Signing</strong>
+              <small data-en>Generate the upload key once, keep recoverable backups under foundation control, and never commit secrets. Existing APK files are test builds and cannot be submitted.</small>
+              <small data-ar hidden>أنشئوا مفتاح الرفع مرة واحدة، واحفظوا نسخًا احتياطية قابلة للاسترجاع تحت سيطرة الجمعية، ولا ترفعوا الأسرار إلى المستودع. ملفات APK الحالية للاختبار ولا تصلح للمتجر.</small>
+            </span>
+          </label>
+          <span class="owner engineering" data-en>Joint</span><span class="owner engineering" data-ar hidden>مشترك</span>
+        </li>
+
+        <li class="todo" data-task="firebase-config">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Configure Firebase push notifications for both platforms</strong>
+              <strong data-ar hidden>ضبط إشعارات Firebase للمنصتين</strong>
+              <small data-en>Add the Android configuration for the final package, the server service account as a secret, and the iOS/APNs configuration after Apple enrollment.</small>
+              <small data-ar hidden>أضيفوا إعداد أندرويد باسم الحزمة النهائي، وحساب خدمة الخادم كسر، وإعداد iOS وAPNs بعد اكتمال تسجيل Apple.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+
+        <li class="todo" data-task="native-cleanup">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Remove unnecessary Android permissions and fix the App Store icon</strong>
+              <strong data-ar hidden>حذف صلاحيات أندرويد غير اللازمة وإصلاح أيقونة App Store</strong>
+              <small data-en>Remove storage and overlay permissions the app does not use. Export the 1024×1024 iOS icon without transparency.</small>
+              <small data-ar hidden>احذفوا صلاحيات التخزين والظهور فوق التطبيقات التي لا يستخدمها التطبيق. صدّروا أيقونة iOS بمقاس 1024×1024 دون شفافية.</small>
+            </span>
+          </label>
+          <span class="owner engineering" data-en>Engineering</span><span class="owner engineering" data-ar hidden>الفريق التقني</span>
+        </li>
+
+        <li class="todo" data-task="release-quality">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Clear release checks and remove remaining sample-account content</strong>
+              <strong data-ar hidden>اجتياز فحوص الإصدار وحذف محتوى الحسابات التجريبية</strong>
+              <small data-en>Fix the two current TypeScript test errors, run the release checks, and ensure profile, account settings, donations, and consultations never show bundled personal sample data.</small>
+              <small data-ar hidden>أصلحوا خطأي TypeScript الحاليين، وشغّلوا فحوص الإصدار، وتأكدوا من أن الملف الشخصي والإعدادات والتبرعات والاستشارات لا تعرض بيانات أشخاص تجريبية مضمّنة.</small>
+            </span>
+          </label>
+          <span class="owner engineering" data-en>Engineering</span><span class="owner engineering" data-ar hidden>الفريق التقني</span>
+        </li>
+
+        <li class="todo" data-task="store-metadata">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Prepare the Arabic store listing and compliance answers</strong>
+              <strong data-ar hidden>تجهيز صفحة المتجر العربية وإجابات الامتثال</strong>
+              <small data-en>App name, descriptions, category, support URL, privacy URL, screenshots, Google feature graphic, age/content rating, Data safety, App Privacy, and review notes.</small>
+              <small data-ar hidden>اسم التطبيق ووصفه وتصنيفه ورابط الدعم والخصوصية ولقطات الشاشة وصورة Google البارزة والتصنيف العمري وData safety وApp Privacy وملاحظات المراجعة.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="phase">
+      <div class="phase-head">
+        <span class="phase-number">04</span>
+        <h2 id="phase-release-en" data-en>Build, test, and submit</h2>
+        <h2 id="phase-release-ar" data-ar hidden>البناء والاختبار والإرسال</h2>
+        <p class="phase-lede" data-en>Never make the first store upload a public production release.</p>
+        <p class="phase-lede" data-ar hidden>لا تجعلوا أول نسخة مرفوعة إلى المتجر إصدارًا عامًا للمستخدمين.</p>
+      </div>
+      <ol class="todos">
+        <li class="todo" data-task="android-aab">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Build and upload the signed Android App Bundle</strong>
+              <strong data-ar hidden>بناء ورفع ملف Android App Bundle الموقّع</strong>
+              <small data-en>Produce a production <code>.aab</code>, upload it to Google Play internal testing, resolve all automated warnings, and install it through the tester link.</small>
+              <small data-ar hidden>أنشئوا ملف <code>.aab</code> للإنتاج، وارفعوه إلى الاختبار الداخلي في Google Play، وعالجوا كل التحذيرات، وثبّتوه عبر رابط المختبرين.</small>
+            </span>
+          </label>
+          <span class="owner engineering" data-en>Engineering</span><span class="owner engineering" data-ar hidden>الفريق التقني</span>
+          <div class="task-links"><a href="https://docs.expo.dev/submit/android/" target="_blank" rel="noreferrer"><span data-en>Expo Android guide</span><span data-ar hidden>دليل Expo لأندرويد</span></a></div>
+        </li>
+
+        <li class="todo" data-task="ios-testflight">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Build iOS and upload it to TestFlight</strong>
+              <strong data-ar hidden>بناء إصدار iOS ورفعه إلى TestFlight</strong>
+              <small data-en>Generate Apple-managed signing credentials, produce the production <code>.ipa</code>, upload it to App Store Connect, and test on a real iPhone.</small>
+              <small data-ar hidden>أنشئوا بيانات التوقيع التي تديرها Apple، وأنتجوا ملف <code>.ipa</code> للإنتاج، وارفعوه إلى App Store Connect، واختبروه على iPhone حقيقي.</small>
+            </span>
+          </label>
+          <span class="owner engineering" data-en>Engineering</span><span class="owner engineering" data-ar hidden>الفريق التقني</span>
+          <div class="task-links"><a href="https://docs.expo.dev/submit/testflight/" target="_blank" rel="noreferrer"><span data-en>Expo TestFlight guide</span><span data-ar hidden>دليل Expo لـ TestFlight</span></a></div>
+        </li>
+
+        <li class="todo" data-task="end-to-end-proof">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Complete the real-device release test</strong>
+              <strong data-ar hidden>إكمال اختبار الإصدار على أجهزة حقيقية</strong>
+              <small data-en>On both platforms: browse as a guest, sign in by email, book a service, make one deliberate small donation, verify its admin status and receipt, receive a push notification, and delete the test account.</small>
+              <small data-ar hidden>على المنصتين: تصفحوا كزائر، وسجّلوا الدخول بالبريد، واحجزوا خدمة، ونفّذوا تبرعًا صغيرًا مقصودًا، وتحققوا من حالته وإيصاله في الإدارة، واستقبلوا إشعارًا، ثم احذفوا حساب الاختبار.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+
+        <li class="todo" data-task="store-review">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Submit both apps for store review</strong>
+              <strong data-ar hidden>إرسال التطبيقين لمراجعة المتاجر</strong>
+              <small data-en>Attach clear review notes explaining login, donation handling, account deletion, and any location-specific features. Answer reviewer questions from the foundation-owned accounts.</small>
+              <small data-ar hidden>أرفقوا ملاحظات واضحة تشرح تسجيل الدخول وآلية التبرع وحذف الحساب وأي خصائص مرتبطة بالموقع. أجيبوا عن أسئلة المراجعين من حسابات الجمعية.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="phase">
+      <div class="phase-head">
+        <span class="phase-number">05</span>
+        <h2 id="phase-parallel-en" data-en>Parallel launch decisions</h2>
+        <h2 id="phase-parallel-ar" data-ar hidden>قرارات إطلاق موازية</h2>
+        <p class="phase-lede" data-en>These project decisions remain visible so they are not lost during store work.</p>
+        <p class="phase-lede" data-ar hidden>تبقى قرارات المشروع هذه ظاهرة حتى لا تضيع أثناء أعمال المتاجر.</p>
+      </div>
+      <ol class="todos">
+        <li class="todo" data-task="vodafone-code">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Confirm the Vodafone Cash code <code>#237*9*</code></strong>
+              <strong data-ar hidden>تأكيد كود فودافون كاش <code>#237*9*</code></strong>
+              <small data-en>It is stored exactly as supplied. A wrong direction or character means donations will not arrive.</small>
+              <small data-ar hidden>الكود مخزّن كما ورد. أي خطأ في الاتجاه أو حرف واحد يعني أن التبرعات لن تصل.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Foundation</span><span class="owner foundation" data-ar hidden>الجمعية</span>
+        </li>
+
+        <li class="todo" data-task="consultant-privacy">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Approve consultant privacy rules and finish the consultant portal</strong>
+              <strong data-ar hidden>اعتماد قواعد خصوصية المستشار وإنهاء بوابة المستشارين</strong>
+              <small data-en>Decide what a consultant may see before accepting a case and whether colleagues’ assignments are visible, then complete and verify the consultant-facing screens.</small>
+              <small data-ar hidden>حددوا ما يجوز للمستشار رؤيته قبل قبول الحالة، وهل يرى الطلبات المسندة لزملائه، ثم أكملوا شاشات المستشار وتحققوا منها.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Joint</span><span class="owner foundation" data-ar hidden>مشترك</span>
+        </li>
+
+        <li class="todo" data-task="deployment-gate">
+          <label class="todo-main">
+            <input class="task-check" type="checkbox">
+            <span class="check-ui" aria-hidden="true"></span>
+            <span class="todo-copy">
+              <strong data-en>Decide whether failed tests must block deployment</strong>
+              <strong data-ar hidden>تحديد هل تمنع الاختبارات الفاشلة عملية النشر</strong>
+              <small data-en>Adopt the release policy, then apply the one-line deployment dependency if the answer is yes.</small>
+              <small data-ar hidden>اعتمدوا سياسة الإصدار، ثم أضيفوا شرط الاعتماد في إجراء النشر إذا كانت الإجابة نعم.</small>
+            </span>
+          </label>
+          <span class="owner foundation" data-en>Decision</span><span class="owner foundation" data-ar hidden>قرار</span>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <div class="completion-note" id="completion-note" hidden>
+    <strong data-en>All checklist steps are marked complete.</strong>
+    <strong data-ar hidden>تم وضع علامة اكتمال على جميع خطوات القائمة.</strong>
+    <span data-en> Confirm both store releases are live, then archive this checklist with the release records.</span>
+    <span data-ar hidden> تأكدوا من ظهور الإصدارين في المتجرين، ثم احفظوا هذه القائمة مع سجلات الإصدار.</span>
+  </div>
+
+  <details class="legacy-notes">
+    <summary><span data-en>Open the previous detailed launch notes</span><span data-ar hidden>فتح ملاحظات الإطلاق التفصيلية السابقة</span></summary>
 
   <!-- ───────────────────────── release path ───────────────────────── -->
   <h2 data-en>The path to the app store</h2>
@@ -361,32 +909,142 @@
     </div>
   </div>
 
+  </details>
+
   <footer>
-    <p data-en>Everything described as delivered is live on the server and verified from outside it.
-      Full detail in <code>DELIVERY_SUMMARY.md</code>; the consultant-portal questions are in
+    <p data-en>Progress is stored only in this browser under <code>ahlaLaunchChecklist.v2</code>.
+      Project evidence remains in <code>DELIVERY_SUMMARY.md</code>; consultant-portal decisions are in
       <code>CONSULTANT_PORTAL_SCOPE.md</code>.</p>
-    <p data-ar hidden>كل ما هو موصوف كمُنجَز منشور على الخادم ومُتحقَّق منه من خارجه. التفاصيل الكاملة
-      في <code>DELIVERY_SUMMARY.ar.md</code>، وأسئلة بوابة المستشارين في
+    <p data-ar hidden>يُحفَظ التقدّم في هذا المتصفح فقط تحت المفتاح <code>ahlaLaunchChecklist.v2</code>.
+      أدلة المشروع في <code>DELIVERY_SUMMARY.ar.md</code>، وقرارات بوابة المستشارين في
       <code>CONSULTANT_PORTAL_SCOPE.md</code>.</p>
   </footer>
 </div>
 
 <script>
   (function () {
+    var STORAGE_KEY = 'ahlaLaunchChecklist.v2';
+    var LANGUAGE_KEY = 'ahlaLaunchChecklist.language';
     var en = document.getElementById('btn-en');
     var ar = document.getElementById('btn-ar');
+    var pendingToggle = document.getElementById('pending-toggle');
+    var resetButton = document.getElementById('reset-progress');
+    var tasks = Array.prototype.slice.call(document.querySelectorAll('.todo[data-task]'));
+    var doneCount = document.getElementById('done-count');
+    var remainingCount = document.getElementById('remaining-count');
+    var percentCount = document.getElementById('percent-count');
+    var doneFraction = document.getElementById('done-fraction');
+    var progressFill = document.getElementById('progress-fill');
+    var progressTrack = document.querySelector('.progress-track');
+    var completionNote = document.getElementById('completion-note');
+    var currentLanguage = 'en';
+    var remainingOnly = false;
+
+    function readProgress() {
+      try {
+        var parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeProgress(progress) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+      } catch (_) {
+        /* The checklist still works for this visit when browser storage is unavailable. */
+      }
+    }
+
+    function applyFilter() {
+      tasks.forEach(function (task) {
+        task.classList.toggle('is-filtered', remainingOnly && task.classList.contains('completed'));
+      });
+    }
+
+    function updateProgress() {
+      var completed = tasks.filter(function (task) {
+        return task.querySelector('.task-check').checked;
+      }).length;
+      var total = tasks.length;
+      var remaining = total - completed;
+      var percent = total ? Math.round((completed / total) * 100) : 0;
+
+      doneCount.textContent = String(completed);
+      remainingCount.textContent = String(remaining);
+      percentCount.textContent = percent + '%';
+      doneFraction.textContent = String(completed);
+      progressFill.style.width = percent + '%';
+      progressTrack.setAttribute('aria-valuemax', String(total));
+      progressTrack.setAttribute('aria-valuenow', String(completed));
+      progressTrack.setAttribute('aria-valuetext', currentLanguage === 'ar'
+        ? completed + ' من ' + total + ' خطوة مكتملة'
+        : completed + ' of ' + total + ' steps complete');
+      completionNote.hidden = completed !== total;
+
+      tasks.forEach(function (task) {
+        task.classList.toggle('completed', task.querySelector('.task-check').checked);
+      });
+      applyFilter();
+    }
+
+    function saveFromUi() {
+      var progress = {};
+      tasks.forEach(function (task) {
+        progress[task.getAttribute('data-task')] = task.querySelector('.task-check').checked;
+      });
+      writeProgress(progress);
+      updateProgress();
+    }
 
     function show(lang) {
       var rtl = lang === 'ar';
+      currentLanguage = lang;
       document.body.setAttribute('dir', rtl ? 'rtl' : 'ltr');
       document.documentElement.setAttribute('lang', lang);
       document.querySelectorAll('[data-en]').forEach(function (n) { n.hidden = rtl; });
       document.querySelectorAll('[data-ar]').forEach(function (n) { n.hidden = !rtl; });
       en.setAttribute('aria-pressed', String(!rtl));
       ar.setAttribute('aria-pressed', String(rtl));
+      progressTrack.setAttribute('aria-label', rtl ? 'تقدّم نشر التطبيق' : 'App release progress');
+      document.title = rtl ? 'أحلى شباب — قائمة نشر التطبيق' : 'Ahla Shabab — Store Release Checklist';
+      try { window.localStorage.setItem(LANGUAGE_KEY, lang); } catch (_) {}
+      updateProgress();
     }
 
     en.addEventListener('click', function () { show('en'); });
     ar.addEventListener('click', function () { show('ar'); });
+
+    var saved = readProgress();
+    tasks.forEach(function (task) {
+      var checkbox = task.querySelector('.task-check');
+      var taskId = task.getAttribute('data-task');
+      checkbox.checked = saved[taskId] === true;
+      checkbox.addEventListener('change', saveFromUi);
+    });
+
+    pendingToggle.addEventListener('click', function () {
+      remainingOnly = !remainingOnly;
+      pendingToggle.setAttribute('aria-pressed', String(remainingOnly));
+      applyFilter();
+    });
+
+    resetButton.addEventListener('click', function () {
+      var message = currentLanguage === 'ar'
+        ? 'هل تريد إزالة جميع علامات الاكتمال والبدء من جديد؟'
+        : 'Remove every completion mark and start again?';
+      if (!window.confirm(message)) return;
+      tasks.forEach(function (task) { task.querySelector('.task-check').checked = false; });
+      remainingOnly = false;
+      pendingToggle.setAttribute('aria-pressed', 'false');
+      saveFromUi();
+    });
+
+    var savedLanguage = 'en';
+    try { savedLanguage = window.localStorage.getItem(LANGUAGE_KEY) || 'en'; } catch (_) {}
+    show(savedLanguage === 'ar' ? 'ar' : 'en');
   })();
 </script>
+</body>
+</html>
