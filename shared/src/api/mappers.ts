@@ -1,5 +1,10 @@
 import { paymentMethods } from '../data';
 import type {
+  Provider as CatalogProvider,
+  Service as CatalogService,
+  ServiceCategory,
+} from '../services';
+import type {
   Article,
   ArticleCategory,
   CaseTag,
@@ -172,12 +177,19 @@ export function mapConsultant(w: Record<string, any>): Consultant {
     specialty,
     type: inferConsultationType(specialty),
     yearsExperience: num(w.yearsExperience),
-    // `_count.bookings` is the closest thing the API has to a session count.
-    sessions: num(w._count?.bookings),
+    // `providers.sessions` is the authored figure; `_count.bookings` is the
+    // fallback for a payload that predates it.
+    sessions: num(w.sessions ?? w._count?.bookings),
     rating: num(w.rating),
     reviews: num(w.reviews),
     available: w.acceptingBookings ?? w.active ?? true,
-    featured: false,
+    /*
+     * `providers.featured` is a real column and the API returns it. This used
+     * to be hard-coded `false`, which meant no mapped consultant could ever be
+     * featured — and ConsultationsScreen crashed on the `undefined` that its
+     * `.find((c) => c.featured)!` then produced, every time the API answered.
+     */
+    featured: Boolean(w.featured),
   };
 }
 
@@ -247,5 +259,137 @@ export function mapPaymentMethod(w: Record<string, any>): PaymentMethodInfo | nu
     // Defaults to manual (admin review) when absent: the safer of the two, since
     // it never claims a payment succeeded without confirmation.
     manual: w.manual ?? true,
+  };
+}
+
+/* ------------------------------------------------- free-services catalog */
+
+/*
+ * The booking catalog (categories → services → providers) shipped as mock data
+ * in `services.ts` with ids like `sv-psych`, while the server has a real catalog
+ * with ids like `svc-1`. Nothing in the app read the server's copy, so the
+ * booking screen offered services that do not exist and, had it ever posted,
+ * would have been answered with «الخدمة غير موجودة».
+ *
+ * These map the server's catalog onto the shapes the screens already render, so
+ * the ids that reach `POST /bookings` are ids the server knows.
+ */
+
+/**
+ * The API stores an icon name per category, but it is authored in the dashboard
+ * and is not guaranteed to be a Feather glyph — the live data has `people`,
+ * which Feather does not define and which renders as nothing. Aliases the ones
+ * actually in use and falls back to a glyph that always exists.
+ */
+const ICON_ALIASES: Record<string, string> = {
+  people: 'users',
+  person: 'user',
+  health: 'activity',
+  medical: 'activity',
+  law: 'file-text',
+  legal: 'file-text',
+  education: 'book-open',
+  school: 'book-open',
+};
+
+const FEATHER_FALLBACK = 'grid';
+
+/** Feather names the catalog is known to use; anything else falls back. */
+const KNOWN_ICONS = new Set([
+  'activity', 'award', 'book', 'book-open', 'briefcase', 'calendar', 'clipboard',
+  'coffee', 'droplet', 'edit-3', 'eye', 'file-text', 'grid', 'heart', 'home',
+  'message-circle', 'message-square', 'shopping-bag', 'smile', 'thermometer',
+  'user', 'users',
+]);
+
+function icon(value: unknown): string {
+  if (typeof value !== 'string' || !value) return FEATHER_FALLBACK;
+  const aliased = ICON_ALIASES[value] ?? value;
+  return KNOWN_ICONS.has(aliased) ? aliased : FEATHER_FALLBACK;
+}
+
+export function mapServiceCategory(w: Record<string, any>): ServiceCategory {
+  return {
+    id: str(w.id),
+    name: str(w.name),
+    icon: icon(w.icon),
+    description: w.description || undefined,
+    // `null` means top level. `undefined` from a partial payload must not become
+    // `undefined` here: `childCategories(null)` compares with `===`.
+    parentId: w.parentId ?? null,
+    active: w.active ?? true,
+  };
+}
+
+/** Deterministic card gradient — the API has no concept of one. */
+function gradientFor(id: string): [string, string] {
+  const palette: [string, string][] = [
+    ['#8296b5', '#4d6386'],
+    ['#a7b6d0', '#7186a6'],
+    ['#93a8c4', '#5b7396'],
+    ['#7d93b4', '#455c80'],
+  ];
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return palette[h % palette.length];
+}
+
+/** "09:00" + 45 minutes -> "09:45". Returns null once it passes `end`. */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Expand a provider's weekly schedule into the slot labels shown on their card.
+ *
+ * This is presentation only. What is actually BOOKABLE comes from
+ * `GET /services/:id/availability`, which also excludes slots already taken —
+ * this cannot know that, so it must never be used to decide what to offer.
+ */
+function slotsFromSchedules(schedules: any[]): string[] {
+  const out = new Set<string>();
+  for (const s of schedules ?? []) {
+    const start = str(s.startTime);
+    const end = str(s.endTime);
+    const step = num(s.slotMinutes, 30);
+    if (!start || !end || step <= 0) continue;
+    for (let t = start; t < end; t = addMinutes(t, step)) {
+      out.add(t);
+      if (out.size > 48) break; // a day cannot hold more; guards a bad schedule
+    }
+  }
+  return [...out].sort();
+}
+
+export function mapProvider(w: Record<string, any>): CatalogProvider {
+  const schedules = Array.isArray(w.schedules) ? w.schedules : [];
+  return {
+    id: str(w.id),
+    name: str(w.name),
+    specialization: str(w.specialization ?? w.specialty),
+    bio: str(w.bio),
+    yearsExperience: num(w.yearsExperience),
+    rating: num(w.rating),
+    reviews: num(w.reviews),
+    availableDays: [...new Set(schedules.map((s: any) => num(s.weekday)))].sort(),
+    slots: slotsFromSchedules(schedules),
+    unavailableDates: Array.isArray(w.unavailableDates)
+      ? w.unavailableDates.map((d: any) => str(d.date ?? d)).map((d: string) => d.slice(0, 10))
+      : [],
+    gradient: gradientFor(str(w.id)),
+  };
+}
+
+export function mapCatalogService(w: Record<string, any>): CatalogService {
+  return {
+    id: str(w.id),
+    name: str(w.name),
+    description: str(w.description),
+    categoryId: str(w.categoryId),
+    providerId: str(w.providerId),
+    free: w.free ?? true,
+    requireNationalId: w.requireNationalId ?? false,
   };
 }

@@ -32,7 +32,7 @@ export const defaultSettings: CmsSettings = {
   socials: { ...appConfig.socials },
   zakatNisabEgp: appConfig.zakatNisabEgp,
   donationReassurance:
-    'لن يُعتمد تبرعك إلا بعد تأكيد العملية من بوابة الدفع أو مراجعة الإدارة. هذه نسخة عرض — لا يتم تنفيذ أي عملية دفع حقيقية.',
+    'لا يتم تنفيذ أي عملية دفع داخل التطبيق. حوِّل المبلغ بالطريقة المختارة وأرسل صورة الإيصال، ولن يُعتمد تبرعك إلا بعد مراجعة الإدارة.',
   demoLabel: 'نسخة عرض — يتم حفظ التعديلات على هذا الجهاز فقط',
   stats: {
     governorates: String(foundationStats.governorates),

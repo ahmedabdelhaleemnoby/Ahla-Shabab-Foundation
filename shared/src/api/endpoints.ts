@@ -8,8 +8,24 @@ import type {
 import type { CmsState } from '../cms/cmsTypes';
 import { makeDefaultCmsState } from '../cms/cmsDefaults';
 import { articles, cases, consultants, projects } from '../data';
+import {
+  providers as bundledProviders,
+  serviceCategories as bundledCategories,
+  services as bundledServices,
+  type Provider as CatalogProvider,
+  type Service as CatalogService,
+  type ServiceCategory,
+} from '../services';
 import { mapCmsState } from './cmsMapper';
-import { mapArticle, mapCase, mapConsultant, mapProject } from './mappers';
+import {
+  mapArticle,
+  mapCase,
+  mapCatalogService,
+  mapConsultant,
+  mapProject,
+  mapProvider,
+  mapServiceCategory,
+} from './mappers';
 import { withFallback, withFallbackTagged } from './fallback';
 import { request, requestList, type Paginated } from './http';
 
@@ -144,9 +160,77 @@ export const fetchServices = (query: ListQuery & { categoryId?: string } = {}) =
 export const fetchServiceForm = (serviceId: string) =>
   request<unknown>(`services/${serviceId}/form`, { auth: false });
 
-/** Free slots for a service. These are the only values `timeSlot` accepts. */
-export const fetchAvailability = (serviceId: string, from: string, to: string) =>
-  request<unknown>(`services/${serviceId}/availability`, { auth: false, query: { from, to } });
+/* ------------------------------------------- free-services booking catalog */
+
+/*
+ * The catalog the booking screens render. These used to come only from the
+ * mock arrays in `services.ts`, whose ids (`sv-psych`, `pr-tarek`) the server
+ * has never heard of — so a booking built from them could not have been
+ * accepted. They fall back to those same arrays when the API is unreachable,
+ * which keeps the catalog browsable offline; `POST /bookings` does not fall
+ * back, so an offline booking fails loudly instead of vanishing.
+ */
+
+export const fetchServiceCategories = (query: ListQuery = {}): Promise<ServiceCategory[]> =>
+  withFallback(
+    'GET /categories',
+    async () =>
+      (await requestList<Record<string, any>>('categories', query, { auth: false })).items.map(
+        mapServiceCategory,
+      ),
+    () => bundledCategories,
+  );
+
+export const fetchProviders = (query: ListQuery = {}): Promise<CatalogProvider[]> =>
+  withFallback(
+    'GET /providers',
+    async () =>
+      (await requestList<Record<string, any>>('providers', query, { auth: false })).items.map(
+        mapProvider,
+      ),
+    () => bundledProviders,
+  );
+
+export const fetchCatalogServices = (
+  query: ListQuery & { categoryId?: string } = {},
+): Promise<CatalogService[]> =>
+  withFallback(
+    'GET /services',
+    async () =>
+      (await requestList<Record<string, any>>('services', query, { auth: false })).items.map(
+        mapCatalogService,
+      ),
+    () => bundledServices,
+  );
+
+/** One bookable day: the slots left after existing bookings are removed. */
+export interface DayAvailability {
+  /** YYYY-MM-DD. */
+  date: string;
+  /** HH:MM, 24-hour. */
+  slots: string[];
+}
+
+/**
+ * Free slots for a service. These are the only values `timeSlot` accepts.
+ *
+ * Dates the provider does not work are simply absent from the result, and slots
+ * already booked are absent from a date — so this is the single source of truth
+ * for what the picker may offer. It deliberately does NOT fall back to bundled
+ * data: showing invented availability would let someone pick a slot the server
+ * will refuse, or one that is already someone else's appointment.
+ */
+export const fetchAvailability = async (
+  serviceId: string,
+  from: string,
+  to: string,
+): Promise<DayAvailability[]> => {
+  const data = await request<DayAvailability[]>(`services/${serviceId}/availability`, {
+    auth: false,
+    query: { from, to },
+  });
+  return Array.isArray(data) ? data : [];
+};
 
 /** One call for the whole home screen. */
 export const fetchHomeAggregate = () => request<Record<string, any>>('home', { auth: false });

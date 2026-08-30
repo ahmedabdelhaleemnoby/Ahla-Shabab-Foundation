@@ -162,7 +162,7 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
           <Text style={[font('800'), { fontSize: 19, color: colors.navy700, marginTop: 16 }]}>تم استلام الطلب بنجاح</Text>
           <Text style={[font('400'), { fontSize: 12, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
             رقم الطلب <Text style={[font('800'), num, { color: colors.navy700 }]}>{doneRef}</Text>{'\n'}
-            سُجِّل طلبك في النسخة التجريبية، ويمكنك تسجيل الدخول بنفس البريد أثناء هذه الجلسة لمتابعته.
+            وصل طلبك إلى فريق الجمعية. سجّل الدخول بنفس البريد لمتابعة حالته.
           </Text>
         </View>
 
@@ -185,7 +185,7 @@ export default function ConsultationRequestScreen({ route }: RootProps<'Consulta
         <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: colors.goldSoft }]}>
           <Icon name="alert-triangle" size={15} color="#B9791A" />
           <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
-            نسخة عرض — الطلب محفوظ أثناء الجلسة الحالية فقط ولم يُرسل لأي جهة. سيُمسح عند إغلاق التطبيق.
+            يصل طلبك إلى فريق الجمعية للمراجعة، ويتم التواصل معك لتحديد موعد الجلسة. بياناتك تُعامَل بسرية.
           </Text>
         </Card>
 

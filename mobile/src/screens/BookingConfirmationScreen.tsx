@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { serviceById, providerById } from '@ahla/shared';
+import { getProviderById, getServiceById } from '../store/content';
 import { Screen } from '../components/Screen';
 import { Card, Button } from '../components/ui';
 import { StickyFooter } from './DonateScreen';
@@ -24,8 +24,8 @@ function Line({ icon, label, value }: { icon: IconName; label: string; value: st
 export default function BookingConfirmationScreen({ route }: RootProps<'BookingConfirmation'>) {
   const nav = useNavigation<any>();
   const { reference, serviceId, providerId, date, time, mode } = route.params;
-  const service = serviceById(serviceId);
-  const provider = providerById(providerId);
+  const service = getServiceById(serviceId);
+  const provider = getProviderById(providerId);
 
   return (
     <Screen
@@ -51,7 +51,7 @@ export default function BookingConfirmationScreen({ route }: RootProps<'BookingC
         <Text style={[font('800'), { fontSize: 20, color: colors.navy700, marginTop: 16 }]}>تم استلام طلب الحجز</Text>
         <Text style={[font('400'), { fontSize: 12.5, color: colors.slate, marginTop: 6, textAlign: 'center', lineHeight: 19 }]}>
           سيتواصل معك فريق الإدارة لتثبيت الموعد{mode ? ` عبر ${mode}` : ''}.{'\n'}
-          وصلك إشعار بالطلب، وتم إخطار فريق الإدارة. احتفظ برقم الحجز للمراجعة.
+          حجزك مسجَّل بحالة «قيد الانتظار» ويظهر لفريق الجمعية للمراجعة. احتفظ برقم الحجز لمتابعته.
         </Text>
       </View>
 

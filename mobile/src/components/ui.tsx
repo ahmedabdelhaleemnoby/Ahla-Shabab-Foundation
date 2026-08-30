@@ -38,6 +38,7 @@ export function Button({
   icon,
   small,
   style,
+  disabled,
 }: {
   label: string;
   onPress?: () => void;
@@ -45,6 +46,8 @@ export function Button({
   icon?: IconName;
   small?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** Blocks the press and dims the button — e.g. a submit already in flight. */
+  disabled?: boolean;
 }) {
   const bg =
     variant === 'primary'
@@ -58,10 +61,12 @@ export function Button({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.btn,
         row,
-        { backgroundColor: bg, opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: bg, opacity: disabled ? 0.45 : pressed ? 0.85 : 1 },
         variant === 'outline' && styles.btnOutline,
         small && styles.btnSmall,
         style,

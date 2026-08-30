@@ -22,8 +22,10 @@ import { getCases, getProjects } from '../store/content';
 import { getPaymentMethods } from '../store/cms';
 import { appState, type Receipt } from '../store/appState';
 
-/* Donation journey (demo): destination → case/project → amount & recurrence
-   → payment method → summary → pending receipt. No real payment ever runs. */
+/* Donation journey: destination → case/project → amount & recurrence → payment
+   method → summary → pending receipt. The donation IS recorded on the server;
+   what never happens is a payment — every approved method is completed outside
+   the app, so the server assigns «قيد المراجعة» and an admin confirms it. */
 
 const STEPS = ['الوجهة', 'الاختيار', 'المبلغ', 'الدفع', 'الملخص'] as const;
 
@@ -189,7 +191,7 @@ export default function DonateScreen() {
         <StickyFooter>
           {step > 0 && <Button label="السابق" variant="outline" style={{ width: 104 }} onPress={back} />}
           <Button
-            label={step === STEPS.length - 1 ? 'تأكيد التبرع (عرض)' : 'التالي'}
+            label={step === STEPS.length - 1 ? 'تأكيد التبرع' : 'التالي'}
             icon={step === STEPS.length - 1 ? 'check' : undefined}
             style={{ flex: 1 }}
             onPress={next}
@@ -466,14 +468,14 @@ export default function DonateScreen() {
           <Card style={[row, { gap: 10, marginTop: 12, backgroundColor: colors.goldSoft }]}>
             <Icon name="alert-triangle" size={16} color="#B9791A" />
             <Text style={[font('700'), { flex: 1, fontSize: 11, color: '#8A5B10', textAlign: 'right', lineHeight: 17 }]}>
-              نسخة عرض — لا يتم تنفيذ أي عملية دفع فعلية.{'\n'}سيظهر تبرعك بحالة «{methodInfo ? initialDonationStatus(method) : 'قيد التأكيد'}» حتى يتم تأكيده في النسخة التشغيلية.
+              لا يتم تنفيذ أي عملية دفع داخل التطبيق.{'\n'}حوِّل المبلغ بالطريقة المختارة ثم أرسل صورة الإيصال، وسيظهر تبرعك بحالة «{methodInfo ? initialDonationStatus(method) : 'قيد التأكيد'}» حتى تعتمده الإدارة.
             </Text>
           </Card>
 
           <Card style={[row, { gap: 10, marginTop: 10, backgroundColor: colors.greenSoft }]}>
             <Icon name="lock" size={16} color={colors.greenDark} />
             <Text style={[font('600'), { flex: 1, fontSize: 10.5, color: colors.greenDark, textAlign: 'right', lineHeight: 16 }]}>
-              في النسخة التشغيلية يكون الدفع آمناً ومشفّراً بالكامل، ولا يُعتمد التبرع إلا بعد تأكيد بوابة الدفع أو مراجعة الإدارة.
+              لا يطلب التطبيق أي بيانات بطاقة أو حساب بنكي، ولا يُعتمد أي تبرع تلقائياً — الاعتماد يتم بمراجعة الإدارة بعد التحقق من التحويل.
             </Text>
           </Card>
         </>

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { providerById, services, categoryById } from '@ahla/shared';
+import { getCategoryById, getProviderById, getServices } from '../store/content';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button, Pill } from '../components/ui';
@@ -26,7 +26,7 @@ function InfoRow({ icon, label, value }: { icon: IconName; label: string; value:
 
 export default function ProviderDetailScreen({ route }: RootProps<'ProviderDetail'>) {
   const nav = useNavigation<any>();
-  const provider = providerById(route.params.providerId);
+  const provider = getProviderById(route.params.providerId);
 
   if (!provider) {
     return (
@@ -36,7 +36,7 @@ export default function ProviderDetailScreen({ route }: RootProps<'ProviderDetai
     );
   }
 
-  const own = services.filter((s) => s.providerId === provider.id);
+  const own = getServices().filter((s) => s.providerId === provider.id);
   const days = provider.availableDays.map((d) => WEEKDAYS[d]).join('، ');
 
   return (
@@ -70,7 +70,7 @@ export default function ProviderDetailScreen({ route }: RootProps<'ProviderDetai
         <Text style={[font('800'), { fontSize: 15, color: colors.navy700 }]}>الخدمات المتاحة</Text>
       </View>
       {own.map((s) => {
-        const cat = categoryById(s.categoryId);
+        const cat = getCategoryById(s.categoryId);
         return (
           <Card key={s.id} style={{ marginBottom: 10 }}>
             <View style={[row, { gap: 8, justifyContent: 'space-between' }]}>

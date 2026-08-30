@@ -102,7 +102,7 @@ export default function EmailAuthScreen() {
       <Card style={[row, { gap: 10, marginTop: 16, backgroundColor: colors.goldSoft }]}>
         <Icon name="alert-triangle" size={15} color="#B9791A" />
         <Text style={[font('700'), { flex: 1, fontSize: 10.5, color: '#8A5B10', textAlign: 'right', lineHeight: 16 }]}>
-          نسخة عرض — لا يُرسل أي بريد إلكتروني فعلياً، ويُقبل أي رمز مكوّن من 6 أرقام في الشاشة التالية.
+          يُرسَل رمز تحقق مكوّن من 6 أرقام إلى بريدك، وهو صالح لفترة قصيرة. إن لم يصلك الرمز فتأكد من صحة البريد أو أعد المحاولة.
         </Text>
       </Card>
 

@@ -36,7 +36,14 @@ function SectionTitle({ label, icon }: { label: string; icon: IconName }) {
 
 export default function BookingScreen() {
   const nav = useNavigation<any>();
-  const consultant = getConsultants().find((c) => !c.featured) ?? getConsultants()[1];
+  /*
+   * `[1]` was the fallback, which is itself `undefined` for a list of fewer
+   * than two — the same crash ConsultationsScreen hit. This screen is
+   * registered as `Booking` but nothing navigates to it; hardening it anyway
+   * so it cannot become a live crash the day something links to it.
+   */
+  const consultants = getConsultants();
+  const consultant = consultants.find((c) => !c.featured) ?? consultants[0];
   const [day, setDay] = useState('22');
   const [time, setTime] = useState('11:00 ص');
   const [mode, setMode] = useState('مكالمة صوتية');
@@ -65,6 +72,7 @@ export default function BookingScreen() {
       </View>
 
       <SectionTitle label="اختر المستشار" icon="user" />
+      {consultant && (
       <Card style={[row, { gap: 11 }]}>
         <Icon name="chevron-down" size={16} color={colors.muted} />
         <View style={{ backgroundColor: '#EAF0F8', borderRadius: 10, paddingVertical: 3, paddingHorizontal: 8 }}>
@@ -78,6 +86,7 @@ export default function BookingScreen() {
         </View>
         <LinearGradient colors={['#a7b6d0', '#7186a6']} style={{ width: 48, height: 48, borderRadius: 11 }} />
       </Card>
+      )}
 
       <SectionTitle label="اختر التاريخ" icon="calendar" />
       <View style={[row, { gap: 6 }]}>
