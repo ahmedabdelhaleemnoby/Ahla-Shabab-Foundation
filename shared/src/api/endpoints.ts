@@ -344,6 +344,16 @@ export const removeFavorite = (entityType: FavoriteEntity, entityId: string) =>
 export const fetchMyNotifications = (query: Record<string, unknown> = {}) =>
   requestList<Record<string, any>>('me/notifications', query);
 
+/**
+ * Delete the signed-in person's account, irreversibly.
+ *
+ * Google Play requires this of any app that lets people create an account. The
+ * literal confirmation is required by the server too: an irreversible action
+ * should not be one stray call away.
+ */
+export const deleteMyAccount = () =>
+  request<Record<string, any>>('me', { method: 'DELETE', body: { confirm: 'DELETE' } });
+
 export type DevicePlatform = 'ios' | 'android' | 'web';
 
 /**

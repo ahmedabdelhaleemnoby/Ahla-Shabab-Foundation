@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { donorProfile, governorates } from '@ahla/shared';
+import { donorProfile, governorates, deleteMyAccount } from '@ahla/shared';
 import { Screen } from '../components/Screen';
 import { AppBar } from '../components/AppBar';
 import { Card, Button } from '../components/ui';
@@ -10,7 +10,9 @@ import { LoginGate } from '../components/LoginGate';
 import { SelectField } from '../components/SelectField';
 import { StickyFooter } from './DonateScreen';
 import { Icon } from '../components/Icon';
-import { colors, font, radius } from '../theme';
+import { colors, font, radius, row } from '../theme';
+import { endSession } from '../store/session';
+import { appState } from '../store/appState';
 
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -42,6 +44,7 @@ export default function AccountSettingsScreen() {
   const [email, setEmail] = useState('');
   const [gov, setGov] = useState('القاهرة');
   const [bio, setBio] = useState(donorProfile.bio);
+  const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
 
   return (
@@ -89,6 +92,63 @@ export default function AccountSettingsScreen() {
       <Labeled label="نبذة عنك">
         <TextInput value={bio} onChangeText={setBio} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]} placeholderTextColor={colors.muted} />
       </Labeled>
+      <View style={{ height: 26 }} />
+
+      {/*
+        Google Play requires any app that lets people create an account to let
+        them delete it from inside the app. It also has to be hard to hit by
+        accident, and honest about what survives — the donation ledger and the
+        appointment slot stay, stripped of anything identifying.
+      */}
+      <Card style={{ borderColor: colors.red, borderWidth: 1 }}>
+        <View style={[row, { gap: 8, justifyContent: 'flex-end' }]}>
+          <Text style={[font('800'), { fontSize: 13.5, color: colors.red }]}>حذف الحساب</Text>
+          <Icon name="trash-2" size={16} color={colors.red} />
+        </View>
+        <Text style={[font('400'), { fontSize: 12, color: colors.slate, textAlign: 'right', lineHeight: 20, marginTop: 6 }]}>
+          يُحذف حسابك وبياناتك الشخصية نهائيًا — بما فيها رقمك القومي ووصفك لحالتك في أي طلب استشارة.
+          يبقى سجل التبرع والموعد دون أي بيانات تدلّ عليك، لأن الجمعية ملزَمة بحفظ سجلاتها.
+          {'\n'}لا يمكن التراجع بعد التأكيد.
+        </Text>
+        <Pressable
+          disabled={deleting}
+          onPress={() => {
+            Alert.alert(
+              'حذف الحساب نهائيًا؟',
+              'سيتم حذف حسابك وبياناتك الشخصية. لا يمكن التراجع.',
+              [
+                { text: 'إلغاء', style: 'cancel' },
+                {
+                  text: 'حذف نهائيًا',
+                  style: 'destructive',
+                  onPress: () => {
+                    setDeleting(true);
+                    deleteMyAccount()
+                      .then(() => {
+                        // The server has already revoked every session; clear the
+                        // local one too so the app does not hold a dead token.
+                        void endSession();
+                        appState.logout();
+                        Alert.alert('تم حذف الحساب', 'تم حذف حسابك وبياناتك الشخصية.');
+                        nav.navigate('Main', { screen: 'About' });
+                      })
+                      .catch((e: unknown) => {
+                        Alert.alert('تعذّر الحذف', (e as Error)?.message ?? 'حاول مرة أخرى لاحقًا.');
+                      })
+                      .finally(() => setDeleting(false));
+                  },
+                },
+              ],
+            );
+          }}
+          style={{ marginTop: 12, borderWidth: 1, borderColor: colors.red, borderRadius: 10, paddingVertical: 11, alignItems: 'center', opacity: deleting ? 0.5 : 1 }}
+        >
+          <Text style={[font('800'), { fontSize: 12.5, color: colors.red }]}>
+            {deleting ? 'جارٍ الحذف…' : 'حذف حسابي نهائيًا'}
+          </Text>
+        </Pressable>
+      </Card>
+
       <View style={{ height: 12 }} />
     </Screen>
     </LoginGate>
